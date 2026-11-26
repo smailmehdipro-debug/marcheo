@@ -328,7 +328,7 @@
   }
 
   /* ================= Fiche bien ================= */
-  const ONGLETS = [['synthese', 'Synthèse'], ['avancement', 'Avancement'], ['visite', 'Visite'], ['simulation', 'Simulation'], ['travaux', 'Travaux'], ['comparables', 'Comparables'], ['pieces', 'Pièces'], ['contacts', 'Contacts'], ['journal', 'Journal']];
+  const ONGLETS = [['synthese', 'Synthèse'], ['comparables', 'Comparables'], ['visite', 'Visite'], ['avancement', 'Avancement'], ['simulation', 'Simulation'], ['travaux', 'Travaux'], ['pieces', 'Pièces'], ['contacts', 'Contacts'], ['journal', 'Journal']];
   function vueBien(c, r) {
     const b = D.obtenir('biens', r.id);
     if (!b) { c.innerHTML = '<div class="vide">Bien introuvable. <a href="#/biens">Retour à la liste</a></div>'; return; }
@@ -447,43 +447,50 @@
   }
 
   /* ---------- Simulation ---------- */
+  let ssSim = 'bien';
   function ongletSimulation(z, b) {
     const S = b.sim, TY = M.TYPES[S.type];
     const champ = (id, l, o = {}) => `<div class="champ${o.large ? ' large' : ''}"><label for="${id}" ${o.lid ? `id="${o.lid}"` : ''}>${l}</label><input id="${id}" data-k="${o.k || id}" type="number" inputmode="${o.dec ? 'decimal' : 'numeric'}" min="0" step="${o.step || 1}" value="${S[o.k || id]}">${o.aide ? `<small class="aide" id="${id}Aide"></small>` : ''}</div>`;
     const poste = (k, id, l) => `<div class="poste" data-poste="${k}-${id}"><input type="checkbox" data-coche="${k}-${id}" aria-label="Compter : ${esc(l)}"><label class="poste-nom" for="v-${k}-${id}">${esc(l)}</label><input type="number" id="v-${k}-${id}" data-val="${k}-${id}" inputmode="numeric" min="0" step="50"><div class="poste-repere"><span>Repère <b data-rep="${k}-${id}"></b></span><span data-h="${k}-${id}"></span><span data-ecart="${k}-${id}"></span><button type="button" class="bouton-lien" data-raz="${k}-${id}" hidden>revenir au repère</button></div></div>`;
+    const SS = [['bien', 'Bien et prix'], ['travaux', 'Travaux'], ['frais', 'Frais'], ['parametres', 'Paramètres'], ['resultats', 'Résultat détaillé']];
     z.innerHTML = `
-      <div class="deux-colonnes">
+      <nav class="sous-onglets" role="tablist">${SS.map(([k, l]) => `<button role="tab" data-ss-choix="${k}" class="${ssSim === k ? 'actif' : ''}">${l}</button>`).join('')}</nav>
+      <div class="deux-colonnes simulation">
         <div class="colonne" id="saisie">
-          <div class="carte"><h2>Bien</h2>
-            <div class="segments" role="group" aria-label="Type de bien" id="segType" style="margin-bottom:.8rem">${Object.entries(M.TYPES).map(([k, t]) => `<button data-v="${k}" aria-pressed="${S.type === k}">${t.n}</button>`).join('')}</div>
+          <div class="carte" data-ss="bien"><h2>Bien</h2>
+            <div class="choix-type" role="group" aria-label="Type de bien" id="segType">${Object.entries(M.TYPES).map(([k, t]) => `<button data-v="${k}" aria-pressed="${S.type === k}">${t.n}</button>`).join('')}</div>
             <p class="aide" id="typeNote">${esc(TY.note)}</p>
-            <div class="grille-champs">
+            <div class="grille-champs alignee">
               ${champ('surf', TY.sl, { lid: 'surfL', dec: 1 })}${champ('pieces', TY.pl, { lid: 'piecesL' })}${champ('duree', 'Durée totale (mois)')}
               ${champ('achat', 'Prix d\'achat hors FAI (€)', { step: 500, aide: 1 })}${champ('pm2', TY.ql, { lid: 'pm2L', step: 50, aide: 1 })}${champ('vente', 'Revente souhaitée (€)', { step: 500, aide: 1 })}
             </div><button class="bouton bouton-petit" id="useQ" hidden>Revente au prix du quartier</button></div>
-          <div class="carte"><h2>Acquisition</h2><div id="acq">${poste('n', 'not', 'Frais de notaire, régime marchand de biens')}</div>
-            <div class="grille-champs" style="margin-top:.6rem">${champ('agA', 'Frais d\'agence à l\'achat (€)', { step: 500 })}</div></div>
-          <div class="carte"><h2>Travaux</h2>
+          <div class="carte" data-ss="bien"><h2>Acquisition</h2><div id="acq">${poste('n', 'not', 'Frais de notaire, régime marchand de biens')}</div>
+            <div class="grille-champs alignee" style="margin-top:.6rem">${champ('agA', 'Frais d\'agence à l\'achat (€)', { step: 500 })}</div></div>
+          <div class="carte" data-ss="travaux"><h2>Travaux</h2>
             <div id="nivBlock" class="champ"><label>Niveau</label><div class="segments" id="segNiv">${Object.entries(M.NIVEAUX).map(([k, l]) => `<button data-v="${k}" aria-pressed="${S.niveau === k}">${l}</button>`).join('')}</div></div>
             <div class="champ"><label>Gamme</label><div class="segments" id="segGam">${Object.entries(M.GAMMES).map(([k, l]) => `<button data-v="${k}" aria-pressed="${String(S.gamme) === k}">${l}</button>`).join('')}</div></div>
             <div id="trv">${M.W.map(i => poste('w', i.id, i.l)).join('')}</div>
             <div class="grille-champs" style="margin-top:.6rem">${champ('aleas', 'Aléas de chantier (%)')}</div>
             <div class="compte">${'<div class="compte-ligne"><span>Postes cochés</span><b id="trvBase"></b></div><div class="compte-ligne"><span>Repères des postes cochés</span><b id="trvRef"></b></div><div class="compte-ligne total"><span>Total travaux hors taxes</span><b id="trvTot"></b></div>'}</div>
             <p class="aide" id="trvReelNote" hidden></p></div>
-          <div class="carte"><h2>Frais annexes</h2><div id="anx">${M.X.map(i => i.g ? `<div class="poste-groupe">${esc(i.g)}</div>` : poste('x', i.id, i.l)).join('')}</div>
+          <div class="carte" data-ss="frais"><h2>Frais annexes</h2><div id="anx">${M.X.map(i => i.g ? `<div class="poste-groupe">${esc(i.g)}</div>` : poste('x', i.id, i.l)).join('')}</div>
             <div class="grille-champs" style="margin-top:.6rem">${champ('agV', 'Agence à la revente (%)', { dec: 1, step: .5 })}</div></div>
-          <div class="carte"><h2>Prestations d'une société partenaire</h2>
+          <div class="carte" data-ss="frais"><h2>Prestations d'une société partenaire</h2>
             ${[['m1', M.M1, 'Mission 1'], ['m2', M.M2, 'Mission 2']].map(([k, L, t]) => `<div class="poste-groupe">${t}</div>${L.map((p, i) => `<label class="case"><input type="checkbox" data-mis="${k}-${i}"${S[k][i] ? ' checked' : ''}> <span style="flex:1">${esc(p[0])} <small class="discret">${String(p[1]).replace('.', ',')} %</small></span><b class="montant" data-misv="${k}-${i}"></b></label>`).join('')}`).join('')}</div>
-          <div class="carte"><h2>Paramètres de l'opération</h2><div class="grille-champs">
+          <div class="carte" data-ss="parametres"><h2>Paramètres de l'opération</h2><div class="grille-champs alignee">
             ${champ('taux', 'Intérêts de l\'associé investisseur (% par an)', { dec: 1, step: .5 })}${champ('obj', 'Objectif de marge nette (%)', { dec: 1 })}
             ${champ('part', 'Part de l\'associé opérateur (%)')}${champ('pfu', 'Prélèvement sur dividendes (%)', { dec: 1, step: .1 })}
             ${champ('dmax', 'Durée maximum (mois)')}
             <div class="champ"><label for="tvaT">TVA sur les travaux</label><select id="tvaT"><option value="10">10 %</option><option value="20">20 %</option><option value="5.5">5,5 %</option></select></div>
             <div class="champ"><label for="tvaMode">TVA à la revente</label><select id="tvaMode"><option value="marge">Sur la marge</option><option value="total">Sur le prix total</option><option value="none">Aucune</option></select></div>
           </div><button class="bouton bouton-petit" id="razSim">Réinitialiser les postes du type</button></div>
+          <div data-ss="resultats" id="simDetail"></div>
         </div>
         <div class="colonne" id="resultats" style="position:sticky;top:0"></div>
       </div>`;
+    const montrerSS = () => { $$('[data-ss]', z).forEach(x => { x.hidden = x.dataset.ss !== ssSim; }); $$('[data-ss-choix]', z).forEach(x => x.classList.toggle('actif', x.dataset.ssChoix === ssSim)); };
+    $$('[data-ss-choix]', z).forEach(x => x.onclick = () => { ssSim = x.dataset.ssChoix; montrerSS(); });
+    montrerSS();
     $('#tvaT').value = String(S.tvaT); $('#tvaMode').value = S.tvaMode;
     const champsNum = $$('input[data-k]', z);
     const maj = (sauver = true) => {
@@ -518,7 +525,8 @@
         note.innerHTML = 'Le calcul retient le budget forfaitaire ' + (S.trvForfaitOrigine === 'visite' ? 'de la visite' : 'de l\'annonce') + ' : <b>' + eur(r.T) + '</b>, aléas compris. Les postes ci-dessus ne comptent pas. <button type="button" class="bouton-lien" id="trvDetail">Chiffrer poste par poste</button>';
         $('#trvDetail').onclick = () => { S.trvForfait = null; maj(); };
       } else if (r.reel) note.textContent = 'Le calcul retient le coût réel du chantier : ' + eur(r.T) + ' (onglet Travaux).';
-      $('#resultats').innerHTML = panneauResultats(A, A.S);
+      $('#resultats').innerHTML = panneauCompact(A, A.S);
+      $('#simDetail').innerHTML = panneauDetails(A, A.S);
       majEntete(b);
     };
     /* événements */
@@ -541,22 +549,28 @@
     $('#razSim').onclick = () => confirmer('Remettre les postes de travaux et de frais annexes aux valeurs par défaut du type ?', () => { M.initLines(S); maj(); });
     maj(false);
   }
-  const COULEURS = { 'Achat': '#0e2a1d', 'Notaire et agence': '#4f6b5a', 'Travaux': '#1f5c3e', 'Annexes': '#8aa592', 'Prestations': '#6d7f74', 'TVA': '#8e1f24', 'Intérêts': '#5b3a52', 'IS': '#a8864f', 'Bénéfice net': '#c9ab74' };
+  const COULEURS = { 'Achat': '#14523a', 'Notaire et agence': '#2f6f9f', 'Travaux': '#d98e1f', 'Annexes': '#7b5ea7', 'Prestations': '#8a9a90', 'TVA': '#c8342b', 'Intérêts': '#a3456f', 'IS': '#5c6670', 'Bénéfice net': '#2fb36a' };
   function partsRepartition(r) { return [['Achat', r.achat], ['Notaire et agence', r.acq], ['Travaux', r.T], ['Annexes', r.anx + r.agV], ['Prestations', r.mis], ['TVA', r.tva], ['Intérêts', r.int], ['IS', r.is], ['Bénéfice net', Math.max(0, r.N)]]; }
-  function panneauResultats(A, S) {
-    const r = A.r, P = A.partage, L = A.lim, parts = partsRepartition(r), tot = parts.reduce((s, p) => s + p[1], 0) || 1;
-    const tvaTxt = S.tvaMode === 'marge' ? '(revente − achat) ÷ 6' : S.tvaMode === 'total' ? 'revente ÷ 6' : 'non appliquée';
-    const isTxt = r.R <= 0 ? 'aucun bénéfice' : r.R <= 42500 ? '15 %' : '15 % jusqu\'à 42 500 €, 25 % au-delà';
+  const panneauResultats = (A, S) => panneauCompact(A, S) + panneauDetails(A, S);
+  function panneauCompact(A, S) {
+    const r = A.r, parts = partsRepartition(r).filter(p => p[1] > 0), tot = parts.reduce((s, p) => s + p[1], 0) || 1, cent = v => Math.round(v / tot * 100);
     return `
-      <div class="indicateurs" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin:0">
+      <div class="indicateurs" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin:0 0 .8rem">
         ${indic('Marge nette', pc(r.m), { etat: ETATS[A.etat][0], c: ETATS[A.etat][0], detail: 'objectif ' + S.obj + ' %' })}
         ${indic('Bénéfice net', eur(r.N), { c: r.N < 0 ? 'rouge' : '' })}
         ${indic('Coût de revient', eur(r.C))}
         ${indic('Trésorerie maximale', eur(r.treso), { etat: r.treso > S.env ? 'rouge' : '', detail: 'enveloppe ' + eur(S.env) })}
       </div>
-      <div class="carte"><h2>Répartition du prix de revente</h2>
-        <div class="repartition">${parts.map(p => `<i style="width:${p[1] / tot * 100}%;background:${COULEURS[p[0]]}" title="${p[0]}"></i>`).join('')}</div>
-        <div class="legende">${parts.filter(p => p[1] > 0).map(p => `<span><i style="background:${COULEURS[p[0]]}"></i>${p[0]} ${pc(p[1] / tot, 0)}</span>`).join('')}</div></div>
+      <div class="carte"><h2>Où va le prix de revente</h2>
+        <p class="repartition-phrase">Sur <b>100 €</b> de revente : ${parts.map(p => `<span style="color:${COULEURS[p[0]]}">${cent(p[1])} € ${p[0] === 'Bénéfice net' ? 'de <b>bénéfice net</b>' : p[0].toLowerCase()}</span>`).join(', ')}.</p>
+        <div class="repartition grande">${parts.map(p => `<i style="width:${p[1] / tot * 100}%;background:${COULEURS[p[0]]}" title="${p[0]} : ${eur(p[1])}">${p[1] / tot > .08 ? cent(p[1]) + ' %' : ''}</i>`).join('')}</div>
+        <div class="legende grande">${parts.map(p => `<span><i style="background:${COULEURS[p[0]]}"></i><span>${p[0]}</span><b>${eur(p[1])}</b></span>`).join('')}</div></div>`;
+  }
+  function panneauDetails(A, S) {
+    const r = A.r, P = A.partage, L = A.lim;
+    const tvaTxt = S.tvaMode === 'marge' ? '(revente − achat) ÷ 6' : S.tvaMode === 'total' ? 'revente ÷ 6' : 'non appliquée';
+    const isTxt = r.R <= 0 ? 'aucun bénéfice' : r.R <= 42500 ? '15 %' : '15 % jusqu\'à 42 500 €, 25 % au-delà';
+    return `
       <div class="carte"><h2>Fiscalité et marge nette</h2><div class="compte">
         ${ligneCompte('Prix de revente', eur(r.vente))}
         ${ligneCompte('− Achat', eur(r.achat))}
@@ -696,11 +710,36 @@
     $$('[data-relance]', z).forEach(x => x.onclick = () => nouvelleRelance({ bienId: b.id, contactId: x.dataset.relance }));
   }
 
-  /* ---------- Pièces ---------- */
+  /* ---------- Pièces : cases à cocher et documents importés (classés seuls d'après leur nom) ---------- */
+  const CLASSEMENT_PIECES = [['diagnostics', /diag|dpe|amiante|plomb|termite|carrez|erp|electri|gaz|dda/i], ['pv', /\bpv\b|proc[eè]s|assembl|\bag\b|ago/i], ['reglement', /r[eè]glement|copro|edd|descriptif/i], ['tf', /taxe|fonci|\btf\b/i], ['titre', /titre|acte|propri/i], ['urbanisme', /urba|cadastr|pr[eé]empt|\bcu\b|certificat/i]];
   function ongletPieces(z, b) {
-    z.innerHTML = `<div class="carte">${PIECES.map(p => { const v = b.pieces[p[0]] || {}; return `<div class="poste" style="grid-template-columns:22px minmax(0,1fr) 150px"><input type="checkbox" id="pc-${p[0]}" data-piece="${p[0]}"${v.ok ? ' checked' : ''}><label class="poste-nom" for="pc-${p[0]}">${p[1]}</label><input type="date" data-pdate="${p[0]}" value="${esc(v.date || '')}" aria-label="Date de réception"><div class="poste-repere"><input data-pnote="${p[0]}" value="${esc(v.note || '')}" placeholder="Note" style="min-height:30px"></div></div>`; }).join('')}
-      <p class="aide" style="margin-top:.6rem">${PIECES.filter(p => (b.pieces[p[0]] || {}).ok).length} pièce(s) reçue(s) sur ${PIECES.length}.</p></div>`;
+    b.pieces = b.pieces || {};
     const get = k => (b.pieces[k] = b.pieces[k] || {});
+    const autres = get('autres'); autres.docs = autres.docs || [];
+    const tous = () => PIECES.concat([['autres', 'Autres documents']]).flatMap(p => (b.pieces[p[0]] || {}).docs || []);
+    const ajouter = async (k, fichiers) => {
+      let n = 0;
+      for (const f of fichiers) {
+        const cle = k || (CLASSEMENT_PIECES.find(c => c[1].test(f.name || '')) || ['autres'])[0], p = get(cle);
+        try { const m = await MarcheoPhotos.ajouterFichier(b.id, 'piece-' + cle, f); (p.docs = p.docs || []).push(m); if (cle !== 'autres') { p.ok = true; if (!p.date) p.date = aujourdhui(); } n++; } catch (e) { notifier((f.name || 'Document') + ' : ' + e.message, 'erreur'); }
+      }
+      sauverMaintenant('biens', b); if (n) notifier(n + ' document(s) importé(s).', 'succes'); afficher();
+    };
+    const ligne = (k, l, coche) => { const v = b.pieces[k] || {}; return `<div class="piece${v.ok ? ' recue' : ''}">
+        <div class="piece-tete">${coche ? `<input type="checkbox" id="pc-${k}" data-piece="${k}"${v.ok ? ' checked' : ''}>` : ''}<label class="poste-nom" for="pc-${k}">${l}</label>${coche ? `<input type="date" data-pdate="${k}" value="${esc(v.date || '')}" aria-label="Date de réception">` : ''}</div>
+        <div class="pg-docs">${(v.docs || []).map(d => lienDoc(d) + `<button type="button" class="bouton-icone petit" data-docsuppr="${k}|${d.id}" aria-label="Retirer">${I.fermer}</button>`).join('')}<label class="bouton bouton-petit">+ Importer<input type="file" multiple accept="application/pdf,image/*" hidden data-import="${k}"></label></div>
+        ${coche ? `<input class="piece-note" data-pnote="${k}" value="${esc(v.note || '')}" placeholder="Note">` : ''}</div>`; };
+    z.innerHTML = `
+      <label class="depot" id="pDepot"><input type="file" multiple accept="application/pdf,image/*" hidden data-import=""><b>Importer des documents</b><span>Glisser les fichiers ici ou toucher pour choisir (PDF ou photos). Ils sont rangés seuls d'après leur nom : diagnostics, PV d'AG, règlement, taxe foncière, titre, urbanisme.</span></label>
+      <div class="carte">${PIECES.map(p => ligne(p[0], p[1], true)).join('')}${ligne('autres', 'Autres documents', false)}
+      <p class="aide" style="margin-top:.6rem">${PIECES.filter(p => (b.pieces[p[0]] || {}).ok).length} pièce(s) reçue(s) sur ${PIECES.length} · ${tous().length} document(s).</p></div>`;
+    lierDocs(z, tous);
+    $$('[data-import]', z).forEach(x => x.onchange = () => ajouter(x.dataset.import, Array.from(x.files)));
+    const dep = $('#pDepot', z);
+    dep.addEventListener('dragover', e => { e.preventDefault(); dep.classList.add('survol'); });
+    dep.addEventListener('dragleave', () => dep.classList.remove('survol'));
+    dep.addEventListener('drop', e => { e.preventDefault(); dep.classList.remove('survol'); ajouter('', Array.from(e.dataTransfer.files)); });
+    $$('[data-docsuppr]', z).forEach(x => x.onclick = () => confirmer('Retirer ce document de la fiche ?', () => { const [k, id] = x.dataset.docsuppr.split('|'), p = get(k); p.docs = (p.docs || []).filter(d => d.id !== id); sauverMaintenant('biens', b); afficher(); }));
     $$('[data-piece]', z).forEach(x => x.onchange = () => { const p = get(x.dataset.piece); p.ok = x.checked; if (x.checked && !p.date) p.date = aujourdhui(); sauverMaintenant('biens', b); afficher(); });
     $$('[data-pdate]', z).forEach(x => x.onchange = () => { get(x.dataset.pdate).date = x.value; sauverPlusTard('biens', b); });
     $$('[data-pnote]', z).forEach(x => x.oninput = () => { get(x.dataset.pnote).note = x.value; sauverPlusTard('biens', b); });
@@ -1107,7 +1146,8 @@
   /* ---------- Frise : les dix étapes, de « Repéré » à « Vendu » ---------- */
   function friseProjet(b) {
     const P = parcoursDe(b), dp = datesPrevues(b), t = aujourdhui(), classe = b.etape === 'ecarte', e = etapeAffichee(b), rang = RANG[e];
-    const noeuds = ETAPES.filter(x => x[0] !== 'ecarte');
+    const COURT = { offre: 'Offre', acte: 'Acte', vente: 'En vente' };
+    const noeuds = ETAPES.filter(x => x[0] !== 'ecarte').map(([k, l]) => [k, COURT[k] || l]);
     const prevu = { repere: b.creeLe, visite: dp.visite, etude: jours(dp.visite, 2), offre: dp.offre, compromis: dp.compromis, acte: dp.acte, chantier: dp.debutTravaux, reception: dp.finTravaux, vente: dp.miseEnVente, vendu: dp.acteVente };
     const dateFaite = k => { if (k === 'repere') return b.creeLe || ''; const l = PARCOURS.filter(s => s.n === k && P.faits[s.id] && P.faits[s.id].date); return l.length ? P.faits[l[l.length - 1].id].date : ''; };
     const courant = PARCOURS.find(s => !P.faits[s.id]);
@@ -1639,11 +1679,37 @@
         ${a.chargesAnnuelles ? ligne('Charges de copropriété', eur(a.chargesAnnuelles) + ' par an', 'annoncées par le site') : ''}
         ${e.signaux.length ? ligne('Signaux', `<span class="vert">${esc(e.signaux.join(', '))}</span>`) : ''}
       </div>
+      <div id="annDVF" class="ann-dvf">${blocDVFAnnonce(a, e)}</div>
       ${a.texte ? `<details style="margin-top:.6rem"><summary class="aide">Texte de l'alerte</summary><p class="aide">${esc(a.texte)}</p></details>` : ''}`,
       [{ l: 'Écarter', classe: 'bouton-danger', f: () => { a.statutTri = 'ecartee'; D.enregistrer('annonces', a); afficher(); } },
        { l: 'Corriger', f: () => { setTimeout(() => corrigerAnnonce(D.obtenir('annonces', a.id)), 0); } },
        { l: 'Retenir et prendre rendez-vous', classe: 'bouton-principal', f: () => retenirAnnonce(D.obtenir('annonces', a.id)) }]);
+    lierDVFAnnonce(fond, a, e);
     return fond;
+  }
+  function blocDVFAnnonce(a, e) {
+    const d = a.dvf;
+    if (!d) return `<div class="compte-titre">Ventes récentes du secteur</div><p class="aide">Les 3 dernières ventes similaires et le prix au m² réel du quartier (ventes publiques DVF).</p><button type="button" class="bouton bouton-vert" id="annDVFbtn">Voir les ventes du secteur</button>`;
+    const pm2 = e.surface ? e.prix / e.surface : 0, s = d.secteur || {};
+    return `<div class="compte-titre">Ventes récentes du secteur <small class="discret">DVF ${esc(d.periode || '')}${d.lieu && !d.lieu.precis ? ' · autour du centre de ' + esc(d.lieu.commune || 'la commune') : ''}</small></div>
+      <div class="compte">${ligneCompte('Prix médian du secteur', eur(s.mediane) + ' /m²', { s: 'fourchette ' + eur(s.p25) + ' à ' + eur(s.p75) + ' · ' + s.n + ' ventes' })}
+        ${pm2 ? ligneCompte('Prix affiché de l\'annonce', `<span class="${pm2 < s.mediane ? 'vert' : 'orange'}">${eur(pm2)} /m²</span>`, { s: (pm2 < s.mediane ? pc(1 - pm2 / s.mediane, 0) + ' sous' : pc(pm2 / s.mediane - 1, 0) + ' au-dessus de') + ' la médiane · revente estimée ' + eur(e.pm2) + ' /m²' }) : ''}
+        ${e.pm2 && s.p75 && e.pm2 > s.p75 * 1.05 ? `<div class="alerte-bandeau">Revente estimée à ${eur(e.pm2)} /m², au-dessus du haut de fourchette du secteur (${eur(s.p75)} /m²) : la marge est probablement surestimée. « Corriger » pour ramener le prix du secteur à ${eur(s.p75)}.</div>` : ''}
+        ${(d.ventes || []).map(v => ligneCompte(esc(v.adresse) + `<small class="discret">${dateFr(v.date)} · ${v.surface} m²${v.pieces ? ' · ' + v.pieces + ' p.' : ''}${v.distance != null ? ' · à ' + (v.distance < 1000 ? v.distance + ' m' : (v.distance / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' km') : ''}</small>`, eur(v.prix) + `<small class="sous-ligne">${eur(v.m2)} /m²</small>`)).join('')}</div>`;
+  }
+  function lierDVFAnnonce(fond, a, e) {
+    const bt = $('#annDVFbtn', fond); if (!bt) return;
+    bt.onclick = async () => {
+      if (D.etat().mode !== 'distant') { notifier('La recherche DVF passe par le serveur : se connecter d\'abord.', 'erreur'); return; }
+      if (e.type === 'box') { notifier('DVF ne donne pas de surface pour les boxes.', 'erreur'); return; }
+      bt.disabled = true; bt.textContent = 'Recherche…';
+      try {
+        const rue = /\d/.test(a.titre || '') && /\b(rue|av|avenue|bd|boulevard|place|all[ée]e|chemin|route|impasse|quai|cours|square|villa)\b/i.test(a.titre || '') ? a.titre : '';
+        const x = await requeteDVF({ rue, cp: a.cp, ville: a.ville }, e.type, e.surface, e.pieces);
+        const cur = D.obtenir('annonces', a.id); cur.dvf = dvfEnFiche(x); D.enregistrer('annonces', cur);
+        $('#annDVF', fond).innerHTML = blocDVFAnnonce(cur, e);
+      } catch (err) { bt.disabled = false; bt.textContent = 'Voir les ventes du secteur'; notifier(/inconnue/i.test(err.message) ? 'Serveur à mettre à jour (Code.gs) pour la recherche DVF.' : 'DVF : ' + err.message, 'erreur'); }
+    };
   }
   /* Correction : nouveaux champs, recalcul complet (travaux, coûts, statut, classement) et retour sur la fiche avec les écarts */
   function corrigerAnnonce(a) {
@@ -1733,6 +1799,10 @@
     if (!/\d/.test(rue) || !/\b(rue|av|avenue|bd|boulevard|place|all[ée]e|chemin|route|impasse|quai|cours|square|sentier|villa|cit[ée]|r[ée]sidence)\b/i.test(rue)) rue = '';
     return { rue, cp, ville };
   }
+  /* lieu : { rue, cp, ville } ; type du bien Marchéo ; renvoie le résultat du serveur */
+  const requeteDVF = (L, type, surface, pieces) => D.action('ventesDVF', { adresse: L.rue || '', cp: L.cp || '', ville: L.ville || '', type: type === 'maison' ? 'maison' : 'appt', surface: surface || 0, pieces: type === 'local' ? 0 : pieces || 0 });
+  const dvfEnFiche = x => ({ secteur: x.secteur, lieu: x.lieu, periode: x.periode, derniere: x.derniere, rayon: x.rayon, tolerance: x.tolerance, type: x.type, le: aujourdhui(), ventes: x.ventes });
+  const compsDVF = x => x.ventes.map(v => ({ adresse: v.adresse, surface: v.surface, prix: v.prix, date: v.date, pieces: v.pieces, distance: v.distance, source: 'DVF' }));
   const enCoursDVF = new Set();
   async function chercherDVF(b, silencieux) {
     const S = b.sim || {}, L = lieuBien(b);
@@ -1742,10 +1812,12 @@
     if (enCoursDVF.has(b.id)) return null; enCoursDVF.add(b.id);
     try {
       /* un local se revend en logement : on compare aux ventes d'appartements */
-      const x = await D.action('ventesDVF', { adresse: L.rue, cp: L.cp, ville: L.ville, type: S.type === 'maison' ? 'maison' : 'appt', surface: S.surf || 0, pieces: b.nbPieces || (S.type === 'local' ? 0 : S.pieces) || 0 });
+      const a = b.annonceId ? D.obtenir('annonces', b.annonceId) : null;
+      /* ventes déjà cherchées depuis l'annonce, pour la même adresse : pas de nouvelle requête */
+      const x = silencieux && a && a.dvf && a.dvf.ventes ? a.dvf : await requeteDVF(L, S.type, S.surf, b.nbPieces || S.pieces);
       const cur = D.obtenir('biens', b.id) || b;
-      cur.comps = (cur.comps || []).filter(c => c.source !== 'DVF').concat(x.ventes.map(v => ({ adresse: v.adresse, surface: v.surface, prix: v.prix, date: v.date, pieces: v.pieces, distance: v.distance, source: 'DVF' })));
-      cur.dvf = { secteur: x.secteur, lieu: x.lieu, periode: x.periode, derniere: x.derniere, rayon: x.rayon, tolerance: x.tolerance, type: x.type, le: aujourdhui() };
+      cur.comps = (cur.comps || []).filter(c => c.source !== 'DVF').concat(compsDVF(x));
+      cur.dvf = dvfEnFiche(x); delete cur.dvf.ventes;
       sauverMaintenant('biens', cur); Object.assign(b, cur);
       D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'note', auto: true, texte: 'DVF : ' + x.ventes.length + ' vente(s) comparable(s) ' + (x.lieu.precis ? 'autour de l\'adresse' : 'dans la commune (adresse non précise)') + ', médiane du secteur ' + eur(x.secteur.mediane) + ' /m² sur ' + x.secteur.n + ' ventes (' + x.periode + ').' });
       if (!silencieux) notifier(x.ventes.length + ' vente(s) DVF trouvée(s).', x.ventes.length ? 'succes' : 'erreur');
