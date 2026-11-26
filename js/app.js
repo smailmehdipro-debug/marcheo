@@ -6,11 +6,11 @@
   /* ================= Référentiels ================= */
   const ETAPES = [
     ['repere', 'Repéré'], ['visite', 'Visité'], ['etude', 'Étude'], ['offre', 'Offre envoyée'], ['compromis', 'Compromis'],
-    ['acte', 'Acte signé'], ['chantier', 'Chantier'], ['vente', 'En vente'], ['vendu', 'Vendu'], ['ecarte', 'Écarté']
+    ['acte', 'Acte signé'], ['chantier', 'Chantier'], ['reception', 'Réception'], ['vente', 'En vente'], ['vendu', 'Vendu'], ['ecarte', 'Écarté']
   ];
   const ETAPE = Object.fromEntries(ETAPES);
   const RANG = Object.fromEntries(ETAPES.map((e, i) => [e[0], i]));
-  const ENGAGE = ['compromis', 'acte', 'chantier', 'vente']; // capital mobilisé sur l'enveloppe
+  const ENGAGE = ['compromis', 'acte', 'chantier', 'reception', 'vente']; // capital mobilisé sur l'enveloppe
   const PIECES = [
     ['diagnostics', 'Diagnostics techniques'], ['pv', "Procès-verbaux d'assemblée (3 dernières années)"], ['reglement', 'Règlement de copropriété'],
     ['tf', 'Avis de taxe foncière'], ['titre', 'Titre de propriété'], ['urbanisme', "Renseignements d'urbanisme"]
@@ -313,7 +313,9 @@
   }
   function changerEtape(b, etape, apres) {
     const faire = motif => {
-      const avant = b.etape; b.etape = etape; if (motif != null) b.motif = motif;
+      const avant = b.etape, P = parcoursDe(b); b.etape = etape; if (motif != null) b.motif = motif;
+      if (etape === 'ecarte') { b.etapeAvantClasse = avant === 'ecarte' ? b.etapeAvantClasse : avant; P.classe = { date: aujourdhui(), motif: motif || '', etape: b.etapeAvantClasse }; }
+      else { delete P.classe; let dernier = -1; PARCOURS.forEach((s, i) => { if (s.etape && RANG[s.etape] <= RANG[etape]) dernier = i; }); PARCOURS.slice(0, dernier + 1).forEach(s => { if (!P.faits[s.id]) P.faits[s.id] = { date: aujourdhui(), herite: true }; }); }
       sauverMaintenant('biens', b);
       D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'note', texte: 'Étape : ' + ETAPE[avant || 'repere'] + ' → ' + ETAPE[etape] + (motif ? ' (' + motif + ')' : ''), auto: true });
       if (etape === 'chantier') synchroniserLignes(b, true);
@@ -326,26 +328,29 @@
   }
 
   /* ================= Fiche bien ================= */
-  const ONGLETS = [['synthese', 'Synthèse'], ['visite', 'Visite'], ['avancement', 'Avancement'], ['simulation', 'Simulation'], ['travaux', 'Travaux'], ['journal', 'Journal'], ['contacts', 'Contacts'], ['pieces', 'Pièces'], ['comparables', 'Comparables']];
+  const ONGLETS = [['synthese', 'Synthèse'], ['avancement', 'Avancement'], ['visite', 'Visite'], ['simulation', 'Simulation'], ['travaux', 'Travaux'], ['comparables', 'Comparables'], ['pieces', 'Pièces'], ['contacts', 'Contacts'], ['journal', 'Journal']];
   function vueBien(c, r) {
     const b = D.obtenir('biens', r.id);
     if (!b) { c.innerHTML = '<div class="vide">Bien introuvable. <a href="#/biens">Retour à la liste</a></div>'; return; }
     b.sim = M.normalize(b.sim); b.comps = b.comps || []; b.pieces = b.pieces || {}; b.liens = b.liens || []; b.travaux = b.travaux || { lignes: [], utiliserReel: false };
-    const o = ONGLETS.some(x => x[0] === r.o) ? r.o : 'synthese', A = analyse(b);
+    const o = ONGLETS.some(x => x[0] === r.o) ? r.o : RANG[etapeAffichee(b)] >= RANG.visite ? 'avancement' : 'synthese', A = analyse(b), s = etapeCourante(b);
     titre(titreBien(b), typeBien(b) + ' · ' + ETAPE[b.etape || 'repere'], I.biens);
-    const courant = RANG[b.etape || 'repere'];
+    const suite = b.etape === 'ecarte' ? 'Rouvrir le dossier' : !s ? 'Opération terminée' : s.id === 'visite' ? (b.visiteBrouillon ? 'Reprendre la visite' : 'Faire la visite') : s.id === 'reception' && !b.reception ? (b.receptionBrouillon ? 'Reprendre la visite de fin' : 'Visite de fin de chantier') : s.t;
     c.innerHTML = `
       <div class="fiche-tete"><div><a class="bouton-lien" href="#/biens">${'‹'} Projets en cours</a><h1>${esc(titreBien(b))}</h1><div class="sous">${esc(typeBien(b))} · ${surfaceBien(b)}${b.source ? ' · ' + esc(b.source) : ''}${b.lien ? ` · <a href="${esc(b.lien)}" target="_blank" rel="noopener">annonce</a>` : ''}</div></div>
-        <div class="actions"><span id="enteteMarge">${voyantEtat(A.etat)}</span><button class="bouton bouton-petit bouton-vert" id="bVisite">${b.visiteBrouillon ? 'Reprendre la visite' : 'Visite'}</button><button class="bouton bouton-petit" id="bPdf">PDF</button><button class="bouton bouton-petit" id="bDup">Dupliquer</button><button class="bouton bouton-petit bouton-danger" id="bSuppr">Supprimer</button></div></div>
-      <div class="etapes" role="group" aria-label="Étape">${ETAPES.map((e, i) => `<button data-etape="${e[0]}" class="${e[0] === 'ecarte' ? 'ecarte ' : ''}${e[0] === (b.etape || 'repere') ? 'courante' : (b.etape !== 'ecarte' && i < courant ? 'passee' : '')}" aria-pressed="${e[0] === (b.etape || 'repere')}">${e[1]}</button>`).join('')}</div>
-      ${b.etape === 'ecarte' && b.motif ? `<div class="info-bandeau">Écarté : ${esc(b.motif)}</div>` : ''}
+        <div class="actions"><span id="enteteMarge">${voyantEtat(A.etat)}</span>${s || b.etape === 'ecarte' ? `<button class="bouton bouton-petit bouton-suite" id="bSuite" style="--c:${COULEUR_ETAPE[b.etape === 'ecarte' ? 'ecarte' : s.n]}">${esc(suite)} ›</button>` : ''}
+          <details class="menu-plus"><summary class="bouton bouton-petit" aria-label="Autres actions">•••</summary><div class="menu-plus-liste">
+            <button id="bPdf">Dossier d'opération (PDF)</button><button id="bVisite">${b.visiteBrouillon ? 'Reprendre la visite' : b.visite ? 'Refaire une visite' : 'Faire la visite'}</button>${b.etape !== 'ecarte' ? '<button id="bClasser">Classer le dossier</button>' : ''}<button id="bDup">Dupliquer</button><button id="bSuppr" class="rouge">Supprimer</button></div></details></div></div>
+      ${friseProjet(b)}
       <nav class="onglets" role="tablist">${ONGLETS.map(x => `<button role="tab" class="${x[0] === o ? 'actif' : ''}" data-onglet="${x[0]}">${x[1]}${x[0] === 'journal' ? ' ' + compteJournal(b) : x[0] === 'pieces' ? ' ' + compteurPieces(b) : ''}</button>`).join('')}</nav>
       <div id="ongletContenu"></div>`;
-    $$('[data-etape]', c).forEach(x => x.onclick = () => { if (x.dataset.etape !== b.etape) changerEtape(b, x.dataset.etape); });
+    lierFrise(c, b);
+    const bs = $('#bSuite'); if (bs) bs.onclick = () => { if (b.etape === 'ecarte') return rouvrirDossier(b); if (s.id === 'visite') return ouvrirVisite(b); if (s.id === 'reception' && !b.reception) return ouvrirReception(b); if (o === 'avancement') { const g = $('.guide-carte'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'start' }); } else aller('#/bien/' + b.id + '/avancement'); };
+    const bc = $('#bClasser'); if (bc) bc.onclick = () => classerDossier(b);
     $$('[data-onglet]', c).forEach(x => x.onclick = () => aller('#/bien/' + b.id + '/' + x.dataset.onglet));
     $('#bPdf').onclick = () => pdf(b);
     $('#bVisite').onclick = () => ouvrirVisite(b);
-    $('#bDup').onclick = () => { const n = clone(b); delete n.id; delete n._maj; n.sim.adresse = (n.sim.adresse || '') + ' (copie)'; n.etape = 'etude'; const x = D.enregistrer('biens', n); aller('#/bien/' + x.id); };
+    $('#bDup').onclick = () => { const n = clone(b); delete n.id; delete n._maj; n.sim.adresse = (n.sim.adresse || '') + ' (copie)'; n.etape = 'repere'; ['parcours', 'avancement', 'visite', 'reception', 'chantier'].forEach(k => { n[k] = undefined; }); const x = D.enregistrer('biens', n); aller('#/bien/' + x.id); };
     $('#bSuppr').onclick = () => confirmer('Supprimer définitivement ce bien, son journal et ses relances ?', () => {
       D.liste('journal').filter(j => j.bienId === b.id).forEach(j => D.supprimer('journal', j.id));
       D.liste('relances').filter(j => j.bienId === b.id).forEach(j => D.supprimer('relances', j.id));
@@ -358,21 +363,50 @@
   const compteurPieces = b => `<small class="discret">${PIECES.filter(p => (b.pieces[p[0]] || {}).ok).length}/${PIECES.length}</small>`;
   function majEntete(b) { const e = $('#enteteMarge'); if (e) e.innerHTML = voyantEtat(analyse(b).etat); }
 
-  /* ---------- Synthèse ---------- */
+  /* ---------- Synthèse : le calcul automatique, expliqué ligne par ligne ---------- */
+  function sourcesCalcul(b, A) {
+    const S = A.S, r = A.r, P = parcoursDe(b), acc = P.offres.filter(o => o.statut === 'acceptee').pop(), R = reglages();
+    const achat = acc && Math.round(acc.montant) === Math.round(r.achat) ? 'offre acceptée par le vendeur'
+      : b.prixAffiche && r.achat < b.prixAffiche ? 'prix affiché ' + eur(b.prixAffiche) + ' moins ' + pc(1 - r.achat / b.prixAffiche, 0) + ' de négociation'
+      : b.prixAffiche && Math.round(r.achat) === Math.round(b.prixAffiche) ? 'prix affiché, sans négociation' : 'prix saisi dans la simulation';
+    const travaux = b.travaux && b.travaux.utiliserReel && (b.travaux.lignes || []).some(l => l.devis) ? 'devis reçus, budget estimé pour les postes sans devis'
+      : S.trvForfait != null ? (S.trvForfaitOrigine === 'visite' ? 'estimés à la visite' : 'estimés d\'après l\'annonce') + ' : ' + M.NIVEAUX[S.niveau].toLowerCase() + ', ' + eur(S.surf ? r.T / S.surf : 0) + ' /m²'
+      : 'poste par poste (repères), ' + M.NIVEAUX[S.niveau].toLowerCase();
+    const q = A.quartier, d = b.dvf && b.dvf.secteur;
+    const vente = (S.type === 'box' ? 'prix saisi' : S.surf + ' m² × ' + eur(S.surf ? r.vente / S.surf : 0) + ' /m²') + (d && d.mediane ? ' · secteur DVF : ' + eur(d.mediane) + ' médian, ' + eur(d.p75) + ' haut de fourchette' : q.vise && Math.abs(q.ecart) > .02 ? ' · prix du quartier : ' + eur(q.vise) : '');
+    return { achat, travaux, vente, notaire: 'notaire ≈ ' + pc(r.achat ? r.not / r.achat : 0, 1) + ' du prix' + (S.agA ? ' + agence ' + eur(S.agA) : ''), annexes: 'taxe foncière, charges, assurance, diagnostics… sur ' + S.duree + ' mois', env: R.enveloppe };
+  }
   function ongletSynthese(z, b) {
-    const A = analyse(b), r = A.r, S = A.S, p = b.prochaine || {}, ctl = A.controles, ind = A.ind;
+    const A = analyse(b), r = A.r, S = A.S, src = sourcesCalcul(b, A), ctl = A.controles, ind = A.ind, s = etapeCourante(b), d = b.dvf;
     const etatI = e => e === 'ok' ? 'vert' : e === 'juste' ? 'orange' : e === 'ko' ? 'rouge' : '';
+    const verdict = { ok: 'Opération rentable', juste: 'Marge juste', ko: 'Pas rentable à ce prix' }[A.etat];
+    const reste = src.env - r.treso;
+    const lc = (l, v, sTxt, o = {}) => `<div class="calc-ligne${o.total ? ' total' : ''}${o.moins ? ' moins' : ''}"><span><b>${l}</b>${sTxt ? `<small>${esc(sTxt)}</small>` : ''}</span><strong class="${o.c || ''}">${o.moins ? '− ' : ''}${v}</strong></div>`;
     z.innerHTML = `
       ${A.chantier && A.chantier.alerte ? `<div class="alerte-bandeau">Travaux engagés : ${pc(A.chantier.depassement, 0)} au-dessus du budget (seuil ${seuilTravaux(b)} %).</div>` : ''}
-      <div class="indicateurs">
-        ${indic('Bénéfice net', eur(r.N), { c: r.N < 0 ? 'rouge' : '', detail: 'objectif ' + S.obj + ' % du coût de revient' })}
-        ${indic('Marge nette', pc(r.m), { etat: ETATS[A.etat][0], c: ETATS[A.etat][0], detail: ETATS[A.etat][1] })}
-        ${indic('Coût de revient', eur(r.C), { detail: r.reel ? 'travaux au coût réel' : 'travaux au budget' })}
-        ${indic('Trésorerie maximale', eur(r.treso), { etat: ind.tresorerie.etat === 'ok' ? '' : 'rouge', detail: 'enveloppe ' + eur(S.env) })}
-        ${indic('Prix d\'achat maximum', A.lim.achatMax ? eur(A.lim.achatMax) : 'aucun', { detail: 'pour ' + S.obj + ' % · achat simulé ' + eur(S.achat) })}
-        ${indic('Contrôles', ctl.score + ' / 4', { etat: ctl.score === 4 ? 'vert' : ctl.score >= 2 ? 'orange' : 'rouge' })}
+      <div class="verdict verdict-${ETATS[A.etat][0]}"><div><span class="verdict-titre">${verdict}</span>
+        <p>Acheté <b>${eur(r.achat)}</b>, ${r.T ? 'rénové pour <b>' + eur(r.T) + '</b>, ' : ''}revendu <b>${eur(r.vente)}</b> au bout de ${S.duree} mois : il reste <b>${eur(r.N)}</b> de bénéfice net, soit ${pc(r.m)} du coût total (objectif ${S.obj} %).</p></div></div>
+      <div class="retenir">
+        <div class="retenir-carte"><small>Offre maximale</small><b>${A.lim.achatMax ? eur(A.lim.achatMax) : 'aucune'}</b><p>${A.lim.achatMax ? 'Au-dessus de ce prix, le bénéfice passe sous ton objectif de ' + S.obj + ' %.' : 'Même gratuit, l\'objectif n\'est pas atteint : revoir la revente ou les travaux.'}${b.prixAffiche && A.lim.achatMax ? ' Prix affiché : ' + eur(b.prixAffiche) + (A.lim.achatMax < b.prixAffiche ? ', soit ' + pc(1 - A.lim.achatMax / b.prixAffiche, 0) + ' de négociation à obtenir.' : ', déjà en dessous.') : ''}</p></div>
+        <div class="retenir-carte"><small>Bénéfice net</small><b class="${ETATS[A.etat][0]}">${eur(r.N)}</b><p>Ce qui reste après tous les frais, la TVA sur la marge, les intérêts et l'impôt, pour un achat à ${eur(r.achat)}.</p></div>
+        <div class="retenir-carte"><small>Argent à avancer</small><b class="${reste < 0 ? 'rouge' : ''}">${eur(r.treso)}</b><p>Le besoin d'argent le plus haut pendant l'opération. Ton enveloppe : ${eur(src.env)}, ${reste >= 0 ? 'il reste ' + eur(reste) : '<span class="rouge">dépassée de ' + eur(-reste) + '</span>'}.</p></div>
       </div>
       <div class="deux-colonnes">
+        <div class="colonne">
+          <div class="carte"><h2>Le calcul, ligne par ligne</h2>
+            ${lc('Achat', eur(r.achat), src.achat)}
+            ${lc('Notaire et agence', eur(r.acq), src.notaire)}
+            ${lc('Travaux', eur(r.T), src.travaux)}
+            ${lc('Frais pendant l\'opération', eur(r.anx), src.annexes)}
+            ${r.agV + r.mis ? lc('Frais de revente', eur(r.agV + r.mis), 'agence et prestations à la revente') : ''}
+            ${lc('Coût total', eur(r.C), '', { total: 1 })}
+            ${lc('Revente', eur(r.vente), src.vente)}
+            ${r.tva ? lc('TVA sur la marge', eur(r.tva), '(revente − achat) ÷ 6', { moins: 1 }) : ''}
+            ${r.int ? lc('Intérêts', eur(r.int), S.taux + ' % par an sur ' + S.duree + ' mois', { moins: 1 }) : ''}
+            ${r.is ? lc('Impôt sur les sociétés', eur(r.is), '15 % jusqu\'à 42 500 €, 25 % au-delà', { moins: 1 }) : ''}
+            ${lc('Bénéfice net', eur(r.N) + ' · ' + pc(r.m), 'revente − coût total − TVA − intérêts − impôt', { total: 1, c: ETATS[A.etat][0] })}
+            <p class="aide"><a href="#/bien/${b.id}/simulation">Modifier les hypothèses</a> · <a href="#/bien/${b.id}/travaux">détail des travaux</a></p></div>
+        </div>
         <div class="colonne">
           <div class="carte"><h2>Identification</h2><div class="grille-champs">
             <div class="champ" style="grid-column:1/-1"><label for="sAdr">Adresse ou référence</label><input id="sAdr" value="${esc(S.adresse)}"></div>
@@ -381,58 +415,35 @@
             <div class="champ" style="grid-column:1/-1"><label for="sLien">Lien de l'annonce</label><input id="sLien" type="url" value="${esc(b.lien || '')}"></div>
           </div><datalist id="sources2"><option>Leboncoin</option><option>SeLoger</option><option>Agence</option><option>Réseau direct</option><option>Apporteur</option><option>Notaire</option></datalist>
           <p class="aide">Type, surface, pièces, prix d'achat et revente se règlent dans l'onglet Simulation.</p></div>
-          <div class="carte"><h2>Prochaine action</h2><div class="grille-champs">
-            <div class="champ" style="grid-column:1/-1"><label for="pAct">Action</label><input id="pAct" value="${esc(p.action || '')}"></div>
-            <div class="champ"><label for="pDate">Date</label><input id="pDate" type="date" value="${esc(p.date || '')}"></div>
-            <div class="champ" style="justify-content:flex-end"><button class="bouton" id="pRel">Créer la relance</button></div></div></div>
-          <div class="carte"><h2>Chiffres clés</h2><div class="compte">
-            ${ligneCompte('Prix affiché', b.prixAffiche ? eur(b.prixAffiche) : '—')}
-            ${ligneCompte('Prix d\'achat simulé, hors frais d\'agence', eur(r.achat), { s: b.prixAffiche ? 'négociation ' + pc(1 - r.achat / b.prixAffiche, 0) + ' sur le prix affiché' : '' })}
-            ${ligneCompte('Notaire et agence à l\'achat', eur(r.acq))}
-            ${ligneCompte('Travaux hors taxes', eur(r.T), { s: r.reel ? 'coût réel du chantier' : 'budget, aléas compris' })}
-            ${ligneCompte('Frais annexes et prestations', eur(r.anx + r.agV + r.mis))}
-            ${ligneCompte('Coût de revient', eur(r.C), { total: 1 })}
-            ${ligneCompte('Revente souhaitée', eur(r.vente), { s: A.quartier.vise ? 'prix du quartier ' + eur(A.quartier.vise) : '' })}
-            ${ligneCompte('Bénéfice net', eur(r.N) + ' · ' + pc(r.m), { total: 1, c: ETATS[A.etat][0] })}
-            ${ligneCompte('Net de l\'associé opérateur', eur(A.partage.operateur.net))}
-            ${ligneCompte('Revenus nets de l\'associé investisseur', eur(A.partage.investisseur.net), { s: pc(A.partage.investisseur.rendementAn) + ' par an' })}
-          </div></div>
+          <div class="carte"><h2>Prix du secteur</h2>${d && d.secteur ? `<p><b>${eur(d.secteur.mediane)} /m²</b> médian · ${eur(d.secteur.p25)} à ${eur(d.secteur.p75)} · ${d.secteur.n} ventes (DVF ${esc(d.periode || '')})</p>
+            <div class="compte">${(b.comps || []).filter(x => x.source === 'DVF').map(x => ligneCompte(esc(x.adresse) + `<small class="discret">${esc(x.date || '')} · ${x.surface} m²${x.distance != null ? ' · à ' + x.distance + ' m' : ''}</small>`, eur(x.prix) + `<small class="sous-ligne">${eur(x.prix / x.surface)} /m²</small>`)).join('')}</div>
+            <p class="aide"><a href="#/bien/${b.id}/comparables">Toutes les ventes comparables</a></p>`
+            : `<p class="aide">Les 3 dernières ventes similaires et le prix au m² du quartier, d'après les ventes publiques (DVF).</p><button class="bouton bouton-vert" id="sDVF">Chercher les ventes</button>`}</div>
+          ${s && b.etape !== 'ecarte' ? `<a class="carte prochaine-etape" href="#/bien/${b.id}/avancement" style="--c:${COULEUR_ETAPE[s.n]}"><small>Prochaine étape</small><b>${esc(s.t)}</b><span>Ouvrir le guide ›</span></a>` : ''}
         </div>
-        <div class="colonne">
-          <div class="carte"><h2>Contrôles avant décision</h2>
-            <div class="score"><b class="${ctl.score === 4 ? 'vert' : 'rouge'}">${ctl.score}</b><span class="discret">/ 4 validés</span></div>
-            ${ctl.liste.map(x => `<div class="controle">${voyant(x.ok ? 'vert' : 'rouge', x.ok ? 'Oui' : 'Non')}<span>${esc(x.l)}${x.k === 'comps' ? ` <small class="discret">(${x.v})</small>` : x.k === 'marge' ? ` <small class="discret">(${pc(r.m)})</small>` : x.k === 'duree' ? ` <small class="discret">(${S.duree} mois)</small>` : ''}</span></div>`).join('')}
-            <div class="grille-champs" style="margin-top:.8rem">
-              <div class="champ"><label for="cAbf">Zone ABF</label><select id="cAbf">${['', 'Oui', 'Non', 'À vérifier'].map(v => `<option value="${v}"${S.abf === v ? ' selected' : ''}>${v || 'Choisir'}</option>`).join('')}</select></div>
-              <div class="champ"><label for="cPre">Zone de préemption</label><select id="cPre">${['', 'Oui', 'Non', 'À vérifier'].map(v => `<option value="${v}"${S.preempt === v ? ' selected' : ''}>${v || 'Choisir'}</option>`).join('')}</select></div>
-            </div></div>
-          <div class="carte"><h2>Indicateurs</h2><div class="compte">
-            ${ligneCompte('Décote achat / revente', `<span class="${etatI(ind.decote.etat)}">${pc(ind.decote.v, 0)}</span>`, { s: 'repère : 40 % ou plus' })}
-            ${ind.ecartQuartier.v != null ? ligneCompte('Revente / prix du quartier', `<span class="${etatI(ind.ecartQuartier.etat)}">${(ind.ecartQuartier.v >= 0 ? '+ ' : '− ') + pc(Math.abs(ind.ecartQuartier.v))}</span>`, { s: 'marge au prix du quartier : ' + pc(ind.ecartQuartier.margeAuQuartier) }) : ''}
-            ${ligneCompte('Marge de négociation', `<span class="${etatI(ind.negociation.etat)}">${eur(ind.negociation.v)}</span>`, { s: 'écart au prix d\'achat maximum' })}
-            ${ligneCompte('Travaux', eur(ind.travauxU.v) + (S.type === 'box' ? ' /box' : ' /m²'), { s: pc(ind.travauxPart.v, 0) + ' du coût de revient' })}
-            ${ligneCompte('Écart du budget aux repères', `<span class="${etatI(ind.ecartRepere.etat)}">${(ind.ecartRepere.v >= 0 ? '+ ' : '− ') + pc(Math.abs(ind.ecartRepere.v), 0)}</span>`, { s: ind.ecartRepere.etat ? 'sous les repères : devis signés à obtenir' : '' })}
+      </div>
+      <details class="carte repli"><summary><h2>Contrôles et indicateurs détaillés</h2><span class="discret">${ctl.score} / 4 contrôles validés</span></summary>
+        <div class="deux-colonnes"><div class="colonne">
+          ${ctl.liste.map(x => `<div class="controle">${voyant(x.ok ? 'vert' : 'rouge', x.ok ? 'Oui' : 'Non')}<span>${esc(x.l)}${x.k === 'comps' ? ` <small class="discret">(${x.v})</small>` : x.k === 'marge' ? ` <small class="discret">(${pc(r.m)})</small>` : x.k === 'duree' ? ` <small class="discret">(${S.duree} mois)</small>` : ''}</span></div>`).join('')}
+          <div class="grille-champs" style="margin-top:.8rem">
+            <div class="champ"><label for="cAbf">Zone ABF</label><select id="cAbf">${['', 'Oui', 'Non', 'À vérifier'].map(v => `<option value="${v}"${S.abf === v ? ' selected' : ''}>${v || 'Choisir'}</option>`).join('')}</select></div>
+            <div class="champ"><label for="cPre">Zone de préemption</label><select id="cPre">${['', 'Oui', 'Non', 'À vérifier'].map(v => `<option value="${v}"${S.preempt === v ? ' selected' : ''}>${v || 'Choisir'}</option>`).join('')}</select></div>
+          </div></div>
+          <div class="colonne"><div class="compte">
+            ${ligneCompte('Décote achat / revente', `<span class="${etatI(ind.decote.etat)}">${pc(ind.decote.v, 0)}</span>`, { s: 'part du prix de revente non payée à l\'achat ; repère : 40 % ou plus' })}
+            ${ligneCompte('Marge de négociation', `<span class="${etatI(ind.negociation.etat)}">${eur(ind.negociation.v)}</span>`, { s: 'écart entre l\'offre maximale et l\'achat simulé' })}
             ${ligneCompte('Baisse de revente supportable', pc(Math.max(0, ind.baisseObjectif.v)), { s: 'avant de passer sous l\'objectif · ' + pc(Math.max(0, ind.baissePerte.v)) + ' avant la perte' })}
             ${ligneCompte('Coût d\'un mois de retard', eur(ind.coutMois.v), { s: A.lim.retard < 0 ? 'objectif non atteint' : 'retard supportable : ' + (A.lim.retard >= 36 ? 'plus de 36' : A.lim.retard) + ' mois' })}
-            ${ind.fiscaliteMarge.v != null ? ligneCompte('TVA et IS sur la marge brute', pc(ind.fiscaliteMarge.v, 0)) : ''}
-            ${ligneCompte('Reste dans l\'enveloppe', `<span class="${ind.tresorerie.etat === 'ok' ? '' : 'rouge'}">${eur(ind.tresorerie.reste)}</span>`)}
             ${ind.alertesType.map(a => ligneCompte('<span class="orange">Point de vigilance</span>', '', { s: esc(a) })).join('')}
-            ${S.abf === 'Oui' ? ligneCompte('<span class="orange">Zone ABF</span>', '', { s: 'accord requis sur les travaux visibles, délais allongés' }) : ''}
-            ${S.preempt === 'Oui' ? ligneCompte('<span class="orange">Zone de préemption</span>', '', { s: 'délai de réponse de la mairie à prévoir' }) : ''}
-          </div></div>
-          ${A.chantier ? `<div class="carte"><h2>Chantier</h2><div class="compte">${ligneCompte('Avancement', pc(A.chantier.avancement, 0))}${ligneCompte('Engagé / budget', eur(A.chantier.engage) + ' / ' + eur(A.chantier.budget), { c: A.chantier.alerte ? 'rouge' : '' })}${ligneCompte('Reste à payer', eur(A.chantier.reste))}</div></div>` : ''}
-        </div>
-      </div>`;
+          </div></div></div></details>`;
     const sauver = () => { sauverPlusTard('biens', b); };
     $('#sAdr').oninput = e => { b.sim.adresse = e.target.value; sauver(); };
     $('#sPrix').oninput = e => { b.prixAffiche = nb(e.target.value); sauver(); };
     $('#sSource').oninput = e => { b.source = e.target.value; sauver(); };
     $('#sLien').oninput = e => { b.lien = e.target.value.trim(); sauver(); };
-    $('#pAct').oninput = e => { b.prochaine = Object.assign(b.prochaine || {}, { action: e.target.value }); sauver(); };
-    $('#pDate').onchange = e => { b.prochaine = Object.assign(b.prochaine || {}, { date: e.target.value }); sauver(); };
-    $('#pRel').onclick = () => { const p = b.prochaine || {}; if (!p.action) { notifier('Saisir d\'abord l\'action.', 'erreur'); return; } D.enregistrer('relances', { date: p.date || aujourdhui(), objet: p.action, bienId: b.id, fait: false }); notifier('Relance créée.', 'succes'); majNav(); };
     $('#cAbf').onchange = e => { b.sim.abf = e.target.value; sauverMaintenant('biens', b); afficher(); };
     $('#cPre').onchange = e => { b.sim.preempt = e.target.value; sauverMaintenant('biens', b); afficher(); };
+    const dv = $('#sDVF'); if (dv) dv.onclick = async () => { dv.disabled = true; dv.textContent = 'Recherche…'; await chercherDVF(b, false); afficher(); };
   }
 
   /* ---------- Simulation ---------- */
@@ -920,7 +931,10 @@
     b.avancement.jalons.visite = Object.assign({}, b.avancement.jalons.visite, { reelle: aujourdhui() });
     if (suite === 'Faire une offre') b.prochaine = { action: 'Faire une offre', date: aujourdhui() };
     if (suite === 'Rappeler') { b.prochaine = { action: 'Rappeler après la visite', date: jours(aujourdhui(), 1) }; D.enregistrer('relances', { date: jours(aujourdhui(), 1), objet: 'Rappeler après la visite', bienId: b.id, contactId: ((b.liens || [])[0] || {}).contactId || '', fait: false }); }
-    if (suite === 'Écarter') { b.etape = 'ecarte'; b.motif = 'Après visite' + (A.alertes[0] ? ' : ' + A.alertes[0] : ''); }
+    const P = parcoursDe(b); P.faits.visite = { date: aujourdhui(), outil: true, reponse: 'Visite guidée, ' + V.photos.length + ' photo(s)' };
+    if (suite === 'Faire une offre') P.faits.decision = { date: aujourdhui(), reponse: 'Retenu à la visite' };
+    if (suite === 'Écarter') { b.etapeAvantClasse = 'visite'; b.etape = 'ecarte'; b.motif = 'Après visite' + (A.alertes[0] ? ' : ' + A.alertes[0] : ''); P.classe = { date: aujourdhui(), motif: b.motif, etape: 'visite' }; }
+    if (suite === 'Faire une offre' && RANG[b.etape] < RANG.etude) b.etape = 'etude';
     sauverMaintenant('biens', b); cacheAnalyse.clear();
     D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'visite', texte: 'Visite (' + Math.max(1, Math.round((Date.now() - new Date(V.debut)) / 60000)) + ' min, ' + V.photos.length + ' photo(s)). Travaux : ' + M.NIVEAUX[A.niveau].toLowerCase() + ', ' + eur(V.budget === 'postes' ? A.budgetPostes : A.budgetM2) + '.\n' + compteRendu(R) + (A.alertes.length ? '\nPoints d\'attention : ' + A.alertes.join(' ') : ''), auto: true });
     notifier('Visite enregistrée : simulation, travaux, charges et journal mis à jour.', 'succes');
@@ -1003,47 +1017,506 @@
       avancementTemps: Math.min(1, Math.max(0, ecartJours(debut, t) / Math.max(1, ecartJours(debut, finProjetee)))),
       moisRestants: Math.max(0, ecartJours(t, finProjetee) / 30.4), prevu, depense, projete, totalPrevu: tot(prevu), totalDepense: tot(depense), totalProjete: tot(projete), rProj };
   }
+  /* ================= Parcours du projet : un guide, une question à la fois ================= */
+  /* Chaque étape du guide pose une question ; la réponse fait avancer la frise, remplit le journal, les relances,
+     les dates réelles, les dépenses et la simulation. Rien d'autre à tenir à jour à la main. */
+  const COULEUR_ETAPE = { repere: '#7c8a80', visite: '#2f8f5b', etude: '#1f7a6a', offre: '#c58b2a', compromis: '#c0622b', acte: '#9b3b30', chantier: '#a8864f', reception: '#6d5a9c', vente: '#2f6f9f', vendu: '#1e7d3c', ecarte: '#8e1f24' };
+  const PHASES = [['Acquisition', ['repere', 'visite', 'etude', 'offre', 'compromis', 'acte']], ['Chantier', ['chantier', 'reception']], ['Revente', ['vente', 'vendu']]];
+  const PARCOURS = [
+    { id: 'visite', n: 'visite', t: 'Visite du bien', jal: 'visite', etape: 'visite' },
+    { id: 'decision', n: 'etude', t: 'Décision après la visite', etape: 'etude' },
+    { id: 'offre', n: 'offre', t: 'Offre au vendeur', etape: 'offre', jtype: 'offre' },
+    { id: 'reponse', n: 'offre', t: 'Réponse du vendeur', jal: 'offre' },
+    { id: 'notaire', n: 'compromis', t: 'Dossier pour le notaire' },
+    { id: 'rdvPromesse', n: 'compromis', t: 'Rendez-vous de signature de la promesse' },
+    { id: 'promesse', n: 'compromis', t: 'Promesse signée', jal: 'compromis', etape: 'compromis' },
+    { id: 'devis', n: 'acte', t: 'Devis des travaux' },
+    { id: 'rdvActe', n: 'acte', t: 'Rendez-vous de signature de l\'acte' },
+    { id: 'acte', n: 'acte', t: 'Acte signé, clés remises', jal: 'acte', etape: 'acte' },
+    { id: 'debut', n: 'chantier', t: 'Début des travaux', jal: 'debutTravaux', etape: 'chantier' },
+    { id: 'chantier', n: 'chantier', t: 'Suivi du chantier', etape: 'reception' },
+    { id: 'reception', n: 'reception', t: 'Visite de fin de chantier et réserves', jal: 'finTravaux' },
+    { id: 'nettoyage', n: 'reception', t: 'Nettoyage du chantier' },
+    { id: 'photos', n: 'vente', t: 'Photos pour l\'annonce' },
+    { id: 'annonce', n: 'vente', t: 'Annonce de vente publiée', jal: 'miseEnVente', etape: 'vente' },
+    { id: 'offreAcheteur', n: 'vente', t: 'Offre d\'un acheteur acceptée' },
+    { id: 'compromisVente', n: 'vente', t: 'Compromis de vente signé', jal: 'compromisVente' },
+    { id: 'acteVente', n: 'vendu', t: 'Acte de vente signé', jal: 'acteVente', etape: 'vendu' }
+  ];
+  const ETAPE_PARCOURS = Object.fromEntries(PARCOURS.map(s => [s.id, s]));
+  function parcoursDe(b) {
+    const P = b.parcours = b.parcours || {};
+    P.faits = P.faits || {}; P.offres = P.offres || []; P.offresAch = P.offresAch || [];
+    if (!P.init) {
+      /* Projet créé avant le guide : les étapes déjà franchies sont tenues pour faites */
+      P.init = true;
+      const e = b.etape === 'ecarte' ? (b.etapeAvantClasse || 'repere') : (b.etape || 'repere');
+      if (b.visite && b.visite.fin) P.faits.visite = { date: b.visite.fin.slice(0, 10), outil: true };
+      let dernier = -1; PARCOURS.forEach((s, i) => { if (s.etape && RANG[s.etape] <= RANG[e]) dernier = i; });
+      PARCOURS.slice(0, dernier + 1).forEach(s => { if (!P.faits[s.id]) P.faits[s.id] = { date: '', herite: true }; });
+    }
+    return P;
+  }
+  const etapeCourante = b => { const P = parcoursDe(b); return PARCOURS.find(s => !P.faits[s.id]) || null; };
+  const etapeAffichee = b => b.etape === 'ecarte' ? (b.etapeAvantClasse || 'repere') : (b.etape || 'repere');
+  function resumeEtape(s, f) {
+    if (!f) return '';
+    if (f.herite) return 'fait avant le guide';
+    return [f.reponse, f.montant ? eur(f.montant) : '', f.quand ? 'le ' + dateFr(f.quand) + (f.heure ? ' à ' + f.heure : '') : '', f.texte].filter(Boolean).join(' · ');
+  }
+  function finirEtape(b, id, data, sansAfficher) {
+    const P = parcoursDe(b), s = ETAPE_PARCOURS[id];
+    const f = P.faits[id] = Object.assign({ date: aujourdhui() }, data || {});
+    if (s.etape && b.etape !== 'ecarte' && RANG[s.etape] > RANG[b.etape || 'repere']) b.etape = s.etape;
+    if (s.jal) { b.avancement = b.avancement || { jalons: {}, depenses: [] }; b.avancement.jalons = b.avancement.jalons || {}; b.avancement.jalons[s.jal] = Object.assign({}, b.avancement.jalons[s.jal], { reelle: f.date }); }
+    const solde = { visite: /rendez-vous de visite/i, reponse: /réponse à l'offre/i, notaire: /dossier au notaire/i, rdvPromesse: /date de signature de la promesse/i, promesse: /signature de la promesse/i, acte: /signature de l'acte d'achat/i, acteVente: /signature de l'acte de vente/i }[id];
+    if (solde) D.liste('relances').filter(x => x.bienId === b.id && !x.fait && solde.test(x.objet || '')).forEach(x => { x.fait = true; D.enregistrer('relances', x); });
+    const suivante = PARCOURS.find(x => !P.faits[x.id]);
+    b.prochaine = suivante ? { action: suivante.t, date: aujourdhui() } : null;
+    sauverMaintenant('biens', b); cacheAnalyse.clear();
+    D.enregistrer('journal', { bienId: b.id, date: f.date, type: s.jtype || 'note', montant: f.montant || null, texte: s.t + (resumeEtape(s, f) ? ' : ' + resumeEtape(s, f) : '') + '.', auto: true });
+    if (!sansAfficher) { notifier(s.t + ' : fait.' + (suivante ? ' Suite : ' + suivante.t.toLowerCase() + '.' : ''), 'succes'); afficher(); }
+  }
+  function rouvrirEtape(b, id) {
+    const P = parcoursDe(b), i = PARCOURS.findIndex(x => x.id === id);
+    PARCOURS.slice(i).forEach(s => { delete P.faits[s.id]; const j = s.jal && b.avancement && b.avancement.jalons && b.avancement.jalons[s.jal]; if (j) delete j.reelle; });
+    let e = 'repere'; PARCOURS.forEach(s => { if (P.faits[s.id] && s.etape && RANG[s.etape] > RANG[e]) e = s.etape; });
+    if (b.etape !== 'ecarte') b.etape = e;
+    b.prochaine = { action: ETAPE_PARCOURS[id].t, date: aujourdhui() };
+    sauverMaintenant('biens', b); cacheAnalyse.clear(); afficher();
+  }
+  function classerDossier(b, motifImpose) {
+    const faire = motif => {
+      const P = parcoursDe(b); b.etapeAvantClasse = etapeAffichee(b); P.classe = { date: aujourdhui(), motif, etape: b.etapeAvantClasse };
+      b.etape = 'ecarte'; b.motif = motif; b.prochaine = null;
+      sauverMaintenant('biens', b);
+      D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'note', texte: 'Dossier classé : ' + motif + '.', auto: true });
+      notifier('Dossier classé.', 'succes'); afficher();
+    };
+    if (motifImpose) return faire(motifImpose);
+    const fond = modale('Classer le dossier', `<div class="champ"><label>Pourquoi ?</label><div class="puces" id="clM">${['Prix vendeur trop élevé', 'Trop de travaux', 'Marge insuffisante', 'Copropriété à risque', 'Emplacement', 'Vendu à un autre acquéreur', 'Autre'].map(m => `<button type="button" class="puce" data-m="${esc(m)}">${esc(m)}</button>`).join('')}</div></div><div class="champ"><label for="clT">Précision (facultatif)</label><input id="clT"></div>`,
+      [{ l: 'Annuler' }, { l: 'Classer le dossier', classe: 'bouton-principal', f: f => { const c = $('.puce.choisie', f); if (!c) { notifier('Choisir un motif.', 'erreur'); return false; } const p = $('#clT', f).value.trim(); faire(c.dataset.m + (p ? ' : ' + p : '')); } }]);
+    $$('[data-m]', fond).forEach(x => x.onclick = () => { $$('[data-m]', fond).forEach(y => y.classList.remove('choisie')); x.classList.add('choisie'); });
+  }
+  function rouvrirDossier(b) {
+    const P = parcoursDe(b); b.etape = (P.classe && P.classe.etape) || b.etapeAvantClasse || 'repere'; delete P.classe; delete b.etapeAvantClasse; b.motif = '';
+    const s = etapeCourante(b); b.prochaine = s ? { action: s.t, date: aujourdhui() } : null;
+    sauverMaintenant('biens', b); D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'note', texte: 'Dossier rouvert.', auto: true }); afficher();
+  }
+
+  /* ---------- Frise : les dix étapes, de « Repéré » à « Vendu » ---------- */
+  function friseProjet(b) {
+    const P = parcoursDe(b), dp = datesPrevues(b), t = aujourdhui(), classe = b.etape === 'ecarte', e = etapeAffichee(b), rang = RANG[e];
+    const noeuds = ETAPES.filter(x => x[0] !== 'ecarte');
+    const prevu = { repere: b.creeLe, visite: dp.visite, etude: jours(dp.visite, 2), offre: dp.offre, compromis: dp.compromis, acte: dp.acte, chantier: dp.debutTravaux, reception: dp.finTravaux, vente: dp.miseEnVente, vendu: dp.acteVente };
+    const dateFaite = k => { if (k === 'repere') return b.creeLe || ''; const l = PARCOURS.filter(s => s.n === k && P.faits[s.id] && P.faits[s.id].date); return l.length ? P.faits[l[l.length - 1].id].date : ''; };
+    const courant = PARCOURS.find(s => !P.faits[s.id]);
+    const li = noeuds.map(([k, l], i) => {
+      const fait = RANG[k] <= rang, actif = !classe && !fait && courant && courant.n === k, d = fait ? dateFaite(k) : prevu[k];
+      const retard = !fait && !classe && d && d < t ? ecartJours(d, t) : 0;
+      const etat = fait ? 'fait' : actif ? 'courant' + (retard ? ' retard' : '') : 'avenir';
+      return `<li class="fp-noeud ${etat}" style="--c:${COULEUR_ETAPE[k]};--cp:${COULEUR_ETAPE[(noeuds[i - 1] || noeuds[0])[0]]}"><button type="button" data-noeud="${k}" title="${esc(l)}">
+        <span class="fp-rond">${fait ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : i + 1}</span>
+        <span class="fp-nom">${esc(l)}</span><span class="fp-date">${fait ? (d ? dateFr(d) : 'fait') : actif ? (retard ? retard + ' j de retard' : 'en cours') : d ? 'prévu ' + dateFr(d) : ''}</span></button></li>`;
+    }).join('');
+    const avance = Math.max(0, rang) / (noeuds.length - 1) * 100;
+    return `<div class="frise-projet${classe ? ' classee' : ''}" style="--n:${noeuds.length};--av:${avance}%">
+      <div class="fp-defile"><ol class="fp-liste">${li}</ol>
+      <div class="fp-phases">${PHASES.map(([n, l]) => `<span style="grid-column:span ${l.length}">${n}</span>`).join('')}</div></div>
+      ${classe ? `<div class="fp-classe">Dossier classé${P.classe && P.classe.date ? ' le ' + dateFr(P.classe.date) : ''}${b.motif ? ' : ' + esc(b.motif) : ''} <button class="bouton bouton-petit" data-rouvrir-dossier>Rouvrir</button></div>` : ''}</div>`;
+  }
+  function lierFrise(c, b) {
+    $$('[data-noeud]', c).forEach(x => x.onclick = () => aller('#/bien/' + b.id + '/avancement'));
+    const ro = $('[data-rouvrir-dossier]', c); if (ro) ro.onclick = () => rouvrirDossier(b);
+    const d = $('.fp-defile', c), cur = $('.fp-noeud.courant', c) || $$('.fp-noeud.fait', c).pop();
+    if (d && cur && d.scrollWidth > d.clientWidth) d.scrollLeft = Math.max(0, cur.offsetLeft - d.clientWidth / 2 + cur.offsetWidth / 2);
+  }
+
+  /* ---------- Documents PDF et envoi (e-mail, WhatsApp) ---------- */
+  async function photoEnDataUrl(meta) {
+    try { const u = await MarcheoPhotos.url(meta); if (!u) return ''; const bl = await (await fetch(u)).blob(); return await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.readAsDataURL(bl); }); } catch (e) { return ''; }
+  }
+  const nomFichier = (prefixe, b) => prefixe + '-' + ((b.sim && b.sim.adresse) || 'bien').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) + '-' + aujourdhui() + '.pdf';
+  async function partagerPDF(doc, nom, texte, contact) {
+    const blob = doc.output('blob');
+    try {
+      const f = new File([blob], nom, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: nom, text: texte }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    doc.save(nom);
+    const tel = contact && contact.tel ? contact.tel.replace(/\D/g, '').replace(/^0/, '33') : '', mail = contact && contact.email ? contact.email : '';
+    modale('Envoyer le document', `<p>Le PDF « ${esc(nom)} » est enregistré dans les téléchargements. Ouvrir la messagerie puis joindre le fichier :</p>
+      <div class="actions"><a class="bouton bouton-principal" href="mailto:${esc(mail)}?subject=${encodeURIComponent(nom.replace(/\.pdf$/, ''))}&body=${encodeURIComponent(texte)}">E-mail</a><a class="bouton bouton-vert" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent(texte)}">WhatsApp</a></div>
+      <p class="aide">Sur iPhone, le bouton envoie directement le PDF dans WhatsApp ou Mail.</p>`, [{ l: 'Fermer' }]);
+  }
+  const pdfPret = () => { if (window.jspdf && window.jspdf.jsPDF && window.MarcheoPDF && window.MarcheoPDF.document) return true; notifier('Le générateur de PDF n\'a pas pu se charger. Vérifier la connexion internet.', 'erreur'); return false; };
+  const contactDe = (b, re) => { const l = (b.liens || []).find(x => re.test(x.role || '') || re.test((D.obtenir('contacts', x.contactId) || {}).categorie || '')); return l ? D.obtenir('contacts', l.contactId) : null; };
+  function lierContact(b, id, role) { if (!id) return; b.liens = b.liens || []; if (!b.liens.some(l => l.contactId === id && l.role === role)) b.liens.push({ contactId: id, role }); }
+  const societe = () => reglages().societe || '';
+
+  function docLettreOffre(b, o) {
+    const S = b.sim, ag = contactDe(b, /agent|agence/i);
+    return window.MarcheoPDF.document({ titre: 'Offre d\'achat', sous: S.adresse || '', sections: [
+      { lignes: [['Date', dateFr(o.date)], ['Acquéreur', societe() || 'à compléter'], ['Bien', (M.TYPES[S.type] || {}).n + ' · ' + surfaceBien(b) + (S.adresse ? ' · ' + S.adresse : '')], ['Prix affiché', b.prixAffiche ? eur(b.prixAffiche) : '—'], ['Prix proposé', eur(o.montant)], ['Offre valable jusqu\'au', dateFr(o.validite)], ['Financement', o.comptant ? 'Achat comptant, sans condition de prêt' : 'Avec condition d\'obtention d\'un prêt']].concat(ag ? [['À l\'attention de', ag.nom]] : []) },
+      { paragraphes: ['Par la présente, nous formulons une offre d\'achat ferme pour le bien désigné ci-dessus, au prix de ' + eur(o.montant) + ', sous réserve de la signature d\'une promesse de vente chez notaire et de la communication des documents d\'usage (diagnostics, procès-verbaux d\'assemblée, règlement de copropriété, taxe foncière).', 'Cette offre tient compte de l\'état du bien constaté lors de la visite et des travaux à réaliser.'] },
+      { signature: ['L\'acquéreur', 'Le vendeur (bon pour accord)'] }] });
+  }
+  function docDossierNotaire(b) {
+    const S = b.sim, P = parcoursDe(b), dn = P.dossierNotaire || {}, A = analyse(b), acc = P.offres.filter(o => o.statut === 'acceptee').pop();
+    const c = id => D.obtenir('contacts', id) || {}, fiche = x => x && x.nom ? [x.nom, x.personne, x.tel, x.email].filter(Boolean).join(' · ') : '—';
+    const V = b.visite && b.visite.reponses ? b.visite.reponses.questions || {} : {};
+    return window.MarcheoPDF.document({ titre: 'Dossier pour le notaire', sous: 'Préparation de la promesse de vente · ' + (S.adresse || ''), sections: [
+      { titre: 'Le bien', lignes: [['Adresse', S.adresse || '—'], ['Nature', (M.TYPES[S.type] || {}).n + ' · ' + surfaceBien(b) + ' · ' + S.pieces + ' pièce(s)'], ['DPE', b.dpe || V.dpe || 'à fournir'], ['Occupation', V.occupation || 'à préciser'], ['Annonce', b.lien || '—']] },
+      { titre: 'Prix et conditions', lignes: [['Prix convenu', acc ? eur(acc.montant) : eur(A.r.achat)], ['Offre acceptée le', acc ? dateFr(P.faits.reponse && P.faits.reponse.date || acc.date) : '—'], ['Honoraires d\'agence', S.agA ? eur(S.agA) + ' à la charge de l\'acquéreur' : 'aucun ou à la charge du vendeur'], ['Conditions suspensives', (dn.conditions || []).length ? dn.conditions.join(', ') : 'aucune (achat comptant)'], ['Signature souhaitée avant le', dn.dateSouhaitee ? dateFr(dn.dateSouhaitee) : '—']] },
+      { titre: 'Les parties', lignes: [['Acquéreur', dn.acquereur || societe() || 'à compléter'], ['Vendeur', dn.vendeur || '—'], ['Agence', fiche(contactDe(b, /agent|agence/i))], ['Notaire de l\'acquéreur', fiche(c(dn.notaireId))], ['Notaire du vendeur', dn.notaireVendeur || '—']] },
+      { titre: 'Pièces à réunir', cases: PIECES.map(p => [!!(b.pieces[p[0]] || {}).ok, p[1]]) },
+      { titre: 'Observations', paragraphes: [dn.notes || '', V.travauxVotes === 'Oui' ? 'Travaux votés en copropriété : préciser qui les supporte.' : '', V.procedures === 'Oui' ? 'Procédure en cours dans la copropriété : joindre les procès-verbaux.' : ''].filter(Boolean).concat(['Merci de nous indiquer les dates possibles de signature de la promesse.']) }] });
+  }
+  async function docReserves(b, filtre) {
+    const artisanId = filtre === '*' ? '' : filtre, R = b.reception || { items: [] }, items = R.items.filter(x => x.etat !== 'Conforme' && (filtre === '*' || (x.artisanId || '') === filtre));
+    const ar = artisanId ? D.obtenir('contacts', artisanId) : null, photos = b.reception.photos || [];
+    const sections = [{ lignes: [['Chantier', b.sim.adresse || '—'], ['Visite de fin de chantier', dateFr(R.date)], ['Maître d\'ouvrage', societe() || '—'], ['Entreprise', ar ? ar.nom : 'toutes les entreprises'], ['Réserves', items.length + (items.filter(x => x.levee).length ? ' dont ' + items.filter(x => x.levee).length + ' levée(s)' : '')]] }];
+    for (const x of items) {
+      const imgs = []; for (const m of photos.filter(p => p.point === x.cle)) { const s = await photoEnDataUrl(m); if (s) imgs.push(s); }
+      sections.push({ titre: x.l + (artisanId ? '' : ' — ' + ((D.obtenir('contacts', x.artisanId) || {}).nom || 'entreprise non désignée')), lignes: [['Constat', x.etat + (x.levee ? ' · levée le ' + dateFr(x.levee) : '')]], paragraphes: x.note ? [x.note] : [], images: imgs });
+    }
+    if (!items.length) sections.push({ paragraphes: ['Aucune réserve : travaux conformes.'] });
+    sections.push({ paragraphes: ['Les réserves ci-dessus sont à lever dans un délai de 15 jours à compter de ce procès-verbal.'] }, { signature: ['Le maître d\'ouvrage', 'L\'entreprise'] });
+    return window.MarcheoPDF.document({ titre: 'Procès-verbal de réserves', sous: (ar ? ar.nom + ' · ' : '') + (b.sim.adresse || ''), sections });
+  }
+
+  /* ---------- Petits éléments du guide ---------- */
+  const gq = (t, aide) => `<h2 class="guide-q">${t}</h2>${aide ? `<p class="aide">${aide}</p>` : ''}`;
+  const ginfo = (l, v, c) => `<div class="guide-info"><small>${l}</small><b class="${c || ''}">${v}</b></div>`;
+  const gdate = (id, l, v) => `<div class="champ"><label for="${id}">${l}</label><input type="date" id="${id}" value="${v || aujourdhui()}"></div>`;
+  const gmontant = (id, l, v, aide) => `<div class="champ"><label for="${id}">${l}</label><input type="number" inputmode="numeric" id="${id}" value="${v != null && v !== '' ? Math.round(v) : ''}">${aide ? `<small class="aide" id="${id}Aide">${aide}</small>` : ''}</div>`;
+  const choixContact = (id, cat, v, l) => `<div class="champ"><label for="${id}">${l}</label><div class="actions" style="flex-wrap:nowrap"><select id="${id}"><option value="">Choisir</option>${D.liste('contacts').filter(c => !cat || c.categorie === cat).sort((a, c) => (a.nom || '').localeCompare(c.nom || '')).map(c => `<option value="${c.id}"${c.id === v ? ' selected' : ''}>${esc(c.nom)}</option>`).join('')}</select><button type="button" class="bouton" data-nouveau-contact="${id}" data-cat="${cat || ''}">+</button></div></div>`;
+  function lierNouveauxContacts(el) {
+    $$('[data-nouveau-contact]', el).forEach(x => x.onclick = () => ficheContact({ categorie: x.dataset.cat || 'autre', nom: '' }, c => { const s = $('#' + x.dataset.nouveauContact, el); if (s) { s.insertAdjacentHTML('beforeend', `<option value="${c.id}">${esc(c.nom)}</option>`); s.value = c.id; s.dispatchEvent(new Event('change')); } }));
+  }
+  const gval = (el, id) => { const x = $('#' + id, el); return x ? x.value.trim() : ''; };
+  function margePour(b, achat) { const S = clone(analyse(b).S); S.achat = achat; const r = M.compute(S); return { N: r.N, m: r.m, ok: r.m >= S.obj / 100 }; }
+  function ajouterDepense(b, cat, libelle, montant, date) {
+    if (!montant) return; b.avancement = b.avancement || { jalons: {}, depenses: [] }; b.avancement.depenses = b.avancement.depenses || [];
+    b.avancement.depenses.push({ id: D.nouvelId('d'), date: date || aujourdhui(), categorie: cat, libelle, montant: Math.round(montant) });
+  }
+  function relance(b, date, objet, contactId) { D.enregistrer('relances', { date: date || aujourdhui(), objet, bienId: b.id, contactId: contactId || '', fait: false }); }
+  /* Rendez-vous (promesse, acte) : date, heure, lieu, relance le jour même */
+  function etapeRdv(b, el, id, quoi) { // quoi : « la promesse de vente », « l'acte d'achat »
+    const notaire = contactDe(b, /notaire/i);
+    el.innerHTML = gq('Quand signes-tu ' + quoi + ' ?', notaire ? 'Notaire : ' + esc(notaire.nom) + (notaire.tel ? ' · ' + esc(notaire.tel) : '') : '') + `<div class="grille-champs alignee">${gdate('gQ', 'Date', '')}<div class="champ"><label for="gH">Heure</label><input type="time" id="gH"></div><div class="champ" style="grid-column:1/-1"><label for="gL">Lieu</label><input id="gL" placeholder="Étude du notaire…"></div></div>
+      <div class="guide-actions"><button class="bouton bouton-principal bouton-large" id="gOk">Rendez-vous fixé</button></div>`;
+    $('#gOk').onclick = () => { const q = gval(el, 'gQ'); if (!q) { notifier('Saisir la date.', 'erreur'); return; } relance(b, q, 'Signature de ' + quoi + (gval(el, 'gH') ? ' à ' + gval(el, 'gH') : '') + (gval(el, 'gL') ? ', ' + gval(el, 'gL') : ''), notaire && notaire.id); finirEtape(b, id, { quand: q, heure: gval(el, 'gH'), texte: gval(el, 'gL') }); };
+  }
+  /* Date + coût, rangé dans les dépenses (nettoyage, photos) */
+  function etapeDateCout(b, el, id, question, libelle, aide) {
+    el.innerHTML = gq(question, aide) + `<div class="grille-champs alignee">${gdate('gQ', 'Date', '')}${gmontant('gM', 'Coût (€)', '')}<div class="champ" style="grid-column:1/-1"><label for="gP">Prestataire</label><input id="gP" placeholder="facultatif"></div></div>
+      <div class="guide-actions"><button class="bouton bouton-principal bouton-large" id="gOk">C'est fait</button><button class="bouton" id="gSans">Sans objet</button></div>`;
+    $('#gOk').onclick = () => { const m = nb(gval(el, 'gM')), q = gval(el, 'gQ'); ajouterDepense(b, 'annexes', libelle + (gval(el, 'gP') ? ' · ' + gval(el, 'gP') : ''), m, q); finirEtape(b, id, { quand: q, montant: m || null, texte: gval(el, 'gP') }); };
+    $('#gSans').onclick = () => finirEtape(b, id, { reponse: 'Sans objet' });
+  }
+  /* Documents joints (devis) : photo ou PDF, gardés sur l'appareil puis envoyés dans Drive */
+  const lienDoc = d => `<button type="button" class="doc-joint" data-doc="${d.id}">${/pdf/.test(d.type || '') ? 'PDF' : 'Photo'} · ${esc((d.nom || 'document').slice(0, 28))}</button>`;
+  function lierDocs(el, docs) { $$('[data-doc]', el).forEach(x => x.onclick = async () => { const d = docs().find(y => y.id === x.dataset.doc); try { const u = await MarcheoPhotos.url(d); if (u) window.open(u, '_blank'); else notifier('Document pas encore disponible sur cet appareil.', 'erreur'); } catch (e) { notifier('Document illisible : ' + e.message, 'erreur'); } }); }
+  const vignettes = l => l.map(p => `<img data-photo="${p.id}" alt="">`).join('');
+  function chargerVignettes(el, toutes) { $$('img[data-photo]', el).forEach(img => { const m = toutes.find(p => p.id === img.dataset.photo); if (m) MarcheoPhotos.url(m).then(u => { if (u) { img.src = u; img.onclick = () => window.open(u, '_blank'); } }).catch(() => {}); }); }
+
+  /* ---------- Les étapes ---------- */
+  const GUIDE = {
+    visite(b, el) {
+      el.innerHTML = gq('As-tu visité le bien ?', 'La visite guidée sur téléphone remplit seule les travaux, les charges, la taxe foncière et le DPE du projet.') + `
+        <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gV">${b.visiteBrouillon ? 'Reprendre la visite' : 'Faire la visite'}</button><button class="bouton" id="gDeja">Déjà visité sans l'outil</button><button class="bouton" id="gNon">Classer sans visiter</button></div>
+        <div id="gDejaZ" hidden class="guide-plus"><div class="grille-champs alignee">${gdate('gQ', 'Date de la visite', '')}</div><button class="bouton bouton-principal" id="gOk">Valider</button></div>`;
+      $('#gV').onclick = () => ouvrirVisite(b);
+      $('#gDeja').onclick = () => { $('#gDejaZ').hidden = false; };
+      $('#gOk').onclick = () => finirEtape(b, 'visite', { date: gval(el, 'gQ') || aujourdhui(), reponse: 'Visité' });
+      $('#gNon').onclick = () => classerDossier(b);
+    },
+    decision(b, el) {
+      const A = analyse(b), r = A.r, al = (b.visite && b.visite.analyse && b.visite.analyse.alertes) || [];
+      el.innerHTML = gq('Après la visite, on retient le bien ?', 'Chiffres mis à jour avec la visite.') + `
+        <div class="guide-infos">${ginfo('Bénéfice net estimé', eur(r.N) + ' · ' + pc(r.m), ETATS[A.etat][0])}${ginfo('Offre maximale', A.lim.achatMax ? eur(A.lim.achatMax) : 'aucune', A.lim.achatMax ? '' : 'rouge')}${ginfo('Travaux', eur(r.T))}</div>
+        ${al.map(x => `<div class="alerte-bandeau">${esc(x)}</div>`).join('')}
+        <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gOui">Oui, je fais une offre</button><button class="bouton bouton-large" id="gNon">Non, classer le dossier</button></div>`;
+      $('#gOui').onclick = () => finirEtape(b, 'decision', { reponse: 'Retenu' });
+      $('#gNon').onclick = () => classerDossier(b);
+    },
+    offre(b, el) {
+      const A = analyse(b), P = parcoursDe(b), max = A.lim.achatMax ? Math.floor(A.lim.achatMax / 500) * 500 : 0, d = P.offres[P.offres.length - 1];
+      const base = d ? (d.contre ? (d.montant + d.contre) / 2 : d.montant * 1.03) : Math.min(A.S.achat, b.prixAffiche || Infinity);
+      const sugg = Math.round(Math.min(max || base, base) / 500) * 500;
+      el.innerHTML = gq(d ? 'Nouvelle offre : quel montant ?' : 'Quel montant proposes-tu au vendeur ?', 'Offre maximale pour ton objectif de ' + A.S.obj + ' % : <b>' + (max ? eur(max) : 'aucune') + '</b>' + (b.prixAffiche ? ' · prix affiché ' + eur(b.prixAffiche) : '') + (d ? ' · dernière offre ' + eur(d.montant) + (d.contre ? ', contre-proposition ' + eur(d.contre) : '') : '') + '.') + `
+        <div class="grille-champs alignee">${gmontant('gM', 'Montant de l\'offre (€)', sugg, ' ')}${gdate('gQ', 'Date d\'envoi', '')}${gdate('gVal', 'Valable jusqu\'au', jours(aujourdhui(), 7))}
+          <label class="case" style="grid-column:1/-1"><input type="checkbox" id="gCpt" checked> Achat comptant, sans condition de prêt</label></div>
+        <div class="guide-actions"><button class="bouton bouton-principal bouton-large" id="gOk">Offre envoyée</button><button class="bouton" id="gPdf">Lettre d'offre (PDF)</button></div>`;
+      const maj = () => { const m = nb(gval(el, 'gM')), x = margePour(b, m); $('#gMAide').innerHTML = m ? `À ce prix : bénéfice net <b class="${x.ok ? 'vert' : 'rouge'}">${eur(x.N)} · ${pc(x.m)}</b>${b.prixAffiche ? ' · ' + pc(1 - m / b.prixAffiche, 0) + ' sous le prix affiché' : ''}` : ''; };
+      $('#gM').oninput = maj; maj();
+      const offre = () => ({ id: D.nouvelId('o'), date: gval(el, 'gQ') || aujourdhui(), montant: nb(gval(el, 'gM')), validite: gval(el, 'gVal'), comptant: $('#gCpt').checked, statut: 'attente' });
+      $('#gPdf').onclick = () => { const o = offre(); if (!o.montant) { notifier('Saisir le montant.', 'erreur'); return; } if (!pdfPret()) return; partagerPDF(docLettreOffre(b, o), nomFichier('offre', b), 'Bonjour, veuillez trouver notre offre d\'achat de ' + eur(o.montant) + ' pour le bien ' + (b.sim.adresse || '') + '.', contactDe(b, /agent|agence/i)); };
+      $('#gOk').onclick = () => { const o = offre(); if (!o.montant) { notifier('Saisir le montant.', 'erreur'); return; } P.offres.push(o); relance(b, jours(o.date, 3), 'Relancer : réponse à l\'offre de ' + eur(o.montant), (contactDe(b, /agent|agence/i) || {}).id); finirEtape(b, 'offre', { date: o.date, montant: o.montant }); };
+    },
+    reponse(b, el) {
+      const P = parcoursDe(b), o = P.offres[P.offres.length - 1];
+      if (!o) {
+        /* offre faite avant le guide : on note son montant pour suivre la réponse */
+        el.innerHTML = gq('Quelle offre as-tu faite au vendeur ?', 'Offre envoyée avant l\'utilisation du guide : noter son montant pour suivre la réponse.') + `<div class="grille-champs alignee">${gmontant('gM', 'Montant de l\'offre (€)', analyse(b).S.achat, '')}${gdate('gQ', 'Date d\'envoi', '')}</div><div class="guide-actions"><button class="bouton bouton-principal bouton-large" id="gOk">Enregistrer</button></div>`;
+        $('#gOk').onclick = () => { const m = nb(gval(el, 'gM')); if (!m) { notifier('Saisir le montant.', 'erreur'); return; } P.offres.push({ id: D.nouvelId('o'), date: gval(el, 'gQ') || aujourdhui(), montant: m, statut: 'attente' }); sauverMaintenant('biens', b); afficher(); };
+        return;
+      }
+      const hist = P.offres.length > 1 ? `<div class="guide-offres">${P.offres.map(x => `<span class="etiquette">${dateFr(x.date)} · ${eur(x.montant)}${x.contre ? ' → ' + eur(x.contre) : ''} · ${{ attente: 'en attente', acceptee: 'acceptée', contre: 'contre-proposition', refusee: 'refusée' }[x.statut]}</span>`).join('')}</div>` : '';
+      const accepter = (montant, texte) => { o.statut = o.statut === 'contre' ? 'contre' : 'acceptee'; if (montant !== o.montant) P.offres.push({ id: D.nouvelId('o'), date: aujourdhui(), montant, statut: 'acceptee' }); b.sim.achat = montant; relance(b, aujourdhui(), 'Envoyer le dossier au notaire'); finirEtape(b, 'reponse', { reponse: texte, montant }); };
+      if (o.statut === 'contre') {
+        const x = margePour(b, o.contre);
+        el.innerHTML = gq('Le vendeur demande ' + eur(o.contre) + '. Que fais-tu ?', `À ce prix : bénéfice net <b class="${x.ok ? 'vert' : 'rouge'}">${eur(x.N)} · ${pc(x.m)}</b>.`) + hist + `
+          <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gA">J'accepte ${eur(o.contre)}</button><button class="bouton bouton-large" id="gN">Nouvelle offre</button><button class="bouton" id="gC">Classer le dossier</button></div>`;
+        $('#gA').onclick = () => accepter(o.contre, 'Contre-proposition acceptée');
+      } else if (o.statut === 'refusee') {
+        el.innerHTML = gq('Offre de ' + eur(o.montant) + ' refusée. Et maintenant ?') + hist + `<div class="guide-actions"><button class="bouton bouton-principal bouton-large" id="gN">Nouvelle offre</button><button class="bouton bouton-large" id="gC">Classer le dossier</button></div>`;
+      } else {
+        el.innerHTML = gq('Le vendeur a-t-il répondu à ton offre de ' + eur(o.montant) + ' ?', 'Envoyée le ' + dateFr(o.date) + (o.validite ? ', valable jusqu\'au ' + dateFr(o.validite) : '') + '.') + hist + `
+          <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gA">Acceptée</button><button class="bouton bouton-large" id="gCp">Contre-proposition</button><button class="bouton bouton-large" id="gR">Refusée</button></div>
+          <div id="gCpZ" hidden class="guide-plus"><div class="grille-champs alignee">${gmontant('gCm', 'Prix demandé par le vendeur (€)', '', ' ')}</div><button class="bouton bouton-principal" id="gCok">Enregistrer</button></div>`;
+        $('#gA').onclick = () => accepter(o.montant, 'Offre acceptée');
+        $('#gCp').onclick = () => { $('#gCpZ').hidden = false; $('#gCm').focus(); };
+        $('#gCm').oninput = () => { const m = nb(gval(el, 'gCm')), x = margePour(b, m); $('#gCmAide').innerHTML = m ? `À ce prix : bénéfice net <b class="${x.ok ? 'vert' : 'rouge'}">${eur(x.N)} · ${pc(x.m)}</b>` : ''; };
+        $('#gCok').onclick = () => { const m = nb(gval(el, 'gCm')); if (!m) return; o.statut = 'contre'; o.contre = m; sauverMaintenant('biens', b); D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'contre', montant: m, texte: 'Contre-proposition du vendeur.', auto: true }); afficher(); };
+        $('#gR').onclick = () => { o.statut = 'refusee'; sauverMaintenant('biens', b); D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'offre', texte: 'Offre de ' + eur(o.montant) + ' refusée.', auto: true }); afficher(); };
+      }
+      const n = $('#gN'); if (n) n.onclick = () => { delete P.faits.offre; sauverMaintenant('biens', b); afficher(); };
+      const c = $('#gC'); if (c) c.onclick = () => classerDossier(b);
+    },
+    notaire(b, el) {
+      const P = parcoursDe(b), dn = P.dossierNotaire = P.dossierNotaire || { conditions: [] }, acc = P.offres.filter(o => o.statut === 'acceptee').pop();
+      if (!dn.notaireId) { const n = contactDe(b, /notaire/i); if (n) dn.notaireId = n.id; }
+      if (dn.acquereur == null) dn.acquereur = societe();
+      el.innerHTML = gq('Le dossier pour le notaire', 'Généré en un clic : bien, prix' + (acc ? ' (' + eur(acc.montant) + ')' : '') + ', parties, conditions, pièces reçues ou à réunir. Puis envoi par e-mail ou WhatsApp.') + `
+        <div class="grille-champs alignee">
+          ${choixContact('gNot', 'notaire', dn.notaireId, 'Ton notaire')}
+          <div class="champ"><label for="gNv">Notaire du vendeur</label><input id="gNv" value="${esc(dn.notaireVendeur || '')}" placeholder="facultatif"></div>
+          <div class="champ"><label for="gAcq">Acquéreur (ta société)</label><input id="gAcq" value="${esc(dn.acquereur || '')}" placeholder="SAS …, siège, représentant"></div>
+          <div class="champ"><label for="gVen">Vendeur</label><input id="gVen" value="${esc(dn.vendeur || '')}" placeholder="nom, si connu"></div>
+          <div class="champ" style="grid-column:1/-1"><label>Conditions suspensives</label><div class="puces">${['Obtention d\'un prêt', 'Autorisation de travaux', 'Accord de la copropriété'].map(x => `<button type="button" class="puce${dn.conditions.includes(x) ? ' choisie' : ''}" data-cond="${esc(x)}">${esc(x)}</button>`).join('')}</div><small class="aide">Aucune cochée : achat comptant sans condition.</small></div>
+          ${gdate('gDs', 'Signature souhaitée avant le', dn.dateSouhaitee || jours(aujourdhui(), 21))}
+          <div class="champ" style="grid-column:1/-1"><label for="gNo">Observations</label><textarea id="gNo" rows="2">${esc(dn.notes || '')}</textarea></div>
+        </div>
+        <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gPdf">Générer et envoyer le dossier</button><button class="bouton bouton-principal" id="gOk">Dossier envoyé</button></div>
+        <p class="aide">Pièces reçues : ${PIECES.filter(p => (b.pieces[p[0]] || {}).ok).length} / ${PIECES.length} (onglet Pièces).</p>`;
+      lierNouveauxContacts(el);
+      const lire = () => { dn.notaireId = gval(el, 'gNot'); dn.notaireVendeur = gval(el, 'gNv'); dn.acquereur = gval(el, 'gAcq'); dn.vendeur = gval(el, 'gVen'); dn.dateSouhaitee = gval(el, 'gDs'); dn.notes = gval(el, 'gNo'); if (dn.notaireId) lierContact(b, dn.notaireId, 'Notaire'); sauverPlusTard('biens', b); };
+      $$('input,select,textarea', el).forEach(x => x.addEventListener('change', lire));
+      $$('[data-cond]', el).forEach(x => x.onclick = () => { const k = x.dataset.cond; dn.conditions = dn.conditions.includes(k) ? dn.conditions.filter(y => y !== k) : dn.conditions.concat(k); x.classList.toggle('choisie'); sauverPlusTard('biens', b); });
+      $('#gAcq').addEventListener('change', () => { if (!societe() && dn.acquereur) { const R = D.obtenir('reglages', 'reglages') || { id: 'reglages' }; R.societe = dn.acquereur; D.enregistrer('reglages', R); } });
+      $('#gPdf').onclick = () => { lire(); if (!pdfPret()) return; const n = D.obtenir('contacts', dn.notaireId); partagerPDF(docDossierNotaire(b), nomFichier('dossier-notaire', b), 'Bonjour Maître, veuillez trouver le dossier pour la promesse de vente du bien ' + (b.sim.adresse || '') + '. Bien cordialement.', n); };
+      $('#gOk').onclick = () => { lire(); const n = D.obtenir('contacts', dn.notaireId); relance(b, jours(aujourdhui(), 3), 'Notaire : date de signature de la promesse', n && n.id); finirEtape(b, 'notaire', { reponse: 'Envoyé' + (n ? ' à ' + n.nom : '') }); };
+    },
+    rdvPromesse(b, el) { etapeRdv(b, el, 'rdvPromesse', 'la promesse de vente'); },
+    promesse(b, el) {
+      const r = parcoursDe(b).faits.rdvPromesse || {};
+      el.innerHTML = gq('La promesse de vente est-elle signée ?', r.quand ? 'Rendez-vous prévu le ' + dateFr(r.quand) + (r.heure ? ' à ' + r.heure : '') + '.' : '') + `
+        <div class="grille-champs alignee">${gdate('gQ', 'Date de signature', r.quand)}${gmontant('gM', 'Dépôt de garantie versé (€)', '', '')}${gdate('gActe', 'Date prévue de l\'acte', jours(r.quand || aujourdhui(), 75))}</div>
+        <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gOui">Oui, signée</button><button class="bouton bouton-large" id="gRep">Reportée</button><button class="bouton" id="gNon">Non, la vente ne se fait pas</button></div>`;
+      $('#gOui').onclick = () => { const q = gval(el, 'gQ'), a = gval(el, 'gActe'); b.avancement = b.avancement || { jalons: {}, depenses: [] }; b.avancement.jalons = b.avancement.jalons || {}; if (a) b.avancement.jalons.acte = Object.assign({}, b.avancement.jalons.acte, { prevue: a }); ajouterDepense(b, 'achat', 'Dépôt de garantie (promesse)', nb(gval(el, 'gM')), q); finirEtape(b, 'promesse', { date: q, reponse: 'Signée', montant: nb(gval(el, 'gM')) || null }); };
+      $('#gRep').onclick = () => rouvrirEtape(b, 'rdvPromesse');
+      $('#gNon').onclick = () => classerDossier(b);
+    },
+    devis(b, el) {
+      synchroniserLignes(b, false); const L = b.travaux.lignes;
+      const dessiner = () => {
+        const T = M.totauxChantier(L, b.sim.aleas, seuilTravaux(b)), recus = L.filter(l => l.devis > 0).length;
+        el.innerHTML = gq('Les devis des travaux, poste par poste', 'Montant et document du devis : la marge se recalcule avec les vrais prix.') + `
+          <div class="guide-infos">${ginfo('Budget prévu', eur(T.budget))}${ginfo('Devis reçus', recus + ' / ' + L.length)}${ginfo('Total des devis', eur(T.engage), T.alerte ? 'rouge' : '')}${ginfo('Coût réel estimé', eur(T.reel))}</div>
+          <div class="postes-guide">${L.map((l, i) => `<div class="poste-guide${l.devis > 0 ? ' fait' : ''}" data-i="${i}"><div class="pg-tete"><strong>${esc(l.l)}</strong><small class="discret">budget ${eur(l.budget)}</small></div>
+            <div class="grille-champs alignee">${choixContact('gA' + i, 'artisan', l.artisanId, 'Artisan')}<div class="champ"><label for="gD${i}">Devis HT (€)</label><input id="gD${i}" type="number" inputmode="numeric" data-f="devis" value="${l.devis || ''}"></div></div>
+            <div class="pg-docs">${(l.docs || []).map(lienDoc).join('')}<label class="bouton bouton-petit">+ Devis (photo ou PDF)<input type="file" accept="image/*,application/pdf" hidden data-fichier="${i}"></label></div></div>`).join('')}</div>
+          <div class="guide-actions"><button class="bouton bouton-principal bouton-large" id="gOk">Devis réunis</button><button class="bouton" id="gPlus">+ Poste</button></div>`;
+        lierNouveauxContacts(el); lierDocs(el, () => L.flatMap(l => l.docs || []));
+        L.forEach((l, i) => { const s = $('#gA' + i, el); if (s) s.onchange = () => { l.artisanId = s.value; if (s.value) lierContact(b, s.value, l.l.split(',')[0]); sauverMaintenant('biens', b); }; });
+        $$('[data-f="devis"]', el).forEach(x => x.onchange = () => { const l = L[+x.closest('[data-i]').dataset.i]; l.devis = nb(x.value); if (l.devis && !l.devisDate) l.devisDate = aujourdhui(); b.travaux.utiliserReel = true; sauverMaintenant('biens', b); cacheAnalyse.clear(); majEntete(b); dessiner(); });
+        $$('[data-fichier]', el).forEach(x => x.onchange = async () => { const l = L[+x.dataset.fichier]; for (const f of x.files) { try { const m = await MarcheoPhotos.ajouterFichier(b.id, 'devis', f); (l.docs = l.docs || []).push(m); } catch (e) { notifier(e.message, 'erreur'); } } sauverMaintenant('biens', b); dessiner(); });
+        $('#gPlus').onclick = () => { L.push({ poste: null, l: 'Poste supplémentaire', budget: 0, artisanId: '', devis: 0, devisDate: '', facture: 0, paye: 0, avancement: 0, debut: '', fin: '', commentaire: '' }); sauverMaintenant('biens', b); dessiner(); };
+        $('#gOk').onclick = () => { const go = () => finirEtape(b, 'devis', { montant: Math.round(T.engage) || null, reponse: recus + ' devis sur ' + L.length + ' postes' }); recus < L.length ? confirmer((L.length - recus) + ' poste(s) sans devis : leur budget estimé reste dans le calcul. Continuer ?', go) : go(); };
+      };
+      dessiner();
+    },
+    rdvActe(b, el) { etapeRdv(b, el, 'rdvActe', 'l\'acte d\'achat'); },
+    acte(b, el) {
+      const r = parcoursDe(b).faits.rdvActe || {}, A = analyse(b);
+      el.innerHTML = gq('L\'acte est-il signé et as-tu les clés ?', r.quand ? 'Rendez-vous prévu le ' + dateFr(r.quand) + (r.heure ? ' à ' + r.heure : '') + '.' : '') + `
+        <div class="grille-champs alignee">${gdate('gQ', 'Date de l\'acte', r.quand)}${gmontant('gM', 'Prix payé (€)', A.r.achat, '')}${gmontant('gN', 'Frais de notaire et d\'agence (€)', A.r.acq, '')}</div>
+        <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gOui">Oui, acte signé, clés en main</button><button class="bouton bouton-large" id="gRep">Reporté</button><button class="bouton" id="gNon">La vente ne se fait pas</button></div>
+        <p class="aide">L'achat et les frais passent seuls dans les dépenses du projet.</p>`;
+      $('#gOui').onclick = () => {
+        const q = gval(el, 'gQ'), m = nb(gval(el, 'gM')), n = nb(gval(el, 'gN')), dep = (b.avancement || {}).depenses || [], garantie = dep.filter(d => d.categorie === 'achat').reduce((s, d) => s + d.montant, 0);
+        if (m) { b.sim.achat = m; ajouterDepense(b, 'achat', 'Prix d\'achat (solde)', m - garantie, q); }
+        ajouterDepense(b, 'notaire', 'Notaire et agence à l\'achat', n, q);
+        relance(b, jours(q, 7), 'Assurance du bien et ouverture des compteurs');
+        finirEtape(b, 'acte', { date: q, montant: m || null, reponse: 'Clés remises' });
+      };
+      $('#gRep').onclick = () => rouvrirEtape(b, 'rdvActe');
+      $('#gNon').onclick = () => classerDossier(b);
+    },
+    debut(b, el) {
+      el.innerHTML = gq('Quand démarrent les travaux ?') + `<div class="grille-champs alignee">${gdate('gQ', 'Début des travaux', '')}${gdate('gF', 'Fin prévue', jours(aujourdhui(), 30 * Math.max(1, Math.round((b.sim.duree || 9) / 3))))}</div>
+        <div class="guide-actions"><button class="bouton bouton-principal bouton-large" id="gOk">Travaux démarrés</button></div>`;
+      $('#gOk').onclick = () => { const q = gval(el, 'gQ'), f = gval(el, 'gF'); synchroniserLignes(b, false); b.travaux.lignes.forEach(l => { if (!l.debut) l.debut = q; if (!l.fin && f) l.fin = f; }); b.avancement = b.avancement || { jalons: {}, depenses: [] }; b.avancement.jalons = b.avancement.jalons || {}; if (f) b.avancement.jalons.finTravaux = Object.assign({}, b.avancement.jalons.finTravaux, { prevue: f }); finirEtape(b, 'debut', { date: q, quand: q }); };
+    },
+    chantier(b, el) {
+      synchroniserLignes(b, false); const L = b.travaux.lignes; b.chantier = b.chantier || { photos: [] }; const PH = b.chantier.photos;
+      const dessiner = () => {
+        const T = M.totauxChantier(L, b.sim.aleas, seuilTravaux(b)), ref = T.engage || T.budget, conso = ref ? T.paye / ref : 0;
+        el.innerHTML = gq('Suivi du chantier', 'Pour chaque poste : avancement, paiements, photos avant et après.') + `
+          <div class="jgs"><div class="jg"><span>Avancement</span><div class="jg-barre"><i style="width:${Math.round(T.avancement * 100)}%"></i></div><b>${pc(T.avancement, 0)}</b></div>
+            <div class="jg${conso > T.avancement + .15 ? ' alerte' : ''}"><span>Budget consommé</span><div class="jg-barre"><i style="width:${Math.min(100, Math.round(conso * 100))}%"></i></div><b>${eur(T.paye)} / ${eur(ref)}</b></div></div>
+          ${T.alerte ? `<div class="alerte-bandeau">Devis au-dessus du budget de ${pc(T.depassement, 0)}.</div>` : ''}
+          <div class="postes-guide">${L.map((l, i) => { const k = l.poste || l.l, av = PH.filter(p => p.poste === k && p.moment === 'avant'), ap = PH.filter(p => p.poste === k && p.moment === 'apres'), ar = D.obtenir('contacts', l.artisanId); return `<div class="poste-guide${l.avancement >= 100 ? ' fait' : ''}" data-i="${i}">
+            <div class="pg-tete"><strong>${esc(l.l)}</strong><small class="discret">${ar ? esc(ar.nom) + ' · ' : ''}${l.devis ? 'devis ' + eur(l.devis) : 'budget ' + eur(l.budget)}</small></div>
+            <div class="segments pg-avance">${[0, 25, 50, 75, 100].map(v => `<button type="button" data-av="${v}" aria-pressed="${(+l.avancement || 0) === v}">${v} %</button>`).join('')}</div>
+            <div class="grille-champs alignee pg-deux"><div class="champ"><label>Payé (€)</label><input type="number" inputmode="numeric" data-paye value="${l.paye || ''}"></div><div class="champ"><label>Facturé (€)</label><input type="number" inputmode="numeric" data-facture value="${l.facture || ''}"></div></div>
+            <div class="pg-photos"><div><small>Avant</small><div class="visite-photos petites">${vignettes(av)}<label class="bouton bouton-petit">+<input type="file" accept="image/*" capture="environment" multiple hidden data-photo-poste="avant"></label></div></div>
+              <div><small>Après</small><div class="visite-photos petites">${vignettes(ap)}<label class="bouton bouton-petit">+<input type="file" accept="image/*" capture="environment" multiple hidden data-photo-poste="apres"></label></div></div></div></div>`; }).join('')}</div>
+          <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gOk">Travaux terminés : visite de fin de chantier</button></div>`;
+        chargerVignettes(el, PH);
+        const ligne = x => L[+x.closest('[data-i]').dataset.i];
+        $$('[data-av]', el).forEach(x => x.onclick = () => { const l = ligne(x); l.avancement = +x.dataset.av; if (l.avancement === 100 && !l.fin) l.fin = aujourdhui(); sauverMaintenant('biens', b); dessiner(); });
+        $$('[data-paye]', el).forEach(x => x.onchange = () => { ligne(x).paye = nb(x.value); sauverMaintenant('biens', b); cacheAnalyse.clear(); dessiner(); });
+        $$('[data-facture]', el).forEach(x => x.onchange = () => { ligne(x).facture = nb(x.value); sauverMaintenant('biens', b); dessiner(); });
+        $$('[data-photo-poste]', el).forEach(x => x.onchange = async () => { const l = ligne(x); for (const f of x.files) { try { const m = await MarcheoPhotos.ajouter(b.id, 'chantier', f); m.poste = l.poste || l.l; m.moment = x.dataset.photoPoste; PH.push(m); } catch (e) { notifier(e.message, 'erreur'); } } sauverMaintenant('biens', b); dessiner(); });
+        $('#gOk').onclick = () => { const go = () => { finirEtape(b, 'chantier', { reponse: 'Travaux terminés' }, true); ouvrirReception(b); }; T.avancement < .99 ? confirmer('Avancement à ' + pc(T.avancement, 0) + '. Passer quand même à la visite de fin de chantier ?', go) : go(); };
+      };
+      dessiner();
+    },
+    reception(b, el) {
+      const R = b.reception;
+      if (!R) {
+        el.innerHTML = gq('Visite de fin de chantier', 'Poste par poste : conforme ou réserve, avec photos et commentaire. Le procès-verbal de réserves par entreprise est généré à la fin.') + `<div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gV">${b.receptionBrouillon ? 'Reprendre la visite' : 'Commencer la visite de fin de chantier'}</button></div>`;
+        $('#gV').onclick = () => ouvrirReception(b); return;
+      }
+      const res = R.items.filter(x => x.etat !== 'Conforme'), ouvertes = res.filter(x => !x.levee), parArtisan = [...new Set(res.map(x => x.artisanId || ''))];
+      el.innerHTML = gq(ouvertes.length ? 'Les réserves sont-elles levées ?' : 'Fin de chantier : tout est conforme ?', 'Visite du ' + dateFr(R.date) + ' · ' + R.items.length + ' points contrôlés · ' + res.length + ' réserve(s).') + `
+        ${res.length ? `<div class="postes-guide">${res.map(x => { const ar = D.obtenir('contacts', x.artisanId); return `<div class="poste-guide${x.levee ? ' fait' : ''}"><div class="pg-tete"><strong>${esc(x.l)}</strong><small class="discret">${ar ? esc(ar.nom) : 'entreprise non désignée'} · ${esc(x.etat)}</small></div>${x.note ? `<p>${esc(x.note)}</p>` : ''}<div class="visite-photos petites">${vignettes((R.photos || []).filter(p => p.point === x.cle))}</div>
+          <label class="case"><input type="checkbox" data-levee="${esc(x.cle)}"${x.levee ? ' checked' : ''}> Réserve levée${x.levee ? ' le ' + dateFr(x.levee) : ''}</label></div>`; }).join('')}</div>
+        <div class="guide-actions">${parArtisan.map(a => `<button class="bouton" data-pv="${a}">PV de réserves${a ? ' · ' + esc((D.obtenir('contacts', a) || {}).nom || '') : ' · sans entreprise'}</button>`).join('')}<button class="bouton" data-pv="*">PV complet</button></div>` : '<div class="info-bandeau">Aucune réserve.</div>'}
+        <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gOk">Oui, réception prononcée</button><button class="bouton" id="gRe">Refaire la visite</button></div>`;
+      chargerVignettes(el, R.photos || []);
+      $$('[data-levee]', el).forEach(x => x.onchange = () => { const it = R.items.find(y => y.cle === x.dataset.levee); it.levee = x.checked ? aujourdhui() : ''; sauverMaintenant('biens', b); afficher(); });
+      $$('[data-pv]', el).forEach(x => x.onclick = async () => { if (!pdfPret()) return; const a = x.dataset.pv === '*' ? '' : x.dataset.pv, ar = a ? D.obtenir('contacts', a) : null; x.disabled = true; try { partagerPDF(await docReserves(b, x.dataset.pv), nomFichier('reserves' + (ar ? '-' + ar.nom.toLowerCase().replace(/[^a-z0-9]+/g, '-') : ''), b), 'Bonjour, veuillez trouver le procès-verbal de réserves du chantier ' + (b.sim.adresse || '') + '. Merci de lever ces réserves sous 15 jours.', ar); } finally { x.disabled = false; } });
+      $('#gRe').onclick = () => confirmer('Refaire la visite de fin de chantier ? La précédente reste dans le journal.', () => { delete b.reception; sauverMaintenant('biens', b); ouvrirReception(b); });
+      $('#gOk').onclick = () => { const go = () => { synchroniserLignes(b, false); b.travaux.lignes.forEach(l => { l.avancement = 100; }); finirEtape(b, 'reception', { reponse: ouvertes.length ? ouvertes.length + ' réserve(s) encore ouverte(s)' : 'Sans réserve ouverte' }); }; ouvertes.length ? confirmer(ouvertes.length + ' réserve(s) non levée(s). Prononcer la réception quand même ?', go) : go(); };
+    },
+    nettoyage(b, el) { etapeDateCout(b, el, 'nettoyage', 'Nettoyage du chantier : quand et combien ?', 'Nettoyage de fin de chantier'); },
+    photos(b, el) { etapeDateCout(b, el, 'photos', 'Photos de l\'annonce : quand et combien ?', 'Photos de l\'annonce', 'Photographe ou photos faites soi-même (coût 0).'); },
+    annonce(b, el) {
+      const A = analyse(b);
+      el.innerHTML = gq('Annonce de vente : où et à quel prix ?', 'Revente prévue dans le calcul : ' + eur(A.r.vente) + (b.dvf && b.dvf.secteur ? ' · secteur ' + eur(b.dvf.secteur.mediane) + ' /m² (médiane DVF)' : '') + '.') + `
+        <div class="grille-champs alignee">${gdate('gQ', 'Date de publication', '')}${gmontant('gM', 'Prix affiché (€)', Math.round(A.r.vente / 1000) * 1000 + 0, '')}
+          <div class="champ" style="grid-column:1/-1"><label>Sites</label><div class="puces">${['Leboncoin', 'SeLoger', 'Bien\'ici', 'PAP', 'Agence', 'Réseau'].map(x => `<button type="button" class="puce" data-site="${esc(x)}">${esc(x)}</button>`).join('')}</div></div>
+          <div class="champ" style="grid-column:1/-1"><label for="gLien">Lien de l'annonce</label><input id="gLien" type="url" placeholder="facultatif"></div></div>
+        <div class="guide-actions"><button class="bouton bouton-principal bouton-large" id="gOk">Annonce publiée</button></div>`;
+      $$('[data-site]', el).forEach(x => x.onclick = () => x.classList.toggle('choisie'));
+      $('#gOk').onclick = () => { const sites = $$('.puce.choisie', el).map(x => x.dataset.site), m = nb(gval(el, 'gM')); b.annonceVente = { date: gval(el, 'gQ'), prix: m, sites, lien: gval(el, 'gLien') }; finirEtape(b, 'annonce', { date: gval(el, 'gQ') || aujourdhui(), montant: m || null, texte: sites.join(', ') }); };
+    },
+    offreAcheteur(b, el) {
+      const P = parcoursDe(b), A = analyse(b);
+      const dessiner = () => {
+        el.innerHTML = gq('Offres des acheteurs', 'Chaque offre reçue, puis celle que tu acceptes.') + `
+          ${P.offresAch.length ? `<div class="postes-guide">${P.offresAch.map((o, i) => { const S2 = clone(A.S); S2.vente = o.montant; const r = M.compute(S2); return `<div class="poste-guide${o.statut === 'refusee' ? ' barre' : ''}"><div class="pg-tete"><strong>${eur(o.montant)} · ${esc(o.acheteur || 'acheteur')}</strong><small class="discret">${dateFr(o.date)} · ${esc(o.financement)} · bénéfice net à ce prix ${eur(r.N)} (${pc(r.m)})</small></div>${o.statut === 'attente' ? `<div class="actions"><button class="bouton bouton-vert bouton-petit" data-acc="${i}">Accepter</button><button class="bouton bouton-petit" data-ref="${i}">Refuser</button></div>` : `<small>${o.statut === 'refusee' ? 'refusée' : 'acceptée'}</small>`}</div>`; }).join('')}</div>` : ''}
+          <div class="grille-champs alignee">${gmontant('gM', 'Montant de l\'offre (€)', '', '')}<div class="champ"><label for="gAch">Acheteur</label><input id="gAch"></div><div class="champ"><label for="gFin">Financement</label><select id="gFin"><option>Prêt bancaire</option><option>Comptant</option></select></div>${gdate('gQ', 'Date', '')}</div>
+          <div class="guide-actions"><button class="bouton bouton-principal" id="gAj">+ Enregistrer l'offre</button></div>`;
+        $('#gAj').onclick = () => { const m = nb(gval(el, 'gM')); if (!m) { notifier('Saisir le montant.', 'erreur'); return; } P.offresAch.push({ date: gval(el, 'gQ') || aujourdhui(), montant: m, acheteur: gval(el, 'gAch'), financement: gval(el, 'gFin'), statut: 'attente' }); sauverMaintenant('biens', b); dessiner(); };
+        $$('[data-ref]', el).forEach(x => x.onclick = () => { P.offresAch[+x.dataset.ref].statut = 'refusee'; sauverMaintenant('biens', b); dessiner(); });
+        $$('[data-acc]', el).forEach(x => x.onclick = () => { const o = P.offresAch[+x.dataset.acc]; o.statut = 'acceptee'; finirEtape(b, 'offreAcheteur', { montant: o.montant, reponse: (o.acheteur || 'Acheteur') + ', ' + o.financement.toLowerCase() }); });
+      };
+      dessiner();
+    },
+    compromisVente(b, el) {
+      el.innerHTML = gq('Le compromis de vente est-il signé ?') + `<div class="grille-champs alignee">${gdate('gQ', 'Date de signature', '')}${gdate('gActe', 'Date prévue de l\'acte de vente', jours(aujourdhui(), 90))}<div class="champ" style="grid-column:1/-1"><label for="gNot">Notaire de l'acheteur</label><input id="gNot" placeholder="facultatif"></div></div>
+        <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gOk">Oui, signé</button></div>`;
+      $('#gOk').onclick = () => { const a = gval(el, 'gActe'); b.avancement = b.avancement || { jalons: {}, depenses: [] }; b.avancement.jalons = b.avancement.jalons || {}; if (a) { b.avancement.jalons.acteVente = Object.assign({}, b.avancement.jalons.acteVente, { prevue: a }); relance(b, a, 'Signature de l\'acte de vente'); } finirEtape(b, 'compromisVente', { date: gval(el, 'gQ') || aujourdhui(), texte: gval(el, 'gNot') }); };
+    },
+    acteVente(b, el) {
+      const P = parcoursDe(b), o = P.offresAch.filter(x => x.statut === 'acceptee').pop();
+      el.innerHTML = gq('L\'acte de vente est-il signé ?', 'Dernière étape : le prix final remplace la revente prévue et le bénéfice réel s\'affiche.') + `<div class="grille-champs alignee">${gdate('gQ', 'Date de l\'acte', (b.avancement && b.avancement.jalons && b.avancement.jalons.acteVente && b.avancement.jalons.acteVente.prevue) || '')}${gmontant('gM', 'Prix de vente final (€)', o ? o.montant : analyse(b).r.vente, '')}</div>
+        <div class="guide-actions"><button class="bouton bouton-vert bouton-large" id="gOk">Vendu</button></div>`;
+      $('#gOk').onclick = () => { const m = nb(gval(el, 'gM')); if (m) b.sim.vente = m; relance(b, jours(aujourdhui(), 30), 'Déclaration de TVA sur marge'); finirEtape(b, 'acteVente', { date: gval(el, 'gQ') || aujourdhui(), montant: m || null }); };
+    }
+  };
+
+  /* ---------- Visite de fin de chantier : un écran par poste ---------- */
+  function ouvrirReception(b) {
+    synchroniserLignes(b, false);
+    const points = b.travaux.lignes.filter(l => l.budget > 0 || l.devis > 0 || !l.poste).map(l => ({ cle: l.poste || l.l, l: l.l.split(',')[0], artisanId: l.artisanId || '' })).concat([{ cle: 'proprete', l: 'Propreté et finitions générales', artisanId: '' }]);
+    const V = b.receptionBrouillon = b.receptionBrouillon || { debut: new Date().toISOString(), point: 0, rep: {}, photos: [] };
+    const ecran = document.createElement('div'); ecran.className = 'visite'; document.body.appendChild(ecran);
+    const sauver = () => sauverMaintenant('biens', b);
+    const dessiner = () => {
+      const fin = V.point >= points.length, p = points[Math.min(V.point, points.length - 1)], R = V.rep[p.cle] = V.rep[p.cle] || {}, ph = V.photos.filter(x => x.point === p.cle), ar = D.obtenir('contacts', p.artisanId);
+      const reserves = points.filter(x => V.rep[x.cle] && V.rep[x.cle].etat && V.rep[x.cle].etat !== 'Conforme');
+      ecran.innerHTML = `
+        <header class="visite-tete"><button class="bouton-icone" data-v="fermer" aria-label="Fermer">${I.fermer}</button><div><strong>Fin de chantier</strong><small>${esc(titreBien(b))}</small></div><span class="visite-chrono">${Math.min(V.point + 1, points.length)} / ${points.length}</span></header>
+        <div class="visite-progression"><span style="width:${Math.round(Math.min(1, (V.point + 1) / (points.length + 1)) * 100)}%"></span></div>
+        <main class="visite-corps">${fin ? `<h2>Bilan</h2><p>${points.length} points contrôlés, <b class="${reserves.length ? 'orange' : 'vert'}">${reserves.length} réserve(s)</b>.</p>${reserves.map(x => `<div class="alerte-bandeau">${esc(x.l)} : ${esc(V.rep[x.cle].etat)}${V.rep[x.cle].note ? ' · ' + esc(V.rep[x.cle].note) : ''}</div>`).join('')}
+            ${points.filter(x => !(V.rep[x.cle] || {}).etat).length ? `<p class="aide orange">${points.filter(x => !(V.rep[x.cle] || {}).etat).length} point(s) sans réponse, comptés conformes.</p>` : ''}` : `
+          <div class="visite-section">${ar ? esc(ar.nom) : 'Contrôle'} · ${V.point + 1} / ${points.length}</div><h2>${esc(p.l)}</h2>
+          <div class="puces puces-point">${['Conforme', 'Réserve', 'Non réalisé'].map(o => `<button class="puce${R.etat === o ? ' choisie' : ''}" data-o="${o}">${o}</button>`).join('')}</div>
+          <div class="visite-photos">${vignettes(ph)}<label class="bouton visite-photo">${ph.length ? 'Autre photo' : 'Photo'}<input type="file" accept="image/*" capture="environment" multiple hidden data-prise></label></div>
+          <details class="visite-note-bloc"${R.note || (R.etat && R.etat !== 'Conforme') ? ' open' : ''}><summary>Commentaire</summary><textarea class="visite-note" data-note rows="3" placeholder="Ce qui ne va pas, ce qu'il faut reprendre">${esc(R.note || '')}</textarea></details>`}</main>
+        <footer class="visite-pied"><button class="bouton" data-v="prec"${V.point === 0 ? ' disabled' : ''}>‹ Précédent</button>${fin ? '<button class="bouton bouton-principal" data-v="fin">Enregistrer la visite</button>' : `<button class="bouton ${R.etat ? 'bouton-principal' : ''}" data-v="suiv">${R.etat ? 'Suivant ›' : 'Passer ›'}</button>`}</footer>`;
+      chargerVignettes(ecran, V.photos);
+      const aller_ = i => { V.point = Math.max(0, Math.min(points.length, i)); sauver(); dessiner(); };
+      $$('[data-o]', ecran).forEach(x => x.onclick = () => { R.etat = x.dataset.o; sauver(); if (R.etat === 'Conforme') setTimeout(() => aller_(V.point + 1), 250); else dessiner(); });
+      const no = $('[data-note]', ecran); if (no) no.oninput = () => { R.note = no.value; sauver(); };
+      const pr = $('[data-prise]', ecran); if (pr) pr.onchange = async () => { for (const f of pr.files) { try { const m = await MarcheoPhotos.ajouter(b.id, 'reception', f); m.point = p.cle; V.photos.push(m); } catch (e) { notifier(e.message, 'erreur'); } } sauver(); dessiner(); };
+      $('[data-v="fermer"]', ecran).onclick = () => { sauver(); ecran.remove(); notifier('Visite gardée en brouillon.'); afficher(); };
+      $('[data-v="prec"]', ecran).onclick = () => aller_(V.point - 1);
+      const s = $('[data-v="suiv"]', ecran); if (s) s.onclick = () => aller_(V.point + 1);
+      const f = $('[data-v="fin"]', ecran); if (f) f.onclick = () => {
+        b.reception = { date: aujourdhui(), photos: V.photos, items: points.map(x => ({ cle: x.cle, l: x.l, artisanId: x.artisanId, etat: (V.rep[x.cle] || {}).etat || 'Conforme', note: (V.rep[x.cle] || {}).note || '', levee: '' })) };
+        delete b.receptionBrouillon; sauverMaintenant('biens', b);
+        const n = b.reception.items.filter(x => x.etat !== 'Conforme');
+        D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'visite', texte: 'Visite de fin de chantier : ' + b.reception.items.length + ' points, ' + n.length + ' réserve(s)' + (n.length ? ' (' + n.map(x => x.l + ' : ' + x.etat).join(' ; ') + ')' : '') + '.', auto: true });
+        ecran.remove(); notifier('Visite de fin de chantier enregistrée.', 'succes'); aller('#/bien/' + b.id + '/avancement'); afficher();
+      };
+      const corps = $('.visite-corps', ecran); if (corps) corps.scrollTop = 0;
+    };
+    dessiner();
+  }
+
+  /* ---------- Onglet Avancement : le guide, ce qui est fait, le budget ---------- */
   function ongletAvancement(z, b) {
     b.avancement = b.avancement || { jalons: {}, depenses: [] }; b.avancement.jalons = b.avancement.jalons || {}; b.avancement.depenses = b.avancement.depenses || [];
-    const P = suiviProjet(b), t = aujourdhui(), r = P.A.r;
-    const pos = d => Math.min(100, Math.max(0, ecartJours(P.debut, d) / Math.max(1, ecartJours(P.debut, P.finProjetee > P.liste[P.liste.length - 1].prevue ? P.finProjetee : P.liste[P.liste.length - 1].prevue)) * 100));
-    const ecart = P.totalProjete - P.totalPrevu;
+    const P = parcoursDe(b), s = etapeCourante(b), classe = b.etape === 'ecarte', faits = PARCOURS.filter(x => P.faits[x.id]), SP = suiviProjet(b);
+    const autres = JALONS.filter(j => ['financement', 'autorisation', 'assurance', 'comptaAchat', 'tva', 'cloture', 'distribution'].includes(j.id));
     z.innerHTML = `
-      ${P.retard ? `<div class="alerte-bandeau">Retard de ${P.retard} jour(s) sur « ${esc(P.liste.find(j => !j.fait).l)} » : fin projetée au ${dateFr(P.finProjetee)} au lieu du ${dateFr(P.finPrevue)}.</div>` : ''}
+      ${classe ? `<div class="guide-carte" style="--c:${COULEUR_ETAPE.ecarte}"><div class="guide-tete"><span class="guide-pastille">Classé</span></div>${gq('Dossier classé' + (P.classe && P.classe.date ? ' le ' + dateFr(P.classe.date) : ''), esc(b.motif || ''))}<div class="guide-actions"><button class="bouton bouton-principal" id="gRouvrir">Rouvrir le dossier</button></div></div>`
+        : s ? `<div class="guide-carte" style="--c:${COULEUR_ETAPE[s.n]}"><div class="guide-tete"><span class="guide-pastille">${esc(ETAPE[s.n])}</span><span class="discret">Étape ${PARCOURS.indexOf(s) + 1} sur ${PARCOURS.length} · ${esc(s.t)}</span></div><div id="gCorps"></div></div>`
+        : `<div class="guide-carte" style="--c:${COULEUR_ETAPE.vendu}"><div class="guide-tete"><span class="guide-pastille">Vendu</span></div>${gq('Opération terminée')}<div class="guide-infos">${ginfo('Bénéfice net réel', eur(SP.rProj.N) + ' · ' + pc(SP.rProj.m), SP.rProj.N >= 0 ? 'vert' : 'rouge')}${ginfo('Coût total', eur(SP.totalProjete))}${ginfo('Prix de vente', eur(SP.A.r.vente))}</div></div>`}
+      ${faits.length ? `<div class="carte guide-fait"><h2>Déjà fait</h2><ol>${faits.slice().reverse().map(x => { const f = P.faits[x.id]; return `<li style="--c:${COULEUR_ETAPE[x.n]}"><span class="gf-date">${f.date ? dateFr(f.date) : '—'}</span><span class="gf-texte"><b>${esc(x.t)}</b>${resumeEtape(x, f) ? `<small>${esc(resumeEtape(x, f))}</small>` : ''}</span><button class="bouton-lien" data-rouvrir="${x.id}">Modifier</button></li>`; }).join('')}</ol></div>` : ''}
+      <details class="carte repli"${RANG[etapeAffichee(b)] >= RANG.compromis ? ' open' : ''}><summary><h2>Budget et dépenses</h2><span class="discret">${eur(SP.totalDepense)} dépensés · projection ${eur(SP.totalProjete)}</span></summary><div id="avBudget"></div></details>
+      <details class="carte repli"><summary><h2>Échéances administratives et comptables</h2><span class="discret">${autres.filter(j => (b.avancement.jalons[j.id] || {}).reelle).length} / ${autres.length}</span></summary>
+        <div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Échéance</th><th>Prévu</th><th>Fait le</th></tr></thead><tbody>${autres.map(j => { const x = SP.liste.find(y => y.id === j.id); return `<tr><td data-titre="Échéance"><strong>${esc(j.l)}</strong></td><td data-titre="Prévu"><input type="date" data-jprev="${j.id}" value="${x.prevue}"></td><td data-titre="Fait le"><input type="date" data-jreel="${j.id}" value="${x.reelle}"></td></tr>`; }).join('')}</tbody></table></div></details>`;
+    if (s && !classe) GUIDE[s.id](b, $('#gCorps'), s);
+    const ro = $('#gRouvrir'); if (ro) ro.onclick = () => rouvrirDossier(b);
+    $$('[data-rouvrir]', z).forEach(x => x.onclick = () => confirmer('Revenir à « ' + ETAPE_PARCOURS[x.dataset.rouvrir].t + ' » ? Les étapes suivantes seront à refaire (les données saisies restent).', () => rouvrirEtape(b, x.dataset.rouvrir)));
+    $$('[data-jprev]', z).forEach(el => el.onchange = () => { const k = el.dataset.jprev; b.avancement.jalons[k] = Object.assign({}, b.avancement.jalons[k], { prevue: el.value }); sauverMaintenant('biens', b); });
+    $$('[data-jreel]', z).forEach(el => el.onchange = () => { const k = el.dataset.jreel; b.avancement.jalons[k] = Object.assign({}, b.avancement.jalons[k], { reelle: el.value }); sauverMaintenant('biens', b); });
+    blocBudget($('#avBudget'), b);
+  }
+  function blocBudget(z, b) {
+    const P = suiviProjet(b), t = aujourdhui(), r = P.A.r, ecart = P.totalProjete - P.totalPrevu;
+    z.innerHTML = `
       <div class="indicateurs">
-        ${indic('Avancement', pc(P.avancementJalons, 0), { detail: P.faits + ' jalon(s) sur ' + P.liste.length + ' · temps écoulé ' + pc(P.avancementTemps, 0) })}
-        ${indic('Temps restant', P.moisRestants.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' mois', { detail: 'fin projetée le ' + dateFr(P.finProjetee), etat: P.retard ? 'rouge' : '' })}
         ${indic('Dépensé', eur(P.totalDepense), { detail: pc(P.totalPrevu ? P.totalDepense / P.totalPrevu : 0, 0) + ' du budget prévu' })}
         ${indic('Budget projeté', eur(P.totalProjete), { detail: (ecart > 0 ? '+ ' : ecart < 0 ? '− ' : '') + eur(Math.abs(ecart)) + ' sur le prévu', etat: ecart > 0 ? 'orange' : '' })}
         ${indic('Bénéfice net projeté', eur(P.rProj.N), { detail: 'prévu ' + eur(r.N) + ' · marge ' + pc(P.rProj.m), etat: P.rProj.N < r.N ? 'orange' : 'vert' })}
+        ${indic('Fin projetée', dateFr(P.finProjetee), { detail: P.retard ? P.retard + ' j de retard' : 'dans les temps', etat: P.retard ? 'rouge' : '' })}
       </div>
-      <div class="carte"><h2>Frise chronologique</h2>
-        <div class="frise"><div class="frise-ligne"></div><div class="frise-aujourdhui" style="left:${pos(t)}%"><span>aujourd'hui</span></div>
-          ${P.liste.map(j => `<div class="frise-point${j.fait ? ' fait' : j.retard ? ' retard' : ''}" style="left:${pos(j.reelle || j.prevue)}%;--c:${COULEUR_GROUPE[j.g]}" title="${esc(j.l)} · ${dateFr(j.reelle || j.prevue)}"></div>`).join('')}
-        </div>
-        <div class="frise-legende">${Object.entries(COULEUR_GROUPE).map(([g, c]) => `<span><i style="background:${c}"></i>${g}</span>`).join('')}<span><i class="cercle"></i>à venir</span><span><i class="cercle plein"></i>fait</span><span><i class="cercle rouge"></i>en retard</span></div>
-      </div>
-      <div class="tableau-conteneur" style="margin-top:.8rem"><table class="tableau adaptable"><thead><tr><th>Jalon</th><th>Famille</th><th>Prévu</th><th>Réalisé</th><th>État</th></tr></thead><tbody>
-        ${P.liste.map(j => `<tr><td data-titre="Jalon"><strong>${esc(j.l)}</strong></td><td data-titre="Famille"><span class="pastille-groupe" style="--c:${COULEUR_GROUPE[j.g]}"></span>${j.g}</td>
-          <td data-titre="Prévu"><input type="date" data-jprev="${j.id}" value="${j.prevue}"></td><td data-titre="Réalisé"><input type="date" data-jreel="${j.id}" value="${j.reelle}"></td>
-          <td data-titre="État">${j.fait ? voyant('vert', 'Fait') : j.retard ? voyant('rouge', j.retard + ' j de retard') : voyant('gris', 'À venir')}</td></tr>`).join('')}
-      </tbody></table></div>
-      <div class="section-titre"><h2>Budget</h2>${!b.avancement.depenses.some(d => d.categorie === 'achat') && b.avancement.jalons.acte && b.avancement.jalons.acte.reelle ? '<button class="bouton bouton-petit" id="avAchat">Comptabiliser l\'achat et le notaire</button>' : ''}</div>
-      <div class="tableau-conteneur"><table class="tableau"><thead><tr><th>Poste</th><th class="nombre">Prévu</th><th class="nombre">Dépensé</th><th class="nombre">Reste prévu</th><th class="nombre">Projection finale</th></tr></thead><tbody>
-        ${[['achat', 'Achat'], ['notaire', 'Notaire et agence'], ['travaux', 'Travaux'], ['annexes', 'Frais annexes et prestations']].map(([k, l]) => `<tr><td>${l}${k === 'travaux' && P.A.chantier ? '<span class="sous-ligne">paiements du chantier suivi compris</span>' : ''}</td><td class="nombre">${eur(P.prevu[k])}</td><td class="nombre">${eur(P.depense[k])}</td><td class="nombre">${eur(Math.max(0, P.prevu[k] - P.depense[k]))}</td><td class="nombre ${P.projete[k] > P.prevu[k] ? 'orange' : ''}">${eur(P.projete[k])}</td></tr>`).join('')}
-      </tbody><tfoot><tr><td>Coût de revient</td><td class="nombre">${eur(P.totalPrevu)}</td><td class="nombre">${eur(P.totalDepense)}</td><td class="nombre">${eur(Math.max(0, P.totalPrevu - P.totalDepense))}</td><td class="nombre">${eur(P.totalProjete)}</td></tr></tfoot></table></div>
+      <div class="tableau-conteneur"><table class="tableau"><thead><tr><th>Poste</th><th class="nombre">Prévu</th><th class="nombre">Dépensé</th><th class="nombre">Projection finale</th></tr></thead><tbody>
+        ${[['achat', 'Achat'], ['notaire', 'Notaire et agence'], ['travaux', 'Travaux'], ['annexes', 'Frais annexes et prestations']].map(([k, l]) => `<tr><td>${l}</td><td class="nombre">${eur(P.prevu[k])}</td><td class="nombre">${eur(P.depense[k])}</td><td class="nombre ${P.projete[k] > P.prevu[k] ? 'orange' : ''}">${eur(P.projete[k])}</td></tr>`).join('')}
+      </tbody><tfoot><tr><td>Coût de revient</td><td class="nombre">${eur(P.totalPrevu)}</td><td class="nombre">${eur(P.totalDepense)}</td><td class="nombre">${eur(P.totalProjete)}</td></tr></tfoot></table></div>
       <div class="section-titre"><h2>Dépenses</h2><button class="bouton bouton-petit" id="avDep">+ Dépense</button></div>
-      ${b.avancement.depenses.length ? `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th class="nombre">Montant</th><th></th></tr></thead><tbody>${b.avancement.depenses.slice().sort((x, y) => (y.date || '').localeCompare(x.date || '')).map(d => `<tr><td data-titre="Date">${dateFr(d.date)}</td><td data-titre="Libellé">${esc(d.libelle || '')}</td><td data-titre="Catégorie">${(CATEGORIES_DEPENSE.find(c => c[0] === d.categorie) || ['', ''])[1]}</td><td class="nombre" data-titre="Montant">${eur(d.montant)}</td><td><button class="bouton-icone" data-depsuppr="${d.id}" aria-label="Supprimer">${I.fermer}</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="vide">Aucune dépense saisie. Les paiements du chantier (onglet Travaux) sont comptés automatiquement.</div>'}`;
+      ${b.avancement.depenses.length ? `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th class="nombre">Montant</th><th></th></tr></thead><tbody>${b.avancement.depenses.slice().sort((x, y) => (y.date || '').localeCompare(x.date || '')).map(d => `<tr><td data-titre="Date">${dateFr(d.date)}</td><td data-titre="Libellé">${esc(d.libelle || '')}</td><td data-titre="Catégorie">${(CATEGORIES_DEPENSE.find(c => c[0] === d.categorie) || ['', ''])[1]}</td><td class="nombre" data-titre="Montant">${eur(d.montant)}</td><td><button class="bouton-icone" data-depsuppr="${d.id}" aria-label="Supprimer">${I.fermer}</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="vide">Aucune dépense. L\'achat, les frais, le nettoyage et les photos s\'ajoutent seuls au fil du guide ; les paiements du chantier sont comptés automatiquement.</div>'}`;
     const sauver = () => { sauverMaintenant('biens', b); cacheAnalyse.clear(); afficher(); };
-    $$('[data-jprev]', z).forEach(el => el.onchange = () => { const k = el.dataset.jprev; b.avancement.jalons[k] = Object.assign({}, b.avancement.jalons[k], { prevue: el.value }); sauver(); });
-    $$('[data-jreel]', z).forEach(el => el.onchange = () => {
-      const k = el.dataset.jreel; b.avancement.jalons[k] = Object.assign({}, b.avancement.jalons[k], { reelle: el.value });
-      const etape = { offre: 'offre', compromis: 'compromis', acte: 'acte', debutTravaux: 'chantier', miseEnVente: 'vente', acteVente: 'vendu' }[k];
-      if (el.value && etape && RANG[etape] > RANG[b.etape || 'repere']) { b.etape = etape; notifier('Étape du projet : ' + ETAPE[etape] + '.', 'succes'); }
-      sauver();
-    });
-    const ach = $('#avAchat'); if (ach) ach.onclick = () => { const d = b.avancement.jalons.acte.reelle; b.avancement.depenses.push({ id: D.nouvelId('d'), date: d, libelle: 'Prix d\'achat', categorie: 'achat', montant: Math.round(r.achat) }, { id: D.nouvelId('d'), date: d, libelle: 'Notaire et agence à l\'achat', categorie: 'notaire', montant: Math.round(r.acq) }); sauver(); };
-    $('#avDep').onclick = () => modale('Nouvelle dépense', `<div class="grille-champs alignee">
+    $('#avDep', z).onclick = () => modale('Nouvelle dépense', `<div class="grille-champs alignee">
         <div class="champ"><label for="dDate">Date</label><input id="dDate" type="date" value="${t}"></div>
         <div class="champ"><label for="dCat">Catégorie</label><select id="dCat">${CATEGORIES_DEPENSE.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('')}</select></div>
         <div class="champ"><label for="dMont">Montant (€)</label><input id="dMont" type="number" inputmode="decimal"></div>

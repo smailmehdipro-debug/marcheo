@@ -43,7 +43,7 @@ function traiter_(action, d, jeton) {
   if (action === 'ecrire') return ecrire_(d.enregistrements || [], utilisateur);
   if (action === 'deconnexion') { supprimerJeton_(jeton); return { fait: true }; }
   if (action === 'lireAnnonce') return lireAnnonce_(String(d.url || ''));
-  if (action === 'deposerPhoto') return deposerPhoto_(String(d.bienId || 'divers'), String(d.nom || 'photo.jpg'), String(d.base64 || ''));
+  if (action === 'deposerPhoto') return deposerPhoto_(String(d.bienId || 'divers'), String(d.nom || 'photo.jpg'), String(d.base64 || ''), String(d.type || 'image/jpeg'));
   if (action === 'lirePhoto') return lirePhoto_(String(d.id || ''));
   if (action === 'ventesDVF') return ventesDVF_(d);
   throw erreur_('Action inconnue.', 'ACTION');
@@ -316,10 +316,11 @@ function completerBienici_(a) {
 
 /* Photos de visite : un dossier Drive « Marchéo — photos », un sous-dossier par projet */
 function dossier_(parent, nom) { var it = parent.getFoldersByName(nom); return it.hasNext() ? it.next() : parent.createFolder(nom); }
-function deposerPhoto_(bienId, nom, base64) {
-  if (!base64 || base64.length > 12000000) throw erreur_('Photo absente ou trop lourde.', 'PHOTO');
+function deposerPhoto_(bienId, nom, base64, type) {
+  if (!base64 || base64.length > 12000000) throw erreur_('Photo ou document absent ou trop lourd.', 'PHOTO');
+  if (!/^(image\/(jpeg|png|webp|heic)|application\/pdf)$/.test(type || '')) type = 'image/jpeg';
   var d = dossier_(dossier_(DriveApp.getRootFolder(), 'Marchéo — photos'), bienId.replace(/[^\w-]/g, '').slice(0, 40) || 'divers');
-  var f = d.createFile(Utilities.newBlob(Utilities.base64Decode(base64), 'image/jpeg', nom.replace(/[^\w.-]/g, '-').slice(0, 80)));
+  var f = d.createFile(Utilities.newBlob(Utilities.base64Decode(base64), type, nom.replace(/[^\w.-]/g, '-').slice(0, 80)));
   return { id: f.getId() };
 }
 function lirePhoto_(id) {

@@ -168,5 +168,48 @@
     for (let i = 1; i <= n; i++) { doc.setPage(i); T('Simulation indicative, à valider par l\'expert-comptable et le notaire', MG, 291, { size: 7.5, color: MU }); T('Page ' + i + ' sur ' + n, W - MG, 291, { size: 7.5, color: MU, align: 'right' }); }
     return doc;
   }
-  global.MarcheoPDF = { creer };
+  /* Document simple aux couleurs de Marchéo : lettre d'offre, dossier pour le notaire, procès-verbal de réserves.
+     o = { titre, sous, sections: [{ titre, lignes: [[libellé, valeur]], paragraphes: [], cases: [[coché, libellé]], images: [dataUrl], signature: [gauche, droite] }] } */
+  function documentSimple(o) {
+    const J = global.jspdf.jsPDF, doc = new J({ unit: 'mm', format: 'a4' });
+    const W = 210, MG = 14, CW = W - 2 * MG; let y = 0;
+    const FOND = [248, 244, 236], ENCRE = [14, 42, 29], TX = [21, 33, 27], MU = [90, 103, 95], LN = [217, 207, 187], AC = [15, 74, 48], BLANC = [250, 246, 238], CLAIR = [201, 171, 116], LAITON = [168, 134, 79];
+    const c = t => String(t == null ? '' : t).replace(/[   ]/g, ' ').replace(/−/g, '-').replace(/[–—]/g, '-').replace(/œ/g, 'oe').replace(/Œ/g, 'OE').replace(/²/g, '2').replace(/[‘’]/g, "'").replace(/[≥]/g, '>=').replace(/[≤]/g, '<=').replace(/…/g, '...').replace(/[^\x00-\xff€]/g, '');
+    const fill = a => doc.setFillColor(a[0], a[1], a[2]), draw = a => doc.setDrawColor(a[0], a[1], a[2]);
+    const T = (t, x, yy, op = {}) => { doc.setFont(op.serif ? 'times' : 'helvetica', op.bold ? 'bold' : 'normal'); doc.setFontSize(op.size || 10); const a = op.color || TX; doc.setTextColor(a[0], a[1], a[2]); doc.text(c(t), x, yy, op.align ? { align: op.align } : undefined); };
+    const wrap = (t, w, size, bold) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); return doc.splitTextToSize(c(t), w); };
+    const page = () => { fill(FOND); doc.rect(0, 0, W, 297, 'F'); };
+    const need = h => { if (y + h > 282) { doc.addPage(); page(); y = 16; } };
+    page(); fill(ENCRE); doc.rect(0, 0, W, 34, 'F'); fill(LAITON); doc.rect(0, 34, W, 0.8, 'F');
+    T('MARCHÉO', MG, 10, { bold: true, size: 7.5, color: CLAIR }); T('Établi le ' + new Date().toLocaleDateString('fr-FR'), W - MG, 10, { size: 8, color: CLAIR, align: 'right' });
+    T(o.titre || '', MG, 21, { serif: true, bold: true, size: 19, color: BLANC });
+    if (o.sous) T(wrap(o.sous, CW, 9.5)[0], MG, 29, { size: 9.5, color: CLAIR });
+    y = 42;
+    (o.sections || []).forEach(s => {
+      if (s.titre) { need(14); y += 3; T(s.titre.toUpperCase(), MG, y, { bold: true, size: 8.8, color: AC }); draw(LAITON); doc.setLineWidth(0.3); doc.line(MG, y + 1.6, MG + 18, y + 1.6); y += 5; }
+      (s.lignes || []).forEach(([l, v]) => {
+        const vl = wrap(v == null || v === '' ? '—' : String(v), CW * 0.6, 9.8, true), h = Math.max(7.2, vl.length * 4.6 + 2.6); need(h);
+        T(l, MG + 1, y + 5, { size: 9.4, color: MU }); vl.forEach((x, i) => T(x, W - MG - 1, y + 5 + i * 4.6, { size: 9.8, bold: true, align: 'right' }));
+        draw(LN); doc.setLineWidth(0.2); doc.line(MG, y + h, W - MG, y + h); y += h;
+      });
+      (s.paragraphes || []).forEach(p => { const l = wrap(p, CW, 9.8); need(l.length * 4.8 + 3); y += 2; l.forEach(x => { T(x, MG, y + 4); y += 4.8; }); });
+      (s.cases || []).forEach(([ok, l]) => { need(7); draw(ok ? AC : MU); doc.setLineWidth(0.35); doc.rect(MG + 1, y + 1.6, 3.6, 3.6); if (ok) { fill(AC); doc.rect(MG + 1.7, y + 2.3, 2.2, 2.2, 'F'); } T(l + (ok ? '  (reçu)' : '  (à fournir)'), MG + 7, y + 4.8, { size: 9.6, color: ok ? TX : MU }); y += 6.6; });
+      if ((s.images || []).length) {
+        const L = 58, H = 43; let x = MG; need(H + 4); y += 2;
+        s.images.forEach(src => {
+          if (x + L > W - MG + 0.1) { x = MG; y += H + 3; need(H + 4); }
+          try { const pr = doc.getImageProperties(src), k = Math.min(L / pr.width, H / pr.height), w = pr.width * k, h = pr.height * k; doc.addImage(src, 'JPEG', x + (L - w) / 2, y + (H - h) / 2, w, h, undefined, 'FAST'); } catch (e) {}
+          x += L + 4;
+        });
+        y += H + 3;
+      }
+      if (s.signature) { need(36); y += 8; const w = (CW - 10) / 2; s.signature.forEach((l, i) => { const x = MG + i * (w + 10); T(l, x, y, { size: 9, color: MU }); T('Date et signature', x, y + 4.5, { size: 7.5, color: MU }); draw(LN); doc.setLineWidth(0.3); doc.rect(x, y + 7, w, 20); }); y += 30; }
+      y += 2;
+    });
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) { doc.setPage(i); T('Marchéo · ' + c(o.titre || '') + ' · page ' + i + ' / ' + n, W / 2, 291, { size: 7.5, color: MU, align: 'center' }); }
+    return doc;
+  }
+
+  global.MarcheoPDF = { creer, document: documentSimple };
 })(typeof window !== 'undefined' ? window : globalThis);

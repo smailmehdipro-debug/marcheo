@@ -34,7 +34,7 @@
     });
   }
   const versBase64 = blob => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => ko(r.error); r.readAsDataURL(blob); });
-  const depuisBase64 = b64 => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Blob([u], { type: 'image/jpeg' }); };
+  const depuisBase64 = (b64, type) => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Blob([u], { type: type || 'image/jpeg' }); };
 
   /* Ajoute une photo prise pendant la visite ; rend sa fiche { id, etape, date } */
   async function ajouter(bienId, etape, fichier) {
@@ -44,13 +44,31 @@
     envoyerPlusTard();
     return { id: p.id, etape, date: p.date };
   }
+  /* Document joint (devis, facture) : image compressée, PDF gardé tel quel (8 Mo au plus) */
+  async function ajouterFichier(bienId, etape, fichier) {
+    const image = /^image\//.test(fichier.type || '');
+    if (!image && fichier.size > 8 * 1024 * 1024) throw new Error('Document trop lourd (8 Mo au plus).');
+    const blob = image ? await compresser(fichier) : fichier, type = image ? 'image/jpeg' : (fichier.type || 'application/pdf');
+    const nom = (fichier.name || 'document').replace(/\.[a-z0-9]+$/i, '') + (image ? '.jpg' : /pdf/.test(type) ? '.pdf' : '');
+    const p = { id: 'dc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), bienId, etape, date: new Date().toISOString(), blob, type, nom, driveId: '' };
+    await ecrireLocal(p);
+    envoyerPlusTard();
+    return { id: p.id, etape, date: p.date, type, nom };
+  }
+  /* L'identifiant Drive est reporté sur la fiche, où qu'elle range la photo ou le document */
+  function marquer(o, id, driveId) {
+    if (!o || typeof o !== 'object') return false;
+    if (Array.isArray(o)) return o.reduce((t, x) => marquer(x, id, driveId) || t, false);
+    if (o.id === id && o.etape && !o.driveId) { o.driveId = driveId; return true; }
+    return Object.keys(o).reduce((t, k) => (o[k] && typeof o[k] === 'object' ? marquer(o[k], id, driveId) : false) || t, false);
+  }
   const urls = new Map();
   async function url(meta) {
     if (urls.has(meta.id)) return urls.get(meta.id);
     let p = await lireLocal(meta.id).catch(() => null);
     if (!p && meta.driveId && global.Donnees && global.Donnees.etat().mode === 'distant') {
       const r = await global.Donnees.action('lirePhoto', { id: meta.driveId });
-      p = { id: meta.id, bienId: '', etape: meta.etape, date: meta.date, blob: depuisBase64(r.base64), driveId: meta.driveId };
+      p = { id: meta.id, bienId: '', etape: meta.etape, date: meta.date, blob: depuisBase64(r.base64, meta.type), type: meta.type, driveId: meta.driveId };
       await ecrireLocal(p).catch(() => {});
     }
     if (!p) return '';
@@ -66,16 +84,16 @@
     try {
       const attente = (await toutLocal()).filter(p => !p.driveId);
       for (const p of attente) {
-        const r = await D.action('deposerPhoto', { bienId: p.bienId, nom: p.etape + '-' + p.date.slice(0, 19).replace(/[:T]/g, '-') + '.jpg', base64: await versBase64(p.blob) });
+        const ext = p.type && !/jpeg/.test(p.type) ? (/pdf/.test(p.type) ? '.pdf' : '') : '.jpg';
+        const r = await D.action('deposerPhoto', { bienId: p.bienId, nom: p.etape + '-' + p.date.slice(0, 19).replace(/[:T]/g, '-') + (p.nom ? '-' + p.nom.replace(/\.[a-z0-9]+$/i, '') : '') + ext, base64: await versBase64(p.blob), type: p.type || 'image/jpeg' });
         p.driveId = r.id; await ecrireLocal(p);
         const b = D.obtenir('biens', p.bienId);
-        if (b && b.visite && b.visite.photos) { const m = b.visite.photos.find(x => x.id === p.id); if (m && !m.driveId) { m.driveId = r.id; D.enregistrer('biens', b); } }
-        if (b && b.visiteBrouillon && b.visiteBrouillon.photos) { const m = b.visiteBrouillon.photos.find(x => x.id === p.id); if (m && !m.driveId) { m.driveId = r.id; D.enregistrer('biens', b); } }
+        if (b && marquer(b, p.id, r.id)) D.enregistrer('biens', b);
       }
     } catch (e) { envoyerPlusTard(60000); }
     finally { enCours = false; }
   }
   const enAttente = async () => (await toutLocal().catch(() => [])).filter(p => !p.driveId).length;
   if (typeof window !== 'undefined') { window.addEventListener('online', () => envoyerPlusTard(500)); setTimeout(() => envoyerPlusTard(3000), 0); }
-  global.MarcheoPhotos = { ajouter, url, envoyer, enAttente, compresser };
+  global.MarcheoPhotos = { ajouter, ajouterFichier, url, envoyer, enAttente, compresser, marquer };
 })(typeof window !== 'undefined' ? window : globalThis);
