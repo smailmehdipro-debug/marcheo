@@ -833,7 +833,7 @@
     b.visiteBrouillon = b.visiteBrouillon || { debut: new Date().toISOString(), point: 0, reponses: {}, photos: [], budget: 'm2' };
     const V = b.visiteBrouillon; if (V.point == null) V.point = 0;
     const ecran = document.createElement('div'); ecran.className = 'visite'; document.body.appendChild(ecran);
-    const sauver = () => sauverPlusTard('biens', b, 300);
+    const sauver = () => sauverMaintenant('biens', b); // chaque toucher est enregistré aussitôt : rien ne se perd si le téléphone ferme la page
     let sommaire = false, minuteurAvance = null;
     const dessiner = () => {
       const P = pointsVisite(V.reponses); V.point = Math.min(V.point, P.length - 1);
