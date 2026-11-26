@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulateur d'opération marchand de biens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  /* Page claire, saisie sur cartes blanches, résultats sur panneau bleu nuit. Cobalt pour ce qui se règle ; vert, orange, rouge réservés au verdict. */
+  --bg:#eef1f6; --panel:#dce4f0; --panel2:#ccd7e7; --field:#f1f4f9; --line:#b7c4d8;
+  --text:#131c2e; --muted:#4a5870; --accent:#1a52e6;
+  --go:#0e9f6e; --warn:#c96a04; --no:#d6364a;
+  --display:"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+.res,.dock{
+  --panel:#101a2c; --panel2:#19263d; --field:#19263d; --line:#293a57;
+  --text:#eef2f8; --muted:#9dabc2; --accent:#8fb4ff;
+  --go:#3ddc97; --warn:#ffb454; --no:#ff6b6b;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;font-variant-numeric:tabular-nums}
+.wrap{max-width:1140px;margin:0 auto;padding:24px 16px 110px;display:grid;gap:22px}
+header{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(1.55rem,5.5vw,2.15rem);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:800;font-size:1.15rem;margin:0;color:var(--text)}
+h3{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:10px 0 0}
+p{margin:0}
+.cols{display:grid;gap:22px;align-items:start}
+@media (min-width:920px){.cols{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)} .res{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto;border-radius:18px} .wrap{padding-bottom:44px} .dock{display:none!important}}
+.form,.res{display:grid;gap:14px;min-width:0}
+.box{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:18px;min-width:0;box-shadow:0 1px 2px rgba(19,28,46,.04)}
+.res .box{box-shadow:none}
+details.box>summary{list-style:none;cursor:pointer;padding:16px 18px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px}
+details.box>summary::-webkit-details-marker{display:none}
+details.box>summary b{font-family:var(--display);font-size:1.08rem;color:var(--accent);white-space:nowrap;text-align:right}
+details.box>summary h2::before{content:"+";display:inline-block;width:1.15em;color:var(--muted);font-family:var(--body);font-weight:400}
+details.box[open]>summary h2::before{content:"–"}
+.body{padding:2px 18px 18px;display:grid;gap:14px}
+.body.top{padding-top:18px}
+/* champs : libellé calé en bas de sa zone pour que les saisies restent alignées quand un libellé passe sur deux lignes */
+.fields{display:grid;gap:14px 12px;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+@media (min-width:560px){.fields{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.f{display:grid;gap:6px;min-width:0;align-content:start}
+.f>label,.f>.lab{font-size:.82rem;line-height:1.25;color:var(--muted);min-height:2.5em;display:flex;align-items:flex-end}
+.f.wide>.lab{min-height:0}
+.f small{font-size:.76rem;line-height:1.3;color:var(--muted)}
+input[type=number],select{width:100%;height:44px;font:inherit;font-size:1rem;color:var(--text);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:0 12px;min-width:0}
+input[type=text],textarea{width:100%;font:inherit;font-size:1rem;color:var(--text);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+input[type=text]{height:44px;padding:0 12px}
+textarea{min-height:96px;resize:vertical;line-height:1.4}
+input[type=file]{font:inherit;font-size:.86rem;color:var(--muted);max-width:100%}
+input[type=number]{text-align:right}
+input[type=number]:focus,select:focus{border-color:var(--accent)}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button,.btn{font:inherit;font-size:.88rem;line-height:1.2;color:var(--text);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:9px 15px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+/* lignes de postes */
+.item{display:grid;grid-template-columns:20px minmax(0,1fr) 118px;gap:6px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.item input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);margin:0}
+.item .name{font-size:.94rem;line-height:1.3;min-width:0}
+.item input[type=number]{height:40px}
+.item .ref{grid-column:2/4;font-size:.78rem;line-height:1.35;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.item .ref b{color:var(--text);font-weight:600}
+.item.off .name,.item.off .ref{opacity:.5}
+.item.off input[type=number]{opacity:.4}
+.chip{border-radius:999px;padding:1px 9px;font-size:.74rem;font-weight:600;border:1px solid currentColor}
+.rst{font:inherit;font-size:.78rem;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-align:left}
+.sub{display:grid;grid-template-columns:1fr auto;gap:12px;font-size:.93rem;align-items:baseline}
+.sub.first{padding-top:12px;border-top:1px solid var(--line)}
+.sub span{color:var(--muted)}
+.sub b{text-align:right}
+.f.full{grid-column:1/-1}
+.f.full>label{min-height:0}
+.opt{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:.94rem}
+.opt:first-of-type{border-top:0}
+.opt input{width:20px;height:20px;accent-color:var(--accent);margin:0}
+.opt b{font-weight:600;text-align:right;white-space:nowrap}
+.ctl{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;font-size:.9rem;line-height:1.4;padding:7px 0}
+.dot{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--muted);display:grid;place-items:center;font-size:.8rem;font-weight:700}
+.dot.ok{background:var(--go);border-color:var(--go);color:#101a2c}
+.bilan{font-family:var(--display);font-weight:800;font-size:1.1rem;border-top:1px solid var(--line);padding-top:10px}
+.msg{font-size:.84rem;color:var(--muted);min-height:1.3em;flex-basis:100%;text-align:right}
+.btn.main{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.note{font-size:.8rem;line-height:1.4;color:var(--muted)}
+/* résultats */
+.badge{font-family:var(--display);font-weight:800;font-size:1.4rem;border-radius:14px;padding:16px;text-align:center;line-height:1.15}
+.badge small{display:block;font-family:var(--body);font-weight:500;font-size:.84rem;opacity:.9;margin-top:5px}
+.go{color:var(--go)} .warn{color:var(--warn)} .no{color:var(--no)}
+.badge.go{background:rgba(61,220,151,.14)} .badge.warn{background:rgba(255,180,84,.14)} .badge.no{background:rgba(255,107,107,.14)}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{background:var(--panel2);border-radius:12px;padding:12px 14px;min-width:0;display:grid;gap:2px;align-content:space-between}
+.kpi span{font-size:.76rem;line-height:1.25;color:var(--muted)}
+.kpi b{font-family:var(--display);font-size:1.3rem;line-height:1.2}
+.stack{display:flex;height:22px;border-radius:8px;overflow:hidden;background:var(--panel2)}
+.stack i{display:block;height:100%}
+.leg{display:grid;gap:7px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:baseline;font-size:.9rem;line-height:1.35;color:var(--muted)}
+.row b{color:var(--text);font-weight:600;white-space:nowrap;text-align:right}
+.row b.go{color:var(--go)} .row b.no{color:var(--no)}
+.row i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:8px}
+#leg .row>span{position:relative;padding-left:17px}
+#leg .row>span i{position:absolute;left:0;top:.42em;margin:0}
+.row small{display:block;font-size:.74rem;color:var(--muted);opacity:.85}
+.row.total{border-top:1px solid var(--line);padding-top:9px;color:var(--text);font-size:.98rem;font-weight:500}
+.ana{display:grid;gap:8px;padding:0;margin:0;list-style:none}
+.ana li{background:var(--panel2);border-left:3px solid var(--muted);border-radius:0 10px 10px 0;padding:10px 13px;font-size:.9rem;line-height:1.45;color:var(--text)}
+.ana li.go{border-color:var(--go)} .ana li.warn{border-color:var(--warn)} .ana li.no{border-color:var(--no)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:8px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;padding-left:0}
+th:last-child,td:last-child{padding-right:0}
+th{color:var(--muted);font-weight:500;font-size:.78rem}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:11px 18px calc(11px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;z-index:5;text-decoration:none;color:var(--text)}
+.dock b{font-family:var(--display);font-size:1.2rem}
+.dock span{font-size:.76rem;color:var(--muted);display:block}
+footer{font-size:.78rem;line-height:1.5;color:var(--muted);display:grid;gap:6px}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Simulateur d'opération marchand de biens</h1>
+  <div class="seg"><button type="button" class="btn main" id="bPdf">Générer le PDF</button><button type="button" class="btn" id="copy">Copier le résumé</button><button type="button" class="btn" id="reset">Tout remettre à zéro</button><span class="msg" id="msg" role="status"></span></div>
+</header>
+
+<div class="cols">
+<div class="form">
+
+  <div class="box"><div class="body top">
+    <h2>Le bien</h2>
+    <div class="seg" id="type"><button type="button" data-v="appt">Appartement</button><button type="button" data-v="maison">Maison</button><button type="button" data-v="local">Local commercial</button><button type="button" data-v="box">Lot de boxes</button><button type="button" data-v="terrain">Terrain à diviser</button></div>
+    <p class="note" id="typeNote"></p>
+    <div class="fields">
+      <div class="f full"><label for="adresse">Adresse ou référence du bien</label><input type="text" id="adresse" autocomplete="off" placeholder="Numéro, rue, code postal, ville"></div>
+      <div class="f"><label for="surf" id="surfL">Surface (m²)</label><input type="number" id="surf" inputmode="decimal" min="5" step="1"></div>
+      <div class="f"><label for="pieces" id="piecesL">Pièces</label><input type="number" id="pieces" inputmode="numeric" min="1" max="10" step="1"></div>
+      <div class="f"><label for="duree">Durée totale (mois)</label><input type="number" id="duree" inputmode="numeric" min="1" max="60" step="1"></div>
+      <div class="f"><label for="achat">Prix d'achat hors FAI (€)</label><input type="number" id="achat" inputmode="numeric" min="0" step="500"><small id="achatm2"></small></div>
+      <div class="f"><label for="pm2" id="pm2L">Prix au m² du quartier, rénové (€)</label><input type="number" id="pm2" inputmode="numeric" min="0" step="50"><small id="viseTxt"></small></div>
+      <div class="f"><label for="vente">Prix de revente souhaité (€)</label><input type="number" id="vente" inputmode="numeric" min="0" step="500"><small id="ventem2"></small><button type="button" class="rst" id="useQ">prendre le prix visé du quartier</button></div>
+    </div>
+  </div></div>
+
+  <details class="box" open><summary><h2>Acquisition</h2><b id="tAcq"></b></summary><div class="body">
+    <div id="acq"></div>
+    <p class="note">Régime marchand de biens appliqué d'office : droits à 0,715 %, émoluments au barème, contribution de sécurité immobilière, formalités.</p>
+  </div></details>
+
+  <details class="box" open><summary><h2>Travaux</h2><b id="tTrv"></b></summary><div class="body">
+    <div class="f wide" id="nivBlock"><span class="lab">Ampleur des travaux : présélectionne les postes</span><div class="seg" id="niveau"><button type="button" data-v="r">Rafraîchissement</button><button type="button" data-v="c">Rénovation complète</button><button type="button" data-v="l">Rénovation lourde</button></div></div>
+    <div class="f wide"><span class="lab">Gamme : ajuste tous les repères</span><div class="seg" id="gamme"><button type="button" data-v="0.8">Éco, piloté en direct</button><button type="button" data-v="1">Standard</button><button type="button" data-v="1.25">Soigné</button></div></div>
+    <div id="trv"></div>
+    <div class="fields"><div class="f"><label for="aleas">Aléas de chantier (%)</label><input type="number" id="aleas" inputmode="decimal" min="0" max="40" step="1"></div></div>
+    <div class="sub first"><span>Postes cochés</span><b id="trvBase"></b></div>
+    <div class="sub"><span>Repère pour les mêmes postes</span><b id="trvRef"></b></div>
+    <div class="sub"><span>Total avec aléas</span><b id="trvTot"></b></div>
+    <p class="note">Montants hors taxes, fourniture et pose. La TVA des travaux est récupérée, mais elle est avancée : elle compte dans la trésorerie.</p>
+  </div></details>
+
+  <details class="box" open><summary><h2>Frais annexes</h2><b id="tAnx"></b></summary><div class="body">
+    <div id="anx"></div>
+  </div></details>
+
+  <details class="box" open><summary><h2>Prestations confiées à une société partenaire</h2><b id="tMis"></b></summary><div class="body">
+    <p class="note">Les trois temps cochés forment une mission complète, soit 2 % du prix de revente. Un seul temps coché est une prestation d'appoint, facturée à son pourcentage. Tout est payé à la revente.</p>
+    <h3>Mission 1 : trouver, sécuriser, revendre</h3>
+    <div id="m1List"></div>
+    <h3>Mission 2 : gestion des travaux</h3>
+    <div id="m2List"></div>
+  </div></details>
+
+  <details class="box" open><summary><h2>Ventes comparables</h2><b id="tComp"></b></summary><div class="body">
+    <p class="note">Une vente par ligne, sous la forme « adresse ; surface en m² ; prix de vente ; date ».</p>
+    <div class="f full"><label for="compFile">Importer un fichier (.csv ou .txt)</label><input type="file" id="compFile" accept=".csv,.txt,text/csv,text/plain"></div>
+    <div class="f full"><label for="comps">Ou coller les lignes ici</label><textarea id="comps" placeholder="12 rue des Lilas, Pontoise ; 58 ; 203000 ; 03/2026"></textarea></div>
+    <div class="tw" id="compWrap" hidden><table><thead><tr><th>Adresse</th><th>Surface</th><th>Prix</th><th>Prix au m²</th><th>Date</th></tr></thead><tbody id="compBody"></tbody></table></div>
+    <p class="note" id="compTxt"></p>
+    <button type="button" class="rst" id="useComp" hidden>prendre cette moyenne comme prix du quartier</button>
+  </div></details>
+
+  <details class="box" open><summary><h2>Contrôles avant décision</h2><b id="tCtl"></b></summary><div class="body">
+    <div class="fields">
+      <div class="f"><label for="abf">Zone ABF (Architecte des Bâtiments de France)</label><select id="abf"><option value="">Choisir</option><option>Oui</option><option>Non</option><option>À vérifier</option></select></div>
+      <div class="f"><label for="preempt">Zone de préemption de la mairie</label><select id="preempt"><option value="">Choisir</option><option>Oui</option><option>Non</option><option>À vérifier</option></select></div>
+      <div class="f"><label for="dmax">Durée maximum de l'opération (mois)</label><input type="number" id="dmax" inputmode="numeric" min="1" max="60" step="1"></div>
+    </div>
+    <p class="note">La marge nette minimum exigée se règle dans Réglages (objectif de marge nette).</p>
+  </div></details>
+
+  <details class="box"><summary><h2>Réglages</h2><b></b></summary><div class="body">
+    <div class="fields">
+      <div class="f"><label for="taux">Intérêts de l'associé investisseur (% par an)</label><input type="number" id="taux" inputmode="decimal" min="0" max="15" step="0.5"></div>
+      <div class="f"><label for="obj">Objectif de marge nette (%)</label><input type="number" id="obj" inputmode="decimal" min="0" max="50" step="1"></div>
+      <div class="f"><label for="env">Enveloppe disponible (€)</label><input type="number" id="env" inputmode="numeric" min="0" step="1000"></div>
+      <div class="f"><label for="part">Part de l'associé opérateur dans le bénéfice net (%)</label><input type="number" id="part" inputmode="numeric" min="0" max="100" step="5"></div>
+      <div class="f"><label for="pfu">Prélèvement sur les dividendes de l'opérateur (%)</label><input type="number" id="pfu" inputmode="decimal" min="0" max="60" step="0.1"></div>
+      <div class="f"><label for="tvaT">TVA sur les travaux</label><select id="tvaT"><option value="10">10 % (logement de plus de 2 ans)</option><option value="20">20 %</option><option value="5.5">5,5 % (travaux d'énergie)</option></select></div>
+      <div class="f"><label for="tvaMode">TVA à la revente</label><select id="tvaMode"><option value="marge">Sur la marge</option><option value="total">Sur le prix total (pire cas)</option><option value="none">Aucune</option></select></div>
+    </div>
+  </div></details>
+</div>
+
+<div class="res" id="resultats">
+  <div class="box"><div class="body top">
+    <div class="badge" id="badge"></div>
+    <div class="kpis">
+      <div class="kpi"><span>Bénéfice net</span><b id="kNet"></b></div>
+      <div class="kpi"><span>Part de l'associé opérateur</span><b id="kPart"></b></div>
+      <div class="kpi"><span>Coût de revient</span><b id="kCout"></b></div>
+      <div class="kpi"><span>Trésorerie maximale à sortir</span><b id="kTreso"></b></div>
+    </div>
+    <h3>Où part le prix de revente</h3>
+    <div class="stack" id="stack" role="img" aria-label="Répartition du prix de revente"></div>
+  </div></div>
+
+  <div class="box"><div class="body top">
+    <h2>Fiscalité et marge nette</h2>
+    <div class="leg" id="leg"></div>
+  </div></div>
+
+  <div class="box"><div class="body top">
+    <h2>Contrôles avant décision</h2>
+    <div id="ctl"></div>
+    <div class="bilan" id="bilan"></div>
+  </div></div>
+
+  <div class="box"><div class="body top">
+    <h2>Analyse</h2>
+    <ul class="ana" id="ana"></ul>
+  </div></div>
+
+  <div class="box"><div class="body top">
+    <h2>Limites de l'opération</h2>
+    <div class="leg" id="lim"></div>
+  </div></div>
+
+  <div class="box"><div class="body top">
+    <h2>Si ça se passe moins bien</h2>
+    <div class="tw"><table><thead><tr><th>Scénario</th><th>Net</th><th>Marge</th></tr></thead><tbody id="sens"></tbody></table></div>
+  </div></div>
+</div>
+</div>
+
+<footer>
+  <p>Repères de prix relevés le 25 novembre 2026, hors taxes, à remplacer par des devis dès qu'ils sont disponibles. Outil d'aide au chiffrage : le traitement fiscal reste à valider par l'expert-comptable.</p>
+  <p>Sources des repères : <a href="https://www.forumconstruire.com/actualites/503142_comment_renover_un_appartement_le_guide_complet.php">ForumConstruire, prix par poste</a> · <a href="https://www.prix-travaux-m2.com/prix-renovation-appartement.php">Prix-travaux-m2, rénovation au m²</a> · <a href="https://www.lamaisonsaintgobain.fr/guides-travaux/menuiseries-exterieures/prix-fenetre-pvc">La Maison Saint-Gobain, fenêtres</a> · <a href="https://investissement-locatif-avis.fr/prix-diagnostics-immobiliers/">Diagnostics, tarifs moyens 2026</a> · <a href="https://www.prix-travaux-m2.com/prix-geometre.php">Prix-travaux-m2, géomètre</a> · <a href="https://www.cpim.fr/marchand-de-biens-2026-statut-fiscalite/">CPIM, fiscalité marchand de biens</a></p>
+</footer>
+</div>
+
+<a class="dock" id="dock" href="#resultats"><div><span>Bénéfice net</span><b id="dNet"></b></div><div style="text-align:right"><span>Marge nette</span><b id="dM"></b></div></a>
+
+<script>
+/* ============ données ============ */
+const r50 = n => Math.round(n/50)*50;
+const ALLB=['appt','maison','local'];
+const W = [
+ {id:'demo',l:'Démolition, curage, évacuation',u:40,per:'m2',lv:'cl'},
+ {id:'macon',l:'Maçonnerie, ouvertures, reprises',u:60,per:'m2',lv:'l'},
+ {id:'vitrine',l:'Dépose de la vitrine, nouvelle façade et menuiseries',u:6000,per:'f',t:['local'],on:1},
+ {id:'raccord',l:'Création des évacuations et raccordements',u:3500,per:'f',t:['local'],on:1},
+ {id:'cloisons',l:'Cloisons, doublages, faux plafonds',u:45,per:'m2',lv:'cl'},
+ {id:'isol',l:"Isolation des murs par l'intérieur",u:70,per:'m2',lv:'l'},
+ {id:'elec',l:'Électricité complète, tableau, mise aux normes',u:100,per:'m2',lv:'cl'},
+ {id:'plomb',l:'Plomberie, alimentations et évacuations',u:70,per:'m2',lv:'cl'},
+ {id:'chauf',l:'Chauffage, radiateurs électriques',u:60,per:'m2',lv:'cl'},
+ {id:'ecs',l:"Ballon d'eau chaude",u:900,per:'f',lv:'cl'},
+ {id:'vmc',l:'Ventilation mécanique',u:900,per:'f',lv:'cl'},
+ {id:'fen',l:'Fenêtres double vitrage',u:850,per:'fen',lv:'l'},
+ {id:'portes',l:'Portes intérieures',u:350,per:'porte',lv:'cl'},
+ {id:'pentree',l:"Porte d'entrée",u:1500,per:'f',lv:'l'},
+ {id:'sols',l:'Sols, parquet ou carrelage',u:50,per:'m2',lv:'rcl'},
+ {id:'enduit',l:'Enduits, bandes, ratissage des murs et plafonds',u:35,per:'m2',lv:'cl'},
+ {id:'peint',l:'Peinture murs et plafonds',u:30,per:'m2',lv:'rcl'},
+ {id:'sdb',l:'Salle de bain complète',u:6000,per:'f',lv:'cl'},
+ {id:'wc',l:'WC',u:700,per:'f',lv:'cl'},
+ {id:'cuis',l:'Cuisine équipée posée',u:4500,per:'f',lv:'cl'},
+ {id:'retouch',l:'Petites reprises : prises, robinetterie, joints',u:25,per:'m2',lv:'r'},
+ {id:'deco',l:'Décoration et mise en scène pour vendre plus vite',u:40,per:'m2',min:1500,lv:'rcl'},
+ {id:'nett',l:'Nettoyage de fin de chantier',u:8,per:'m2',lv:'rcl'},
+ {id:'toit',l:'Toiture, révision ou réfection',u:90,per:'m2',t:['maison'],on:0},
+ {id:'facade',l:'Ravalement de façade',u:50,per:'m2',t:['maison'],on:0},
+ {id:'assain',l:'Assainissement, raccordement',u:8000,per:'f',t:['maison'],on:0},
+ {id:'bporte',l:'Portes de garage',u:900,per:'unit',un:'boxes',t:['box'],on:0},
+ {id:'bpeint',l:'Peinture des sols et des murs',u:300,per:'unit',un:'boxes',t:['box'],on:1},
+ {id:'bserr',l:'Serrures, numérotation, signalétique',u:80,per:'unit',un:'boxes',t:['box'],on:1},
+ {id:'belec',l:'Éclairage et électricité',u:250,per:'unit',un:'boxes',t:['box'],on:0},
+ {id:'betanch',l:'Étanchéité de toiture',u:60,per:'m2',t:['box'],on:0},
+ {id:'tviab',l:'Viabilisation : eau, électricité, télécom, assainissement',u:8000,per:'unit',un:'lots',t:['terrain'],on:0},
+ {id:'tacces',l:'Accès, clôture, portail',u:3000,per:'unit',un:'lots',t:['terrain'],on:0},
+ {id:'tdebr',l:'Débroussaillage, abattage, démolition',u:2000,per:'f',t:['terrain'],on:1}
+];
+const vis=(i,type)=>(i.t||ALLB).includes(type);
+function wDef(it,S){
+  const g=S.gamme, u=it.u*g;
+  if(it.per==='m2') return {v:Math.max(it.min||0,r50(u*S.surf)), h:Math.round(u)+' €/m² × '+S.surf+' m²'+(it.min?', '+it.min.toLocaleString('fr-FR')+' € minimum':'')};
+  if(it.per==='fen'){const q=S.pieces+1; return {v:r50(u*q), h:q+' fenêtres × '+Math.round(u)+' €'};}
+  if(it.per==='porte'){const q=S.pieces+1; return {v:r50(u*q), h:q+' portes × '+Math.round(u)+' €'};}
+  if(it.per==='unit') return {v:r50(u*S.pieces), h:S.pieces+' '+it.un+' × '+Math.round(u)+' €'};
+  return {v:r50(u), h:'forfait'};
+}
+/* annexes : d(S,duree,travaux,vente) -> {v,h} ; on = coché par défaut ; onT = coché pour ces types ; t = types concernés */
+const X = [
+ {g:'Études et autorisations'},
+ {id:'plans',l:"Plans et relevé de l'existant",on:1,t:ALLB,d:S=>({v:Math.max(500,r50(10*S.surf)),h:'10 €/m², 500 € minimum'})},
+ {id:'archi',l:'Architecte, déclaration préalable ou permis',on:0,onT:['local'],t:ALLB,d:S=>S.type==='local'?{v:2500,h:'changement de destination et façade'}:{v:1500,h:'forfait, si façade modifiée'}},
+ {id:'struct',l:"Bureau d'études structure",on:0,t:ALLB,d:()=>({v:1200,h:'forfait, si mur porteur'})},
+ {id:'geo',l:'Géomètre : bornage, division, état descriptif',on:0,onT:['box','terrain'],d:S=>S.type==='terrain'?{v:2500,h:'bornage et division'}:{v:1800,h:'division, 700 à 1 800 €'}},
+ {id:'sol',l:'Étude de sol',on:1,t:['terrain'],d:S=>({v:1000*S.pieces,h:'1 000 € par lot'})},
+ {id:'modif',l:'Modificatif du règlement de copropriété',on:0,onT:['local'],t:['local','box'],d:()=>({v:2000,h:'forfait, géomètre et notaire'})},
+ {id:'do',l:'Assurance dommages-ouvrage',on:0,t:ALLB,d:(S,du,T)=>({v:Math.max(3000,r50(T*0.03)),h:'3 % des travaux, 3 000 € minimum'})},
+ {g:'Portage'},
+ {id:'copro',l:'Charges de copropriété',on:1,t:['appt','local','box'],d:(S,du)=>S.type==='box'?{v:r50(8*S.pieces*du),h:'8 € par box et par mois × '+du+' mois'}:{v:r50(3*S.surf*du),h:'3 €/m²/mois × '+du+' mois'}},
+ {id:'tf',l:'Taxe foncière au prorata',on:1,d:(S,du)=>{const u=S.type==='terrain'?0.3:S.type==='box'?10:15; return {v:r50(u*S.surf*du/12),h:String(u).replace('.',',')+' €/m²/an × '+du+' mois'};}},
+ {id:'assur',l:'Assurance propriétaire et chantier',on:1,d:(S,du)=>({v:r50(30*du),h:'30 €/mois × '+du+' mois'})},
+ {id:'abo',l:'Eau et électricité de chantier',on:1,t:ALLB,d:(S,du)=>({v:r50(40*du),h:'40 €/mois × '+du+' mois'})},
+ {g:'Revente'},
+ {id:'diag',l:'Diagnostics de vente : DPE, amiante, plomb, électricité, gaz, surface',on:1,d:S=>S.type==='maison'?{v:605,h:'pack maison, 500 à 700 €'}:S.type==='box'?{v:150,h:'état des risques, amiante'}:S.type==='terrain'?{v:50,h:'état des risques'}:{v:375,h:'pack appartement, 295 à 485 €'}},
+ {id:'audit',l:'Audit énergétique',on:0,t:['maison'],d:()=>({v:700,h:'forfait, maison classée E, F ou G'})},
+ {id:'edate',l:'État daté du syndic',on:1,t:['appt','local','box'],d:S=>S.type==='box'?{v:380*S.pieces,h:'380 € par box vendu'}:{v:380,h:'plafond légal'}},
+ {id:'photo',l:'Photos et annonces',on:1,d:()=>({v:300,h:'forfait'})},
+ {g:'Société'},
+ {id:'compta',l:"Comptabilité et juridique de l'opération",on:1,d:()=>({v:1200,h:'forfait'})},
+ {id:'banque',l:'Frais bancaires',on:1,d:(S,du)=>({v:r50(Math.max(100,15*du)),h:'15 €/mois'})}
+];
+const xVis=(i,type)=>!i.t||i.t.includes(type);
+const M1=[['Trouver le bien',0.7],["Sécuriser l'achat et suivre le notaire",0.3],['Revendre',1]];
+const M2=[['Préparer le chantier',0.5],['Piloter les travaux',1],['Livrer et remettre le dossier',0.5]];
+function parseComps(txt){const out=[];String(txt||'').split(/\r?\n/).forEach(line=>{if(!line.trim())return;const c=line.split(/;|\t/).map(x=>x.trim());if(c.length<3)return;const n=v=>{const x=parseFloat(String(v).replace(/[^0-9,.\-]/g,'').replace(',','.'));return isFinite(x)?x:0;};const surf=n(c[1]),prix=n(c[2]);if(surf>0&&prix>0)out.push({adresse:c[0],surface:surf,prix,date:c[3]||'',m2:prix/surf});});return out;}
+const TYPES={
+ appt:{ql:"Prix au m² du quartier, rénové (€)",n:'Appartement',sl:'Surface (m²)',pl:'Pièces',note:'Rénovation et revente à un occupant.',p:{surf:42,pieces:2,achat:82000,vente:147000,duree:9,niveau:'c',pm2:3500}},
+ maison:{ql:"Prix au m² du quartier, rénové (€)",n:'Maison',sl:'Surface (m²)',pl:'Pièces',note:'Postes toiture, façade et assainissement disponibles en bas de la liste des travaux.',p:{surf:70,pieces:3,achat:70000,vente:170000,duree:11,niveau:'c',pm2:2400}},
+ local:{ql:"Prix au m² des logements du quartier (€)",n:'Local commercial',sl:'Surface (m²)',pl:'Pièces créées',note:'Transformation en logement : changement de destination, façade et accord de la copropriété.',p:{surf:45,pieces:2,achat:50000,vente:165000,duree:12,niveau:'l',pm2:3650}},
+ box:{ql:"Prix d'un box dans le quartier (€)",n:'Lot de boxes',sl:'Surface totale (m²)',pl:'Nombre de boxes',note:'Achat en bloc, revente à l\'unité. Le prix de revente est le total de tous les boxes.',p:{surf:120,pieces:8,achat:76000,vente:108000,duree:8,niveau:'c',pm2:13500}},
+ terrain:{ql:"Prix au m² du terrain à bâtir (€)",n:'Terrain à diviser',sl:'Surface du terrain (m²)',pl:'Lots à vendre',note:'Division parcellaire. Le prix de revente est le total des lots.',p:{surf:1000,pieces:2,achat:70000,vente:120000,duree:12,niveau:'c',pm2:120}}
+};
+const XI = X.filter(x=>x.id);
+const DEF = {type:'appt',surf:42,pieces:2,duree:9,achat:82000,vente:147000,pm2:3500,niveau:'c',gamme:1,aleas:10,
+  taux:4,obj:10,env:130000,part:50,pfu:31.4,tvaT:10,tvaMode:'marge',agA:0,agV:0,notaire:null,w:{},x:{},m1:[false,false,false],m2:[false,false,false],comps:'',abf:'',preempt:'',dmax:18,adresse:''};
+function initLines(S){S.w={};S.x={};S.notaire=null;applyLevel(S); XI.forEach(i=>S.x[i.id]={on:!!(i.on||(i.onT&&i.onT.includes(S.type))),val:null});}
+function setType(S,t){S.type=t;Object.assign(S,TYPES[t].p);initLines(S);}
+function fresh(){const S=JSON.parse(JSON.stringify(DEF)); initLines(S); return S;}
+function applyLevel(S){W.forEach(i=>{const p=S.w[i.id]||{val:null}; p.on=vis(i,S.type)&&(i.on!=null?!!i.on:i.lv.includes(S.niveau)); S.w[i.id]=p;});}
+
+/* ============ calcul ============ */
+function notaire(a){
+  const tr=[[6500,.0387],[17000,.01596],[60000,.01064],[Infinity,.00799]];
+  let e=0,prev=0; for(const [lim,t] of tr){ if(a>prev){ e+=(Math.min(a,lim)-prev)*t; prev=lim; } }
+  return Math.round(a*0.00715 + e + Math.max(15,a*0.001) + 1100);
+}
+function travaux(S){
+  let base=0,ref=0,top=null;
+  W.forEach(i=>{ if(!vis(i,S.type)) return; const p=S.w[i.id]; if(!p.on) return;
+    const d=wDef(i,S).v, v=p.val==null?d:p.val; base+=v; ref+=d; if(!top||v>top.v) top={l:i.l,v}; });
+  return {base,ref,tot:base*(1+S.aleas/100),top};
+}
+function compute(S,o={}){
+  const achat=o.achat??S.achat, vente=o.vente??S.vente, duree=o.duree??S.duree, tf=o.tf??1;
+  const tr=travaux(S), T=tr.tot*tf;
+  const not=S.notaire==null?notaire(achat):S.notaire;
+  let anx=0; XI.forEach(i=>{ if(!xVis(i,S.type)) return; const p=S.x[i.id]; if(!p.on) return; anx += p.val==null? i.d(S,duree,T,vente).v : p.val; });
+  const agV=vente*S.agV/100, acq=not+S.agA;
+  const misPct=M1.reduce((t,p,i)=>t+(S.m1[i]?p[1]:0),0)+M2.reduce((t,p,i)=>t+(S.m2[i]?p[1]:0),0), mis=vente*misPct/100;
+  const C=achat+acq+T+anx+agV+mis;
+  const tva=S.tvaMode==='marge'?Math.max(0,(vente-achat)/6):S.tvaMode==='total'?vente/6:0;
+  const int=C*S.taux/100*duree/12;
+  const R=vente-C-tva-int;
+  const is=R<=0?0:Math.min(R,42500)*.15+Math.max(0,R-42500)*.25;
+  const N=R-is;
+  return {achat,vente,duree,T,tr,not,acq,anx,agV,mis,misPct,C,tva,int,R,is,N,m:C>0?N/C:0,treso:C-agV-mis+T*S.tvaT/100};
+}
+function solve(f,lo,hi,up){ for(let k=0;k<45;k++){const mid=(lo+hi)/2; (f(mid)?up:!up)? lo=mid : hi=mid;} return (lo+hi)/2; }
+function limits(S){
+  const t=S.obj/100, ok=o=>compute(S,o).m>=t;
+  return {
+    achatMax: ok({achat:0}) ? solve(a=>ok({achat:a}),0,S.vente,true) : 0,
+    venteMin: solve(v=>ok({vente:v}),0,S.vente*3+1,false),
+    venteZero: solve(v=>compute(S,{vente:v}).N>=0,0,S.vente*3+1,false),
+    tfMax: ok({tf:0}) ? solve(f=>ok({tf:f}),0,4,true) : 0,
+    retard: (()=>{ if(!ok({})) return -1; let k=0; while(k<36 && ok({duree:S.duree+k+1})) k++; return k; })()
+  };
+}
+if (typeof module!=='undefined') module.exports={fresh,compute,limits,notaire,travaux,setType,TYPES,parseComps};
+
+/* ============ interface ============ */
+if (typeof document!=='undefined'){
+const $=id=>document.getElementById(id);
+const eur=n=>Math.round(n).toLocaleString('fr-FR')+' €';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pc=(n,d=1)=>(n*100).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d})+' %';
+let S;
+try{ S=JSON.parse(localStorage.getItem('simu-mdb-v3')); }catch(e){}
+if(!S||!S.w||!S.x||!TYPES[S.type]) S=fresh();
+W.forEach(i=>{ if(!S.w[i.id]) S.w[i.id]={on:false,val:null}; }); XI.forEach(i=>{ if(!S.x[i.id]) S.x[i.id]={on:!!i.on,val:null}; }); if(S.pfu==null) S.pfu=31.4; if(S.pm2==null) S.pm2=TYPES[S.type].p.pm2; if(!S.m1) S.m1=[false,false,false]; if(!S.m2) S.m2=[false,false,false]; if(S.dmax==null) S.dmax=18; ['comps','abf','preempt','adresse'].forEach(k=>{if(S[k]==null) S[k]='';});
+const save=()=>{ try{ localStorage.setItem('simu-mdb-v3',JSON.stringify(S)); }catch(e){} };
+
+const line=(k,id,l)=>`<div class="item" id="${k}-${id}"><input type="checkbox" id="${k}c-${id}" aria-label="Compter : ${l}"><label class="name" for="${k}v-${id}">${l}</label><input type="number" id="${k}v-${id}" inputmode="numeric" min="0" step="50"><div class="ref"><span>Repère <b id="${k}r-${id}"></b></span><span id="${k}h-${id}"></span><span class="chip" id="${k}d-${id}" hidden></span><button type="button" class="rst" id="${k}x-${id}" hidden>revenir au repère</button></div></div>`;
+$('trv').innerHTML=W.map(i=>line('w',i.id,i.l)).join('');
+$('anx').innerHTML=X.map(i=>i.g?`<h3>${i.g}</h3>`:line('x',i.id,i.l)).join('')+
+ `<h3>Agence</h3><div class="fields"><div class="f"><label for="agV">Honoraires d'agence à la revente (%)</label><input type="number" id="agV" inputmode="decimal" min="0" max="10" step="0.5"><small>0 en cas de vente directe</small></div></div>`;
+$('acq').innerHTML=line('n','not','Frais de notaire').replace('<input type="checkbox"','<input type="checkbox" checked disabled')+
+ `<div class="fields"><div class="f"><label for="agA">Frais d'agence à l'achat, FAI (€)</label><input type="number" id="agA" inputmode="numeric" min="0" step="500"></div></div>`;
+
+[['m1',M1],['m2',M2]].forEach(([k,L])=>{ $(k+'List').innerHTML=L.map((p,i)=>`<label class="opt" for="${k}_${i}"><input type="checkbox" id="${k}_${i}"><span>${p[0]} (${String(p[1]).replace('.',',')} %)</span><b id="${k}v_${i}"></b></label>`).join(''); });
+const TXT=['adresse','comps'], SEL=['abf','preempt'];
+let LAST=null;
+function syncLine(k,id,p,d,visible){
+  const row=$(k+'-'+id); row.hidden=!visible; if(!visible) return;
+  row.classList.toggle('off',!p.on);
+  if(k!=='n') $(k+'c-'+id).checked=p.on;
+  const inp=$(k+'v-'+id); if(document.activeElement!==inp) inp.value=p.val==null?d.v:p.val;
+  $(k+'r-'+id).textContent=eur(d.v); $(k+'h-'+id).textContent=d.h;
+  const chip=$(k+'d-'+id), rst=$(k+'x-'+id), cust=p.val!=null && p.val!==d.v;
+  chip.hidden=rst.hidden=!cust;
+  if(cust){ const diff=p.val-d.v; chip.textContent=(diff>0?'+ ':'− ')+eur(Math.abs(diff)); chip.className='chip '+(diff>0?'warn':'go'); }
+}
+const BASIC=['dmax','surf','pieces','duree','achat','vente','pm2','aleas','taux','obj','env','part','pfu','agA','agV'];
+function render(){
+  BASIC.forEach(k=>{ const el=$(k); if(document.activeElement!==el) el.value=S[k]; });
+  $('tvaT').value=S.tvaT; $('tvaMode').value=S.tvaMode;
+  TXT.forEach(k=>{const el=$(k); if(document.activeElement!==el) el.value=S[k];}); SEL.forEach(k=>$(k).value=S[k]);
+  ['m1','m2'].forEach(k=>S[k].forEach((v,i)=>$(k+'_'+i).checked=!!v));
+  [['type',S.type],['niveau',S.niveau],['gamme',String(S.gamme)]].forEach(([g,v])=>$(g).querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v)));
+  const r=compute(S), L=limits(S), TY=TYPES[S.type];
+  const U=S.type==='box'?{q:S.pieces||1,s:' /box',w:'le box'}:{q:S.surf||1,s:' /m²',w:'le m²'};
+  $('surfL').textContent=TY.sl; $('piecesL').textContent=TY.pl; $('typeNote').textContent=TY.note; $('nivBlock').hidden=!ALLB.includes(S.type);
+  const vise=S.pm2*U.q, ev=vise?S.vente/vise-1:0;
+  $('pm2L').textContent=TY.ql; $('viseTxt').textContent='Revente visée : '+eur(vise);
+  $('achatm2').textContent=eur(S.achat/U.q)+U.s+', frais d\'agence comptés à part';
+  $('ventem2').textContent=eur(S.vente/U.q)+U.s+(vise?' · '+(Math.abs(ev)<.005?'au prix du quartier':(ev>0?'+ ':'− ')+pc(Math.abs(ev))+(ev>0?' au-dessus du quartier':' sous le quartier')):''); $('ventem2').className=ev>.05?'warn':''; $('useQ').hidden=!vise||Math.round(vise)===Math.round(S.vente);
+  W.forEach(i=>syncLine('w',i.id,S.w[i.id],wDef(i,S),vis(i,S.type)));
+  XI.forEach(i=>syncLine('x',i.id,S.x[i.id],i.d(S,S.duree,r.T,S.vente),xVis(i,S.type)));
+  syncLine('n','not',{on:true,val:S.notaire},{v:notaire(S.achat),h:pc(notaire(S.achat)/(S.achat||1))+" du prix"},true);
+  [['m1',M1],['m2',M2]].forEach(([k,Lm])=>Lm.forEach((p,i)=>{$(k+'v_'+i).textContent=S[k][i]?eur(S.vente*p[1]/100):'';}));
+  $('tMis').textContent=r.mis?eur(r.mis):'aucune';
+  const comps=parseComps(S.comps), compMoy=comps.length?comps.reduce((t,x)=>t+x.m2,0)/comps.length:0, vM2=S.type==='box'?0:S.vente/(S.surf||1), compEc=compMoy&&vM2?vM2/compMoy-1:null;
+  $('tComp').textContent=comps.length+' vente'+(comps.length>1?'s':''); $('compWrap').hidden=!comps.length;
+  $('compBody').innerHTML=comps.map(x=>`<tr><td>${esc(x.adresse)}</td><td>${esc(x.surface.toLocaleString('fr-FR'))} m²</td><td>${eur(x.prix)}</td><td>${eur(x.m2)}</td><td>${esc(x.date)}</td></tr>`).join('');
+  $('compTxt').textContent=comps.length?'Prix moyen des ventes comparables : '+eur(compMoy)+' par m².'+(compEc!=null?' La revente souhaitée ('+eur(vM2)+' par m²) est '+(compEc>=0?'supérieure':'inférieure')+' de '+pc(Math.abs(compEc))+' à cette moyenne.':''):'Aucune vente comparable lisible pour le moment.';
+  $('useComp').hidden=!comps.length||S.type==='box'||Math.round(compMoy)===Math.round(S.pm2);
+  $('tAcq').textContent=eur(r.acq); $('tTrv').textContent=eur(r.T); $('tAnx').textContent=eur(r.anx+r.agV);
+  $('trvBase').textContent=eur(r.tr.base); $('trvRef').textContent=eur(r.tr.ref); $('trvTot').textContent=eur(r.T)+' · '+eur(r.T/U.q)+U.s;
+
+  const t=S.obj/100, cls=r.m>=t?'go':r.m>=t/2?'warn':'no';
+  $('badge').className='badge '+cls;
+  $('badge').innerHTML=(cls==='go'?'On y va':cls==='warn'?'Trop juste':'On passe')+' · '+pc(r.m)+' net<small>Objectif '+S.obj+' % du coût de revient</small>';
+  $('kNet').textContent=eur(r.N); $('kNet').className=r.N>=0?'':'no';
+  $('kPart').textContent=r.N>0?eur(r.N*S.part/100):'0 €';
+  $('kCout').textContent=eur(r.C); $('kTreso').textContent=eur(r.treso); $('kTreso').className=r.treso<=S.env?'':'no';
+  $('dNet').textContent=eur(r.N); $('dM').textContent=pc(r.m); $('dM').className=cls;
+
+  const parts=[['Achat',r.achat,'#5f7396'],['Notaire et agence achat',r.acq,'#8fa1c0'],['Travaux',r.T,'#4f8cff'],['Annexes',r.anx+r.agV,'#9cc0ff'],['Prestations partenaire',r.mis,'#5eead4'],['TVA à la revente',r.tva,'#ff6b6b'],['Intérêts de l\'investisseur',r.int,'#c084fc'],['IS',r.is,'#ffb454'],['Bénéfice net',Math.max(0,r.N),'#3ddc97']];
+  const tot=parts.reduce((s,p)=>s+p[1],0)||1;
+  $('stack').innerHTML=parts.map(p=>`<i style="width:${p[1]/tot*100}%;background:${p[2]}"></i>`).join('');
+  const brut=r.vente-r.C, col=Object.fromEntries(parts.map(p=>[p[0],p[2]]));
+  const tvaTxt=S.tvaMode==='marge'?'(revente − achat) ÷ 6':S.tvaMode==='total'?'revente ÷ 6, pire cas':'non appliquée';
+  const isTxt=r.R<=0?'pas de bénéfice, pas d\'impôt':r.R<=42500?'15 % du résultat':'15 % jusqu\'à 42 500 €, 25 % au-delà';
+  const mine=Math.max(0,r.N)*S.part/100, pfu=mine*S.pfu/100, droits=r.achat*0.00715;
+  const hDiv=Math.max(0,r.N)*(100-S.part)/100, hBrut=r.int+hDiv, hIS=(r.int+hDiv*0.05)*0.15, hRend=r.treso?(hBrut-hIS)/r.treso:0;
+  const row=(l,v,o={})=>`<div class="row${o.t?' total':''}"><span>${o.c?`<i style="background:${o.c}"></i>`:''}${l}${o.s?`<small>${o.s}</small>`:''}</span><b class="${o.k||''}">${v}</b></div>`;
+  $('leg').innerHTML=[
+    row('Prix de revente',eur(r.vente)),
+    row('− Achat',eur(r.achat),{c:col['Achat']}),
+    row('− Notaire et agence à l\'achat',eur(r.acq),{c:col['Notaire et agence achat'],s:'dont droits réduits '+eur(droits)}),
+    row('− Travaux hors taxes',eur(r.T),{c:col['Travaux']}),
+    row('− Frais annexes',eur(r.anx+r.agV),{c:col['Annexes']}),
+    row('− Prestations de la société partenaire',eur(r.mis),{c:col['Prestations partenaire'],s:r.mis?String(Math.round(r.misPct*10)/10).replace('.',',')+' % du prix de revente':'aucune'}),
+    row('= Marge brute',eur(brut)+' · '+pc(brut/(r.vente||1),0),{t:1}),
+    row('− TVA à la revente',eur(r.tva),{c:col['TVA à la revente'],s:tvaTxt}),
+    row('− Intérêts versés à l\'associé investisseur',eur(r.int),{c:col['Intérêts de l\'investisseur'],s:String(S.taux).replace('.',',')+' % par an sur '+r.duree+' mois'}),
+    row('= Résultat avant impôt',eur(r.R),{t:1}),
+    row('− Impôt sur les sociétés',eur(r.is),{c:col['IS'],s:isTxt}),
+    row('= Bénéfice net de la société',eur(r.N)+' · '+pc(r.m),{t:1,k:r.N>=0?'go':'no'}),
+    row('Part de l\'associé opérateur, en dividendes bruts',eur(mine),{s:S.part+' % du bénéfice net'}),
+    row('− Prélèvement sur dividendes',eur(pfu),{s:String(S.pfu).replace('.',',')+' %'}),
+    row('= Net perçu par l\'associé opérateur',eur(mine-pfu),{t:1,k:'go'}),
+    row('Total fiscalité de l\'opération',eur(droits+r.tva+r.is+pfu),{s:'droits d\'achat, TVA, IS, prélèvement sur les dividendes de l\'opérateur'}),
+    row('TVA des travaux avancée puis récupérée',eur(r.T*S.tvaT/100),{s:'pèse sur la trésorerie, pas sur la marge'}),
+    '<h3>Revenus de l\'associé investisseur</h3>',
+    row('Capital avancé, remboursé à la revente',eur(r.treso),{s:'trésorerie maximale sortie'}),
+    row('Intérêts reçus',eur(r.int),{c:col['Intérêts de l\'investisseur'],s:String(S.taux).replace('.',',')+' % par an sur '+r.duree+' mois'}),
+    row('Dividendes reçus',eur(hDiv),{s:(100-S.part)+' % du bénéfice net'}),
+    row('= Revenus bruts de l\'associé investisseur',eur(hBrut),{t:1}),
+    row('− IS de l\'associé investisseur, estimation',eur(hIS),{s:'cas d\'une société : 15 % sur les intérêts et sur 5 % des dividendes (régime mère-fille)'}),
+    row('= Revenus nets de l\'associé investisseur',eur(hBrut-hIS),{t:1,k:'go'}),
+    row('Rendement sur le capital avancé',pc(hRend),{s:'sur '+r.duree+' mois'}),
+    row('Rendement ramené à l\'année',pc(hRend*12/(r.duree||1)))
+  ].join('');
+
+  /* analyse */
+  const A=[], AT=[], add=(c,s)=>{A.push(`<li class="${c}">${s}</li>`);AT.push({c,s});};
+  const dec=r.vente?1-r.achat/r.vente:0;
+  add(dec>=.4?'go':dec>=.3?'warn':'no',`Achat ${pc(dec,0)} sous le prix de revente (${eur(S.achat/U.q)} contre ${eur(S.vente/U.q)} ${U.w}). ${dec>=.4?'La décote porte l\'opération.':dec>=.3?'C\'est la zone limite : la marge repose sur un chantier sans écart.':'Trop peu : aucun chantier ne rattrape un achat trop cher.'}`);
+  if(vise && ev>.05) add('warn',`Revente souhaitée ${pc(ev)} au-dessus du prix du quartier (${eur(vise)}). Au prix du quartier, la marge nette serait de ${pc(compute(S,{vente:vise}).m)}.`);
+  else if(vise && ev<-.05) add('go',`Revente souhaitée ${pc(-ev)} sous le prix du quartier (${eur(vise)}) : hypothèse prudente.`);
+  if(r.m<t && L.achatMax>0) add('warn',`Pour atteindre ${S.obj} %, il faut acheter à ${eur(Math.floor(L.achatMax/500)*500)} au plus, soit ${eur(S.achat-L.achatMax)} de moins. À prix d'achat inchangé, il faut revendre ${eur(Math.ceil(L.venteMin/500)*500)}.`);
+  if(r.m>=t) add('go',`Le prix d'achat peut monter jusqu'à ${eur(Math.floor(L.achatMax/500)*500)} en restant à ${S.obj} %. Marge de négociation : ${eur(L.achatMax-S.achat)}.`);
+  const tm2=r.T/U.q, ecart=r.tr.ref?r.tr.base/r.tr.ref-1:0;
+  add(ecart<-.15?'warn':'', `Travaux : ${eur(tm2)} ${U.w}, ${pc(r.T/(r.C||1),0)} du coût de revient.${r.tr.top?' Plus gros poste : '+r.tr.top.l.toLowerCase()+' ('+eur(r.tr.top.v)+').':''} ${Math.abs(ecart)<.005?'Budget aligné sur les repères.':ecart<0?'Budget '+pc(-ecart,0)+' sous les repères'+(ecart<-.15?' : à justifier par des devis signés avant d\'offrir.':'.'):'Budget '+pc(ecart,0)+' au-dessus des repères.'}`);
+  const chute=r.vente?1-L.venteMin/r.vente:0, chute0=r.vente?1-L.venteZero/r.vente:0;
+  if(r.m>=t) add(chute>=.05?'go':'warn',`La revente peut baisser de ${pc(chute)} avant de passer sous l'objectif, et de ${pc(chute0)} avant la perte.`);
+  else if(r.N>0) add('warn',`Il reste ${pc(chute0)} de baisse possible sur la revente avant la perte.`);
+  else add('no',`Opération en perte : le point mort est à ${eur(Math.ceil(L.venteZero/500)*500)} de revente.`);
+  const mois=compute(S,{duree:S.duree+1}); add('',`Un mois de retard coûte ${eur(r.N-mois.N)} de bénéfice net.${L.retard>0?' L\'objectif tient jusqu\'à '+L.retard+' mois de retard.':L.retard===0?' Aucun retard possible sans passer sous l\'objectif.':''}`);
+  const fisc=r.tva+r.is; if(brut>0) add('',`TVA et IS prennent ${eur(fisc)}, soit ${pc(fisc/brut,0)} de la marge brute de ${eur(brut)}.`);
+  if(S.type==='local') add('warn','Local transformé en logement : après une rénovation lourde, le bien peut être traité comme neuf et la TVA porter sur le prix total. Pire cas à tester dans Réglages.');
+  if(S.type==='terrain') add('warn','Terrain divisé : l\'administration peut refuser la TVA sur la marge. Pire cas à tester dans Réglages avant toute offre.');
+  if(S.type==='box') add('warn','Chaque box doit déjà être un lot distinct. Sinon, prévoir le géomètre et le modificatif de copropriété.');
+  add(r.treso<=S.env?'go':'no', r.treso<=S.env?`Trésorerie : ${eur(r.treso)} à sortir au maximum, TVA des travaux avancée comprise. Il reste ${eur(S.env-r.treso)} dans l'enveloppe.`:`Trésorerie : il manque ${eur(r.treso-S.env)}. L'opération dépasse l'enveloppe de ${eur(S.env)}.`);
+  $('ana').innerHTML=A.join('');
+
+  const c1=r.m>=t, c2=S.duree>0&&S.duree<=S.dmax, c3=comps.length>=3, okv=v=>v==='Oui'||v==='Non', c4=okv(S.abf)&&okv(S.preempt);
+  const CT=[[c1,'La marge nette prévue ('+pc(r.m)+') '+(c1?'atteint':"n'atteint pas")+' le minimum de '+S.obj+' %.'],[c2,"La durée de l'opération ("+S.duree+' mois) '+(c2?'respecte':'dépasse')+' le maximum de '+S.dmax+' mois.'],[c3,comps.length+' vente'+(comps.length>1?'s':'')+' comparable'+(comps.length>1?'s':'')+' importée'+(comps.length>1?'s':'')+' : il en faut au moins trois.'],[c4,c4?'La zone ABF et la zone de préemption sont renseignées.':'La zone ABF et la zone de préemption doivent être renseignées par Oui ou Non.']];
+  const score=CT.filter(x=>x[0]).length, bilan=score+' contrôle'+(score>1?'s':'')+' validé'+(score>1?'s':'')+' sur 4';
+  $('ctl').innerHTML=CT.map(x=>`<div class="ctl"><span class="dot${x[0]?' ok':''}">${x[0]?'✓':''}</span><span>${x[1]}</span></div>`).join(''); $('bilan').textContent=bilan+'.'; $('tCtl').textContent=score+' / 4';
+  if(S.abf==='Oui') add('warn',"Zone ABF : les travaux visibles de l'extérieur demandent un accord, ce qui peut allonger les délais.");
+  if(S.preempt==='Oui') add('warn',"Zone de préemption : la mairie peut se substituer à l'acheteur, son délai de réponse est à prévoir dans la signature.");
+  $('ana').innerHTML=A.join('');
+  const LIM=[
+    ["Prix d'achat maximum",L.achatMax>0?eur(Math.floor(L.achatMax/500)*500):'aucun'],
+    ['Revente minimum pour '+S.obj+' %',eur(Math.ceil(L.venteMin/500)*500)],
+    ['Revente au point mort',eur(Math.ceil(L.venteZero/500)*500)],
+    ['Budget travaux maximum',L.tfMax>0?eur(r.tr.tot*L.tfMax):'aucun'],
+    ['Retard supportable',L.retard<0?'objectif non atteint':L.retard>=36?'plus de 36 mois':L.retard+' mois']
+  ];
+  $('lim').innerHTML=LIM.map(x=>`<div class="row"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+
+  const sc=[['Comme prévu',{}],['Revente − 5 %',{vente:S.vente*.95}],['Revente − 10 %',{vente:S.vente*.9}],['Travaux + 15 %',{tf:1.15}],['Travaux + 30 %',{tf:1.3}],['6 mois de retard',{duree:S.duree+6}],['− 5 %, + 15 %, + 6 mois',{vente:S.vente*.95,tf:1.15,duree:S.duree+6}]];
+  const SC=sc.map(s=>{const q=compute(S,s[1]);return [s[0],q.N,q.m,q.m>=t?'go':q.m>=t/2?'warn':'no'];});
+  $('sens').innerHTML=SC.map(q=>`<tr><td>${q[0]}</td><td>${eur(q[1])}</td><td class="${q[3]}">${pc(q[2])}</td></tr>`).join('');
+  save();
+  LAST={r,L,U,TY,cls,AT,LIM,SC,CT,score,bilan,comps,compMoy,compEc,vise,parts,brut,mine,pfu,droits,hDiv,hBrut,hIS,hRend,tvaTxt,isTxt};
+  return {r,L};
+}
+
+/* événements */
+const num=el=>{const v=parseFloat(el.value); return isNaN(v)?0:v;};
+BASIC.forEach(k=>$(k).addEventListener('input',e=>{ S[k]=num(e.target); if(k==='pieces') S.pieces=Math.max(1,Math.round(S.pieces)); render(); }));
+$('tvaT').addEventListener('change',e=>{S.tvaT=parseFloat(e.target.value);render();});
+$('tvaMode').addEventListener('change',e=>{S.tvaMode=e.target.value;render();});
+$('type').addEventListener('click',e=>{const b=e.target.closest('button'); if(b&&b.dataset.v!==S.type){setType(S,b.dataset.v);render();}});
+$('gamme').addEventListener('click',e=>{const b=e.target.closest('button'); if(b){S.gamme=parseFloat(b.dataset.v);render();}});
+$('niveau').addEventListener('click',e=>{const b=e.target.closest('button'); if(b){S.niveau=b.dataset.v;applyLevel(S);render();}});
+function bind(root,k,store){
+  root.addEventListener('input',e=>{const m=e.target.id.match(new RegExp('^'+k+'([cv])-(.+)$')); if(!m) return;
+    const p=store(m[2]); if(m[1]==='c') p.on=e.target.checked; else { p.val=e.target.value===''?null:num(e.target); if(k!=='n') p.on=true; } render(); });
+  root.addEventListener('click',e=>{const m=e.target.id&&e.target.id.match(new RegExp('^'+k+'x-(.+)$')); if(!m) return; store(m[1]).val=null; render(); });
+  root.addEventListener('focusout',()=>render());
+}
+bind($('trv'),'w',id=>S.w[id]); bind($('anx'),'x',id=>S.x[id]);
+bind($('acq'),'n',()=>({get val(){return S.notaire},set val(v){S.notaire=v},on:true}));
+document.querySelectorAll('.fields input').forEach(el=>el.addEventListener('blur',()=>render()));
+$('useQ').addEventListener('click',()=>{S.vente=Math.round(S.pm2*(S.type==='box'?S.pieces:S.surf));render();});
+$('reset').addEventListener('click',()=>{S=fresh();render();});
+/* ============ événements ajoutés ============ */
+const say=t=>{$('msg').textContent=t;};
+TXT.forEach(k=>$(k).addEventListener('input',e=>{S[k]=e.target.value;render();}));
+SEL.forEach(k=>$(k).addEventListener('change',e=>{S[k]=e.target.value;render();}));
+['m1','m2'].forEach(k=>$(k+'List').addEventListener('change',e=>{const m=e.target.id.match(/_(\d)$/); if(m){S[k][+m[1]]=e.target.checked;render();}}));
+$('compFile').addEventListener('change',ev=>{const f=ev.target.files&&ev.target.files[0]; if(!f) return; const rd=new FileReader();
+  rd.onload=()=>{S.comps=String(rd.result||'');render();say('Fichier importé : '+f.name+'.');}; rd.onerror=()=>say("Le fichier n'a pas pu être lu."); rd.readAsText(f);});
+$('useComp').addEventListener('click',()=>{ if(LAST&&LAST.compMoy){S.pm2=Math.round(LAST.compMoy);render();} });
+
+/* ============ PDF ============ */
+const WORKS=W;
+function pdfDoc(){
+  render(); const D=LAST, r=D.r, J=window.jspdf.jsPDF, doc=new J({unit:'mm',format:'a4'});
+  const W=210,H=297,M=12,CW=W-2*M; let y=0;
+  const BG=[238,241,246],INK=[16,26,44],INK2=[25,38,61],TX=[19,28,46],MU=[74,88,112],LN=[183,196,216],PAN=[220,228,240],AC=[26,82,230],WH=[255,255,255],LT=[157,171,194];
+  const VC={go:[14,159,110],warn:[201,106,4],no:[214,54,74],'':MU}, VD={go:[61,220,151],warn:[255,180,84],no:[255,107,107]};
+  const c=t=>String(t==null?'':t).replace(/[   ]/g,' ').replace(/−/g,'-').replace(/–/g,'-').replace(/œ/g,'oe').replace(/Œ/g,'OE').replace(/²/g,'2').replace(/✓/g,'');
+  const fill=a=>doc.setFillColor(a[0],a[1],a[2]), draw=a=>doc.setDrawColor(a[0],a[1],a[2]);
+  const T=(t,x,yy,o={})=>{doc.setFont('helvetica',o.bold?'bold':'normal');doc.setFontSize(o.size||9.5);const a=o.color||TX;doc.setTextColor(a[0],a[1],a[2]);doc.text(c(t),x,yy,o.align?{align:o.align}:undefined);};
+  const tw=(t,size,bold)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);return doc.getTextWidth(c(t));};
+  const fit=(t,w,size,bold)=>{t=c(t);if(tw(t,size,bold)<=w)return t;while(t.length>1&&tw(t+'...',size,bold)>w)t=t.slice(0,-1);return t.replace(/[ ,·]+$/,'')+'...';};
+  const wrap=(t,w,size,bold)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);return doc.splitTextToSize(c(t),w);};
+  const page=()=>{fill(BG);doc.rect(0,0,W,H,'F');};
+  const need=h=>{if(y+h>282){doc.addPage();page();y=16;}};
+  const titre=t=>{need(18);y+=3;T(t,M,y,{bold:true,size:12.5});y+=4.5;};
+  const ligne=(lab,sub,val,o={})=>{need(7.6);T(lab,M+2,y+5,{size:9.6,bold:o.bold,color:o.color||TX});if(sub){const sx=M+2+tw(lab,9.6,o.bold)+3;T(fit(sub,W-M-2-tw(val,9.6,true)-5-sx,7.8,false),sx,y+5,{size:7.8,color:MU});}T(val,W-M-2,y+5,{size:9.6,bold:true,color:o.vcolor||o.color||TX,align:'right'});draw(LN);doc.setLineWidth(0.2);doc.line(M,y+7.2,W-M,y+7.2);y+=7.2;};
+  const bande=(lab,val,sub,fond,txt)=>{need(11);y+=1.2;fill(fond||INK);doc.roundedRect(M,y,CW,9.2,1.4,1.4,'F');T(lab,M+4,y+6.1,{bold:true,size:10,color:txt||WH});if(sub)T(sub,M+4+tw(lab,10,true)+4,y+6.1,{size:8.2,color:txt||LT});T(val,W-M-4,y+6.2,{bold:true,size:11.5,color:txt||WH,align:'right'});y+=10.6;};
+  const today=new Date(), dateTxt=today.toLocaleDateString('fr-FR');
+  const unite=S.type==='box'?S.pieces+' boxes':S.type==='terrain'?S.surf+' m² de terrain, '+S.pieces+' lots':S.surf+' m², '+S.pieces+' pièce'+(S.pieces>1?'s':'');
+
+  /* ---------- page 1 : synthèse et décompte ---------- */
+  page(); fill(INK); doc.rect(0,0,W,43,'F');
+  const tag="SIMULATION D'OPÉRATION · MARCHAND DE BIENS"; fill(AC); doc.roundedRect(M,7,tw(tag,7,true)+5,6,1,1,'F'); T(tag,M+2.5,11.1,{bold:true,size:7,color:WH});
+  T('Établie le '+dateTxt,W-M,11.1,{size:8.5,color:LT,align:'right'});
+  const al=wrap(S.adresse.trim()||'Adresse à compléter',CW,16,true).slice(0,2); al.forEach((l,i)=>T(l,M,23+i*6.6,{bold:true,size:16,color:WH}));
+  T(D.TY.n+' · '+unite+' · '+S.duree+' mois',M,al.length>1?38:31.5,{size:10,color:LT});
+  y=48;
+  const vc=VC[D.cls]; fill(WH); draw(vc); doc.setLineWidth(0.9); doc.roundedRect(M,y,CW,15,1.6,1.6,'FD');
+  T((D.cls==='go'?'ON Y VA':D.cls==='warn'?'TROP JUSTE':'ON PASSE'),M+5,y+9.8,{bold:true,size:17,color:vc});
+  T('Marge nette '+pc(r.m)+' du coût de revient, pour un objectif de '+S.obj+' %',W-M-5,y+9.4,{size:10,color:vc,align:'right'}); y+=19;
+  const k4=[['BÉNÉFICE NET',eur(r.N)],["PART DE L'ASSOCIÉ OPÉRATEUR",eur(D.mine)],['COÛT DE REVIENT',eur(r.C)],['TRÉSORERIE MAXIMALE',eur(r.treso)]], kw=(CW-9)/4;
+  k4.forEach((k,i)=>{const x=M+i*(kw+3);fill(INK2);doc.roundedRect(x,y,kw,16,1.4,1.4,'F');T(k[0],x+3,y+5.4,{bold:true,size:6.2,color:LT});T(k[1],x+3,y+12.4,{bold:true,size:13,color:WH});}); y+=21;
+
+  T('Où part le prix de revente',M,y,{bold:true,size:10.5}); y+=2.5;
+  const PC={'Achat':[95,115,150],'Notaire et agence achat':[143,161,192],'Travaux':[79,140,255],'Annexes':[156,192,255],'Prestations partenaire':[94,234,212],'TVA à la revente':[255,107,107],"Intérêts de l'investisseur":[192,132,252],'IS':[255,180,84],'Bénéfice net':[61,220,151]};
+  const seg=D.parts.filter(p=>p[1]>0), tot=seg.reduce((s,p)=>s+p[1],0)||1; let x=M;
+  seg.forEach(p=>{const w=p[1]/tot*CW;fill(PC[p[0]]||MU);doc.rect(x,y,w,7,'F');if(w>11)T(Math.round(p[1]/tot*100)+' %',x+w/2,y+4.8,{bold:true,size:7.5,color:INK,align:'center'});x+=w;});
+  y+=10.5; seg.forEach((p,i)=>{const lx=M+(i%3)*(CW/3),ly=y+Math.floor(i/3)*4.8;fill(PC[p[0]]||MU);doc.rect(lx,ly-2.5,2.8,2.8,'F');T(p[0]+' : '+eur(p[1]),lx+4.2,ly,{size:8});});
+  y+=Math.ceil(seg.length/3)*4.8+4;
+
+  titre('Fiscalité et marge nette');
+  ligne('Prix de revente',S.type==='box'?eur(S.vente/(S.pieces||1))+' par box':eur(S.vente/(S.surf||1))+' par m²',eur(r.vente));
+  ligne('- Prix d\'achat hors FAI',D.vise?'décote de '+pc(r.vente?1-r.achat/r.vente:0,0)+' sur le prix de revente':'',eur(r.achat));
+  ligne("- Notaire et agence à l'achat",'régime marchand de biens, dont droits réduits '+eur(D.droits),eur(r.acq));
+  ligne('- Travaux hors taxes',eur(r.T/D.U.q)+(S.type==='box'?' par box':' par m²')+', aléas de '+S.aleas+' % compris',eur(r.T));
+  ligne('- Frais annexes','',eur(r.anx+r.agV));
+  ligne('- Prestations de la société partenaire',r.mis?String(Math.round(r.misPct*10)/10).replace('.',',')+' % du prix de revente':'aucune',eur(r.mis));
+  bande('MARGE BRUTE',eur(D.brut),pc(D.brut/(r.vente||1),0)+' du prix de revente',PAN,TX);
+  ligne('- TVA à la revente',D.tvaTxt,eur(r.tva));
+  ligne("- Intérêts versés à l'associé investisseur",String(S.taux).replace('.',',')+' % par an sur '+r.duree+' mois',eur(r.int));
+  ligne('= Résultat avant impôt','',eur(r.R),{bold:true});
+  ligne('- Impôt sur les sociétés',D.isTxt,eur(r.is));
+  bande('BÉNÉFICE NET DE LA SOCIÉTÉ',eur(r.N),'marge nette '+pc(r.m),INK,WH);
+  ligne("Part de l'associé opérateur, en dividendes bruts",S.part+' % du bénéfice net',eur(D.mine));
+  ligne('- Prélèvement sur dividendes',String(S.pfu).replace('.',',')+' %',eur(D.pfu));
+  ligne("= Net perçu par l'associé opérateur",'',eur(D.mine-D.pfu),{bold:true,vcolor:VC.go});
+  ligne("Total fiscalité de l'opération","droits d'achat, TVA, IS, prélèvement sur dividendes",eur(D.droits+r.tva+r.is+D.pfu));
+  ligne('TVA des travaux avancée puis récupérée','pèse sur la trésorerie, pas sur la marge',eur(r.T*S.tvaT/100));
+  y+=4;
+
+  /* ---------- page 3 : analyse et décision ---------- */
+  doc.addPage(); page(); y=16;
+  T('Analyse et décision',M,y,{bold:true,size:15}); y+=8;
+  titre("Revenus de l'associé investisseur");
+  ligne('Capital avancé, remboursé à la revente','trésorerie maximale sortie',eur(r.treso));
+  ligne('Intérêts reçus',String(S.taux).replace('.',',')+' % par an sur '+r.duree+' mois',eur(r.int));
+  ligne('Dividendes reçus',(100-S.part)+' % du bénéfice net',eur(D.hDiv));
+  ligne("- IS de l'associé investisseur, estimation","cas d'une société : 15 % sur les intérêts et sur 5 % des dividendes",eur(D.hIS));
+  bande("REVENUS NETS DE L'ASSOCIÉ INVESTISSEUR",eur(D.hBrut-D.hIS),pc(D.hRend)+' du capital, soit '+pc(D.hRend*12/(r.duree||1))+' par an',INK,WH);
+
+  y+=5;
+  titre('Contrôles avant décision');
+  const conf=D.score===4; need(34);
+  if(conf){fill(INK);doc.roundedRect(M,y,CW,30,1.6,1.6,'F');}else{fill(WH);draw(VC.no);doc.setLineWidth(0.9);doc.roundedRect(M,y,CW,30,1.6,1.6,'FD');}
+  T(D.score+'/4',M+17,y+17,{bold:true,size:28,color:conf?VD.go:VC.no,align:'center'}); T('contrôles validés',M+17,y+23,{size:7.2,color:conf?LT:VC.no,align:'center'});
+  D.CT.forEach((k,i)=>{const yy=y+7+i*5.8,col=conf?WH:(k[0]?TX:VC.no);T(k[0]?'OUI':'NON',M+38,yy,{bold:true,size:8,color:k[0]?(conf?VD.go:VC.go):VC.no});T(fit(k[1],CW-54,8.6,false),M+48,yy,{size:8.6,color:col});});
+  y+=35;
+  titre('Analyse');
+  D.AT.forEach(a=>{const ls=wrap(a.s,CW-9,9,false),h=ls.length*4.3+4.2;need(h+2);fill(PAN);doc.roundedRect(M,y,CW,h,1,1,'F');fill(VC[a.c]||MU);doc.rect(M,y,1.3,h,'F');ls.forEach((l,i)=>T(l,M+5,y+5.2+i*4.3,{size:9}));y+=h+1.8;});
+  y+=4;
+  titre("Limites de l'opération"); D.LIM.forEach(l=>ligne(l[0],'',l[1])); y+=5;
+  titre('Si cela se passe moins bien');
+  D.SC.forEach(q=>{need(7);T(q[0],M+2,y+5,{size:9.4});T(eur(q[1]),W-M-34,y+5,{size:9.4,bold:true,align:'right'});T(pc(q[2]),W-M-2,y+5,{size:9.4,bold:true,color:VC[q[3]],align:'right'});draw(LN);doc.setLineWidth(0.2);doc.line(M,y+7.2,W-M,y+7.2);y+=7.2;}); y+=5;
+  titre('Ventes comparables');
+  if(D.comps.length){ D.comps.slice(0,12).forEach(q=>ligne(fit(q.adresse,84,9.6,false),q.surface.toLocaleString('fr-FR')+' m² · '+eur(q.prix)+(q.date?' · '+q.date:''),eur(q.m2)+' /m²'));
+    bande('MOYENNE DES VENTES COMPARABLES',eur(D.compMoy)+' /m²',D.compEc!=null?'revente souhaitée '+(D.compEc>=0?'supérieure':'inférieure')+' de '+pc(Math.abs(D.compEc)):'',PAN,TX); }
+  else { T('Aucune vente comparable importée : le prix de revente ne repose que sur le prix du quartier saisi ('+eur(S.pm2)+(S.type==='box'?' par box':' par m²')+').',M+2,y+4,{size:9,color:VC.no}); y+=8; }
+  y+=4; need(40); draw(TX); doc.setLineWidth(0.6); fill(WH); doc.roundedRect(M,y,CW,36,1.4,1.4,'FD');
+  T("DÉCISION DE L'ASSOCIÉ INVESTISSEUR",M+5,y+7.5,{bold:true,size:10.5}); doc.setLineWidth(0.5);
+  [['Accord',M+5],['À revoir',M+42],['Refus',M+79]].forEach(o=>{doc.rect(o[1],y+13,4.5,4.5);T(o[0],o[1]+7,y+16.8,{size:10.5});});
+  T('Montant accordé : ........................ €',M+112,y+16.8,{size:10}); T('Date :',M+5,y+28,{size:10}); T('Signature :',M+70,y+28,{size:10});
+  /* ---------- page 2 : détail des postes ---------- */
+  doc.addPage(); page(); y=16;
+  T('Annexe : détail des postes',M,y,{bold:true,size:15}); y+=8;
+  const table=(rows,foot)=>{const c1=M+2,c2=W-M-62,c3=W-M-32,c4=W-M-2;need(8);T('Poste',c1,y,{size:7.6,color:MU});T('Repère',c2,y,{size:7.6,color:MU,align:'right'});T('Retenu',c3,y,{size:7.6,color:MU,align:'right'});T('Écart',c4,y,{size:7.6,color:MU,align:'right'});draw(TX);doc.setLineWidth(0.35);doc.line(M,y+1.6,W-M,y+1.6);y+=2;
+    rows.forEach(q=>{need(6.2);const d=q[2]-q[1];T(fit(q[0],c2-c1-24,8.8,false),c1,y+4.2,{size:8.8});T(eur(q[1]),c2,y+4.2,{size:8.8,color:MU,align:'right'});T(eur(q[2]),c3,y+4.2,{size:8.8,bold:true,align:'right'});T(Math.round(d)===0?'-':(d>0?'+ ':'- ')+eur(Math.abs(d)),c4,y+4.2,{size:8.8,color:d>0?VC.warn:d<0?VC.go:MU,align:'right'});draw(LN);doc.setLineWidth(0.2);doc.line(M,y+6,W-M,y+6);y+=6;});
+    foot.forEach(f=>{need(6.6);T(f[0],c1,y+4.6,{size:9.2,bold:true});T(f[1],c4,y+4.6,{size:9.2,bold:true,align:'right'});y+=6.2;}); y+=5;};
+  titre('Acquisition');
+  table([['Frais de notaire, régime marchand de biens',notaire(S.achat),r.not],["Frais d'agence à l'achat (FAI)",S.agA,S.agA]].filter(q=>q[1]||q[2]),[['Total acquisition',eur(r.acq)]]);
+  const gam=S.gamme===0.8?'économique':S.gamme===1.25?'soignée':'standard', niv={r:'rafraîchissement',c:'rénovation complète',l:'rénovation lourde'}[S.niveau];
+  titre('Travaux'+(ALLB.includes(S.type)?' : '+niv+', gamme '+gam:' : gamme '+gam));
+  const wr=WORKS.filter(i=>vis(i,S.type)&&S.w[i.id].on).map(i=>{const d=wDef(i,S).v,p=S.w[i.id];return [i.l,d,p.val==null?d:p.val];});
+  table(wr.length?wr:[['Aucun poste coché',0,0]],[['Postes cochés',eur(r.tr.base)],['Aléas de chantier, '+S.aleas+' %',eur(r.tr.tot-r.tr.base)],['Total travaux hors taxes',eur(r.T)]]);
+  titre('Frais annexes');
+  const xr=XI.filter(i=>xVis(i,S.type)&&S.x[i.id].on).map(i=>{const d=i.d(S,S.duree,r.T,S.vente).v,p=S.x[i.id];return [i.l,d,p.val==null?d:p.val];});
+  if(r.agV) xr.push(["Honoraires d'agence à la revente, "+String(S.agV).replace('.',',')+' %',r.agV,r.agV]);
+  table(xr.length?xr:[['Aucun frais coché',0,0]],[['Total frais annexes',eur(r.anx+r.agV)]]);
+  if(r.mis){ need(34); titre('Prestations confiées à une société partenaire');
+    [['Mission 1',M1,S.m1],['Mission 2',M2,S.m2]].forEach(m=>{const sel=m[1].filter((p,i)=>m[2][i]); if(!sel.length) return; const p=sel.reduce((t,q)=>t+q[1],0);
+      ligne(m[0]+(sel.length===3?' complète':", prestation d'appoint"),sel.map(q=>q[0].toLowerCase()).join(', ')+' · '+String(Math.round(p*10)/10).replace('.',',')+' %',eur(S.vente*p/100));});
+    y+=5; }
+
+  const n=doc.getNumberOfPages(); for(let i=1;i<=n;i++){doc.setPage(i);T("Simulation indicative, à valider par l'expert-comptable et le notaire",M,291,{size:7.5,color:MU});T('Page '+i+' sur '+n,W-M,291,{size:7.5,color:MU,align:'right'});}
+  return doc;
+}
+const dlP=(window.claude&&typeof window.claude.use==='function')?window.claude.use('downloads').then(ns=>ns||null,()=>null):Promise.resolve(null);
+$('bPdf').addEventListener('click',()=>{
+  if(!window.jspdf||!window.jspdf.jsPDF){say("Le générateur de PDF n'a pas pu se charger. Vérifier la connexion internet puis recharger la page.");return;}
+  let doc; try{doc=pdfDoc();}catch(err){say("Le PDF n'a pas pu être créé.");window.__pdfErr=err;return;}
+  const d=new Date(), name='simulation-marchand-de-biens-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.pdf';
+  say('Préparation du PDF en cours.');
+  dlP.then(dl=>{
+    if(dl){dl.save({filename:name,data:doc.output('blob')}).then(()=>say('PDF créé.'),err=>say(err&&err.code==='declined'?'Téléchargement annulé.':"Le téléchargement du PDF n'est pas disponible dans cette vue."));}
+    else{try{doc.save(name);say('PDF créé.');}catch(err){say("Le téléchargement du PDF n'est pas disponible dans cette vue.");}}
+  });
+});
+
+$('copy').addEventListener('click',async e=>{
+  const {r,L}=render(), b=e.currentTarget;
+  const txt=[`${TYPES[S.type].n} ${S.surf} m², ${S.duree} mois`,`Achat hors FAI ${eur(r.achat)} + notaire et agence ${eur(r.acq)}`,`Travaux ${eur(r.T)}`,`Annexes ${eur(r.anx+r.agV)}`,`Coût de revient ${eur(r.C)}`,`Revente ${eur(r.vente)}`,`Marge brute ${eur(r.vente-r.C)}`,`TVA ${eur(r.tva)}, intérêts ${eur(r.int)}, IS ${eur(r.is)}`,`Bénéfice net ${eur(r.N)}, marge nette ${pc(r.m)}`,`Prix d'achat maximum pour ${S.obj} % : ${eur(Math.floor(L.achatMax/500)*500)}`].join('\n');
+  try{ await navigator.clipboard.writeText(txt); b.textContent='Copié'; }catch(err){ b.textContent='Copie impossible ici'; }
+  setTimeout(()=>b.textContent='Copier le résumé',1800);
+});
+render();
+}
+</script>
+</body>
+</html>

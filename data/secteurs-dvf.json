@@ -1,0 +1,3716 @@
+{
+ "source": "DVF géolocalisées (data.gouv.fr), ventes 2024-01-01 au 2025-12-31",
+ "methode": "3e quartile du prix au m² (surface bâtie réelle), mutations à une seule habitation",
+ "secteurs": [
+  {
+   "cp": "75001",
+   "commune": "Paris 1er Arrondissement",
+   "pm2": 13670,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 270,
+    "p25": 10258,
+    "mediane": 11873,
+    "p75": 13670
+   },
+   "appartements": {
+    "n": 500,
+    "p25": 10500,
+    "mediane": 12249,
+    "p75": 14521
+   },
+   "maisons": null
+  },
+  {
+   "cp": "75002",
+   "commune": "Paris 2e Arrondissement",
+   "pm2": 12364,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 391,
+    "p25": 9365,
+    "mediane": 10962,
+    "p75": 12364
+   },
+   "appartements": {
+    "n": 693,
+    "p25": 9535,
+    "mediane": 11171,
+    "p75": 12657
+   },
+   "maisons": null
+  },
+  {
+   "cp": "75003",
+   "commune": "Paris 3e Arrondissement",
+   "pm2": 13125,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 715,
+    "p25": 10167,
+    "mediane": 11684,
+    "p75": 13125
+   },
+   "appartements": {
+    "n": 1233,
+    "p25": 10278,
+    "mediane": 11799,
+    "p75": 13559
+   },
+   "maisons": {
+    "n": 1,
+    "p25": 1556,
+    "mediane": 1556,
+    "p75": 1556
+   }
+  },
+  {
+   "cp": "75004",
+   "commune": "Paris 4e Arrondissement",
+   "pm2": 14213,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 557,
+    "p25": 10662,
+    "mediane": 12338,
+    "p75": 14213
+   },
+   "appartements": {
+    "n": 978,
+    "p25": 10797,
+    "mediane": 12663,
+    "p75": 14683
+   },
+   "maisons": null
+  },
+  {
+   "cp": "75005",
+   "commune": "Paris 5e Arrondissement",
+   "pm2": 12853,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 956,
+    "p25": 10043,
+    "mediane": 11486,
+    "p75": 12853
+   },
+   "appartements": {
+    "n": 1617,
+    "p25": 10226,
+    "mediane": 11750,
+    "p75": 13305
+   },
+   "maisons": {
+    "n": 4,
+    "p25": 9712,
+    "mediane": 14532,
+    "p75": 17082
+   }
+  },
+  {
+   "cp": "75006",
+   "commune": "Paris 6e Arrondissement",
+   "pm2": 15673,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 697,
+    "p25": 11667,
+    "mediane": 13514,
+    "p75": 15673
+   },
+   "appartements": {
+    "n": 1407,
+    "p25": 12162,
+    "mediane": 14211,
+    "p75": 17031
+   },
+   "maisons": null
+  },
+  {
+   "cp": "75007",
+   "commune": "Paris 7e Arrondissement",
+   "pm2": 15000,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 682,
+    "p25": 11111,
+    "mediane": 12857,
+    "p75": 15000
+   },
+   "appartements": {
+    "n": 1604,
+    "p25": 11767,
+    "mediane": 13756,
+    "p75": 16825
+   },
+   "maisons": {
+    "n": 4,
+    "p25": 7164,
+    "mediane": 14749,
+    "p75": 26082
+   }
+  },
+  {
+   "cp": "75008",
+   "commune": "Paris 8e Arrondissement",
+   "pm2": 13558,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 467,
+    "p25": 10000,
+    "mediane": 11841,
+    "p75": 13558
+   },
+   "appartements": {
+    "n": 1174,
+    "p25": 10240,
+    "mediane": 12042,
+    "p75": 14116
+   },
+   "maisons": {
+    "n": 1,
+    "p25": 16935,
+    "mediane": 16935,
+    "p75": 16935
+   }
+  },
+  {
+   "cp": "75009",
+   "commune": "Paris 9e Arrondissement",
+   "pm2": 12000,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1035,
+    "p25": 9259,
+    "mediane": 10566,
+    "p75": 12000
+   },
+   "appartements": {
+    "n": 2026,
+    "p25": 9231,
+    "mediane": 10674,
+    "p75": 12170
+   },
+   "maisons": null
+  },
+  {
+   "cp": "75010",
+   "commune": "Paris 10e Arrondissement",
+   "pm2": 10486,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1544,
+    "p25": 8048,
+    "mediane": 9263,
+    "p75": 10486
+   },
+   "appartements": {
+    "n": 2633,
+    "p25": 8000,
+    "mediane": 9259,
+    "p75": 10525
+   },
+   "maisons": null
+  },
+  {
+   "cp": "75011",
+   "commune": "Paris 11e Arrondissement",
+   "pm2": 10895,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 2900,
+    "p25": 8724,
+    "mediane": 9823,
+    "p75": 10895
+   },
+   "appartements": {
+    "n": 4408,
+    "p25": 8696,
+    "mediane": 9867,
+    "p75": 10988
+   },
+   "maisons": {
+    "n": 1,
+    "p25": 20000,
+    "mediane": 20000,
+    "p75": 20000
+   }
+  },
+  {
+   "cp": "75012",
+   "commune": "Paris 12e Arrondissement",
+   "pm2": 9999,
+   "pm2Maison": 17469,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1909,
+    "p25": 8000,
+    "mediane": 8933,
+    "p75": 9999
+   },
+   "appartements": {
+    "n": 2942,
+    "p25": 7968,
+    "mediane": 8952,
+    "p75": 10000
+   },
+   "maisons": {
+    "n": 10,
+    "p25": 9556,
+    "mediane": 10937,
+    "p75": 17469
+   }
+  },
+  {
+   "cp": "75013",
+   "commune": "Paris 13e Arrondissement",
+   "pm2": 9679,
+   "pm2Maison": 14827,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1742,
+    "p25": 7603,
+    "mediane": 8608,
+    "p75": 9679
+   },
+   "appartements": {
+    "n": 2745,
+    "p25": 7508,
+    "mediane": 8640,
+    "p75": 9788
+   },
+   "maisons": {
+    "n": 27,
+    "p25": 9943,
+    "mediane": 12378,
+    "p75": 14827
+   }
+  },
+  {
+   "cp": "75014",
+   "commune": "Paris 14e Arrondissement",
+   "pm2": 10365,
+   "pm2Maison": 15833,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1838,
+    "p25": 8204,
+    "mediane": 9296,
+    "p75": 10365
+   },
+   "appartements": {
+    "n": 2834,
+    "p25": 8173,
+    "mediane": 9342,
+    "p75": 10556
+   },
+   "maisons": {
+    "n": 27,
+    "p25": 9125,
+    "mediane": 11593,
+    "p75": 15833
+   }
+  },
+  {
+   "cp": "75015",
+   "commune": "Issy-les-Moulineaux / Paris 15e Arrondissement",
+   "pm2": 10526,
+   "pm2Maison": 12682,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 3432,
+    "p25": 8285,
+    "mediane": 9419,
+    "p75": 10526
+   },
+   "appartements": {
+    "n": 5687,
+    "p25": 8315,
+    "mediane": 9459,
+    "p75": 10680
+   },
+   "maisons": {
+    "n": 14,
+    "p25": 9094,
+    "mediane": 10889,
+    "p75": 12682
+   }
+  },
+  {
+   "cp": "75016",
+   "commune": "Boulogne-Billancourt / Paris 16e Arrondissement",
+   "pm2": 12000,
+   "pm2Maison": 20600,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1518,
+    "p25": 9000,
+    "mediane": 10370,
+    "p75": 12000
+   },
+   "appartements": {
+    "n": 4199,
+    "p25": 9254,
+    "mediane": 10794,
+    "p75": 12564
+   },
+   "maisons": {
+    "n": 16,
+    "p25": 12012,
+    "mediane": 15359,
+    "p75": 20600
+   }
+  },
+  {
+   "cp": "75017",
+   "commune": "Paris 17e Arrondissement",
+   "pm2": 11197,
+   "pm2Maison": null,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 2620,
+    "p25": 8408,
+    "mediane": 9779,
+    "p75": 11197
+   },
+   "appartements": {
+    "n": 4579,
+    "p25": 8588,
+    "mediane": 10060,
+    "p75": 11538
+   },
+   "maisons": {
+    "n": 6,
+    "p25": 12168,
+    "mediane": 13909,
+    "p75": 20793
+   }
+  },
+  {
+   "cp": "75018",
+   "commune": "Paris 18e Arrondissement",
+   "pm2": 10039,
+   "pm2Maison": 19407,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 3861,
+    "p25": 7344,
+    "mediane": 8654,
+    "p75": 10039
+   },
+   "appartements": {
+    "n": 5388,
+    "p25": 7365,
+    "mediane": 8763,
+    "p75": 10269
+   },
+   "maisons": {
+    "n": 22,
+    "p25": 9223,
+    "mediane": 14364,
+    "p75": 19407
+   }
+  },
+  {
+   "cp": "75019",
+   "commune": "Paris 19e Arrondissement",
+   "pm2": 9000,
+   "pm2Maison": 17236,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1853,
+    "p25": 6866,
+    "mediane": 7955,
+    "p75": 9000
+   },
+   "appartements": {
+    "n": 2815,
+    "p25": 6778,
+    "mediane": 7951,
+    "p75": 9032
+   },
+   "maisons": {
+    "n": 45,
+    "p25": 10184,
+    "mediane": 13095,
+    "p75": 17236
+   }
+  },
+  {
+   "cp": "75020",
+   "commune": "Paris 20e Arrondissement",
+   "pm2": 9303,
+   "pm2Maison": 12817,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 2474,
+    "p25": 7353,
+    "mediane": 8333,
+    "p75": 9303
+   },
+   "appartements": {
+    "n": 3642,
+    "p25": 7246,
+    "mediane": 8280,
+    "p75": 9294
+   },
+   "maisons": {
+    "n": 35,
+    "p25": 8183,
+    "mediane": 10410,
+    "p75": 12817
+   }
+  },
+  {
+   "cp": "78100",
+   "commune": "Saint-Germain-en-Laye",
+   "pm2": 7590,
+   "pm2Maison": 10148,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 331,
+    "p25": 5150,
+    "mediane": 6361,
+    "p75": 7590
+   },
+   "appartements": {
+    "n": 808,
+    "p25": 4950,
+    "mediane": 6473,
+    "p75": 7717
+   },
+   "maisons": {
+    "n": 108,
+    "p25": 5958,
+    "mediane": 7324,
+    "p75": 10148
+   }
+  },
+  {
+   "cp": "78110",
+   "commune": "Le Vésinet",
+   "pm2": 6326,
+   "pm2Maison": 11091,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 143,
+    "p25": 4815,
+    "mediane": 5417,
+    "p75": 6326
+   },
+   "appartements": {
+    "n": 277,
+    "p25": 4700,
+    "mediane": 5417,
+    "p75": 6329
+   },
+   "maisons": {
+    "n": 134,
+    "p25": 7097,
+    "mediane": 8679,
+    "p75": 11091
+   }
+  },
+  {
+   "cp": "78130",
+   "commune": "Chapet / Les Mureaux",
+   "pm2": 2785,
+   "pm2Maison": 3194,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 60,
+    "p25": 2053,
+    "mediane": 2501,
+    "p75": 2785
+   },
+   "appartements": {
+    "n": 169,
+    "p25": 1634,
+    "mediane": 1851,
+    "p75": 2305
+   },
+   "maisons": {
+    "n": 160,
+    "p25": 2445,
+    "mediane": 2796,
+    "p75": 3194
+   }
+  },
+  {
+   "cp": "78200",
+   "commune": "Boinvilliers / Boissy-Mauvoisin / Buchelay / Favrieux / Flacourt / Fontenay-Mauvoisin / Jouy-Mauvoisin / Magnanville / Mantes-la-Jolie / Ménerville / Perdreauville / Soindres",
+   "pm2": 3185,
+   "pm2Maison": 3092,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 232,
+    "p25": 2079,
+    "mediane": 2739,
+    "p75": 3185
+   },
+   "appartements": {
+    "n": 442,
+    "p25": 1821,
+    "mediane": 2466,
+    "p75": 2982
+   },
+   "maisons": {
+    "n": 313,
+    "p25": 2336,
+    "mediane": 2624,
+    "p75": 3092
+   }
+  },
+  {
+   "cp": "78230",
+   "commune": "Le Pecq",
+   "pm2": 5090,
+   "pm2Maison": 7467,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 105,
+    "p25": 3662,
+    "mediane": 4214,
+    "p75": 5090
+   },
+   "appartements": {
+    "n": 262,
+    "p25": 3538,
+    "mediane": 4281,
+    "p75": 5223
+   },
+   "maisons": {
+    "n": 71,
+    "p25": 4406,
+    "mediane": 6167,
+    "p75": 7467
+   }
+  },
+  {
+   "cp": "78250",
+   "commune": "Gaillon-sur-Montcient / Hardricourt / Meulan-en-Yvelines / Mézy-sur-Seine / Oinville-sur-Montcient / Tessancourt-sur-Aubette",
+   "pm2": 3303,
+   "pm2Maison": 3468,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 101,
+    "p25": 2281,
+    "mediane": 2792,
+    "p75": 3303
+   },
+   "appartements": {
+    "n": 156,
+    "p25": 2086,
+    "mediane": 2629,
+    "p75": 3101
+   },
+   "maisons": {
+    "n": 186,
+    "p25": 2476,
+    "mediane": 2903,
+    "p75": 3468
+   }
+  },
+  {
+   "cp": "78260",
+   "commune": "Achères",
+   "pm2": 4196,
+   "pm2Maison": 4330,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 107,
+    "p25": 3368,
+    "mediane": 3923,
+    "p75": 4196
+   },
+   "appartements": {
+    "n": 187,
+    "p25": 2974,
+    "mediane": 3600,
+    "p75": 4022
+   },
+   "maisons": {
+    "n": 138,
+    "p25": 3332,
+    "mediane": 3732,
+    "p75": 4330
+   }
+  },
+  {
+   "cp": "78300",
+   "commune": "Poissy",
+   "pm2": 4603,
+   "pm2Maison": 5442,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 290,
+    "p25": 3213,
+    "mediane": 3942,
+    "p75": 4603
+   },
+   "appartements": {
+    "n": 609,
+    "p25": 3038,
+    "mediane": 3651,
+    "p75": 4286
+   },
+   "maisons": {
+    "n": 150,
+    "p25": 3744,
+    "mediane": 4474,
+    "p75": 5442
+   }
+  },
+  {
+   "cp": "78360",
+   "commune": "Montesson",
+   "pm2": 4971,
+   "pm2Maison": 5987,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 78,
+    "p25": 3744,
+    "mediane": 4350,
+    "p75": 4971
+   },
+   "appartements": {
+    "n": 160,
+    "p25": 3571,
+    "mediane": 4136,
+    "p75": 4756
+   },
+   "maisons": {
+    "n": 140,
+    "p25": 4696,
+    "mediane": 5329,
+    "p75": 5987
+   }
+  },
+  {
+   "cp": "78400",
+   "commune": "Chatou",
+   "pm2": 5446,
+   "pm2Maison": 8557,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 200,
+    "p25": 4152,
+    "mediane": 4717,
+    "p75": 5446
+   },
+   "appartements": {
+    "n": 481,
+    "p25": 4066,
+    "mediane": 4722,
+    "p75": 5607
+   },
+   "maisons": {
+    "n": 209,
+    "p25": 5655,
+    "mediane": 7000,
+    "p75": 8557
+   }
+  },
+  {
+   "cp": "78410",
+   "commune": "Aubergenville / Bouafle / Flins-sur-Seine / La Falaise / Nézel",
+   "pm2": 3602,
+   "pm2Maison": 3540,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 48,
+    "p25": 2502,
+    "mediane": 3030,
+    "p75": 3602
+   },
+   "appartements": {
+    "n": 142,
+    "p25": 1649,
+    "mediane": 1920,
+    "p75": 2924
+   },
+   "maisons": {
+    "n": 221,
+    "p25": 2685,
+    "mediane": 3143,
+    "p75": 3540
+   }
+  },
+  {
+   "cp": "78420",
+   "commune": "Carrières-sur-Seine",
+   "pm2": 5404,
+   "pm2Maison": 6107,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 65,
+    "p25": 4257,
+    "mediane": 4909,
+    "p75": 5404
+   },
+   "appartements": {
+    "n": 143,
+    "p25": 3957,
+    "mediane": 4812,
+    "p75": 5387
+   },
+   "maisons": {
+    "n": 120,
+    "p25": 4701,
+    "mediane": 5449,
+    "p75": 6107
+   }
+  },
+  {
+   "cp": "78480",
+   "commune": "Verneuil-sur-Seine",
+   "pm2": 4352,
+   "pm2Maison": 4605,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 64,
+    "p25": 2873,
+    "mediane": 3895,
+    "p75": 4352
+   },
+   "appartements": {
+    "n": 203,
+    "p25": 2379,
+    "mediane": 2995,
+    "p75": 3964
+   },
+   "maisons": {
+    "n": 146,
+    "p25": 3328,
+    "mediane": 3836,
+    "p75": 4605
+   }
+  },
+  {
+   "cp": "78500",
+   "commune": "Sartrouville",
+   "pm2": 4941,
+   "pm2Maison": 6297,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 282,
+    "p25": 3465,
+    "mediane": 4091,
+    "p75": 4941
+   },
+   "appartements": {
+    "n": 548,
+    "p25": 2909,
+    "mediane": 3667,
+    "p75": 4454
+   },
+   "maisons": {
+    "n": 418,
+    "p25": 4324,
+    "mediane": 5165,
+    "p75": 6297
+   }
+  },
+  {
+   "cp": "78510",
+   "commune": "Triel-sur-Seine",
+   "pm2": 3720,
+   "pm2Maison": 4093,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 58,
+    "p25": 3000,
+    "mediane": 3518,
+    "p75": 3720
+   },
+   "appartements": {
+    "n": 92,
+    "p25": 2815,
+    "mediane": 3183,
+    "p75": 3620
+   },
+   "maisons": {
+    "n": 171,
+    "p25": 3073,
+    "mediane": 3493,
+    "p75": 4093
+   }
+  },
+  {
+   "cp": "78520",
+   "commune": "Follainville-Dennemont / Guernes / Limay / Saint-Martin-la-Garenne",
+   "pm2": 3038,
+   "pm2Maison": 3101,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 41,
+    "p25": 2289,
+    "mediane": 2640,
+    "p75": 3038
+   },
+   "appartements": {
+    "n": 79,
+    "p25": 1714,
+    "mediane": 2361,
+    "p75": 2746
+   },
+   "maisons": {
+    "n": 218,
+    "p25": 2266,
+    "mediane": 2649,
+    "p75": 3101
+   }
+  },
+  {
+   "cp": "78570",
+   "commune": "Andrésy / Chanteloup-les-Vignes",
+   "pm2": 3847,
+   "pm2Maison": 4139,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 113,
+    "p25": 2884,
+    "mediane": 3356,
+    "p75": 3847
+   },
+   "appartements": {
+    "n": 239,
+    "p25": 2558,
+    "mediane": 3043,
+    "p75": 3568
+   },
+   "maisons": {
+    "n": 234,
+    "p25": 3057,
+    "mediane": 3552,
+    "p75": 4139
+   }
+  },
+  {
+   "cp": "78600",
+   "commune": "Le Mesnil-le-Roi / Maisons-Laffitte",
+   "pm2": 6276,
+   "pm2Maison": 8572,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 168,
+    "p25": 4624,
+    "mediane": 5349,
+    "p75": 6276
+   },
+   "appartements": {
+    "n": 465,
+    "p25": 4637,
+    "mediane": 5354,
+    "p75": 6243
+   },
+   "maisons": {
+    "n": 210,
+    "p25": 6110,
+    "mediane": 7390,
+    "p75": 8572
+   }
+  },
+  {
+   "cp": "78700",
+   "commune": "Conflans-Sainte-Honorine",
+   "pm2": 4003,
+   "pm2Maison": 4883,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 177,
+    "p25": 2783,
+    "mediane": 3294,
+    "p75": 4003
+   },
+   "appartements": {
+    "n": 332,
+    "p25": 2597,
+    "mediane": 3106,
+    "p75": 3687
+   },
+   "maisons": {
+    "n": 429,
+    "p25": 3627,
+    "mediane": 4237,
+    "p75": 4883
+   }
+  },
+  {
+   "cp": "78711",
+   "commune": "Mantes-la-Ville",
+   "pm2": 3190,
+   "pm2Maison": 2961,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 84,
+    "p25": 2376,
+    "mediane": 2753,
+    "p75": 3190
+   },
+   "appartements": {
+    "n": 144,
+    "p25": 1972,
+    "mediane": 2499,
+    "p75": 2936
+   },
+   "maisons": {
+    "n": 192,
+    "p25": 2238,
+    "mediane": 2521,
+    "p75": 2961
+   }
+  },
+  {
+   "cp": "78800",
+   "commune": "Houilles",
+   "pm2": 5540,
+   "pm2Maison": 6308,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 219,
+    "p25": 4010,
+    "mediane": 4906,
+    "p75": 5540
+   },
+   "appartements": {
+    "n": 442,
+    "p25": 3589,
+    "mediane": 4344,
+    "p75": 5258
+   },
+   "maisons": {
+    "n": 323,
+    "p25": 4653,
+    "mediane": 5297,
+    "p75": 6308
+   }
+  },
+  {
+   "cp": "78955",
+   "commune": "Carrières-sous-Poissy",
+   "pm2": 4375,
+   "pm2Maison": 3879,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 131,
+    "p25": 3410,
+    "mediane": 3947,
+    "p75": 4375
+   },
+   "appartements": {
+    "n": 218,
+    "p25": 3299,
+    "mediane": 3729,
+    "p75": 4138
+   },
+   "maisons": {
+    "n": 125,
+    "p25": 3092,
+    "mediane": 3544,
+    "p75": 3879
+   }
+  },
+  {
+   "cp": "92000",
+   "commune": "Nanterre",
+   "pm2": 5842,
+   "pm2Maison": 7131,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 357,
+    "p25": 4447,
+    "mediane": 5185,
+    "p75": 5842
+   },
+   "appartements": {
+    "n": 648,
+    "p25": 4275,
+    "mediane": 5000,
+    "p75": 5667
+   },
+   "maisons": {
+    "n": 201,
+    "p25": 5122,
+    "mediane": 6169,
+    "p75": 7131
+   }
+  },
+  {
+   "cp": "92110",
+   "commune": "Clichy",
+   "pm2": 7672,
+   "pm2Maison": 13022,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 808,
+    "p25": 5901,
+    "mediane": 6875,
+    "p75": 7672
+   },
+   "appartements": {
+    "n": 1250,
+    "p25": 5779,
+    "mediane": 6866,
+    "p75": 7696
+   },
+   "maisons": {
+    "n": 11,
+    "p25": 8140,
+    "mediane": 9800,
+    "p75": 13022
+   }
+  },
+  {
+   "cp": "92230",
+   "commune": "Gennevilliers",
+   "pm2": 5304,
+   "pm2Maison": 5871,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 121,
+    "p25": 3965,
+    "mediane": 4727,
+    "p75": 5304
+   },
+   "appartements": {
+    "n": 232,
+    "p25": 3590,
+    "mediane": 4514,
+    "p75": 5176
+   },
+   "maisons": {
+    "n": 54,
+    "p25": 3577,
+    "mediane": 4603,
+    "p75": 5871
+   }
+  },
+  {
+   "cp": "92250",
+   "commune": "La Garenne-Colombes",
+   "pm2": 6965,
+   "pm2Maison": 10625,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 370,
+    "p25": 5312,
+    "mediane": 6213,
+    "p75": 6965
+   },
+   "appartements": {
+    "n": 678,
+    "p25": 5431,
+    "mediane": 6391,
+    "p75": 7174
+   },
+   "maisons": {
+    "n": 64,
+    "p25": 6918,
+    "mediane": 8615,
+    "p75": 10625
+   }
+  },
+  {
+   "cp": "92270",
+   "commune": "Bois-Colombes",
+   "pm2": 7033,
+   "pm2Maison": 9570,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 352,
+    "p25": 5437,
+    "mediane": 6264,
+    "p75": 7033
+   },
+   "appartements": {
+    "n": 592,
+    "p25": 5437,
+    "mediane": 6175,
+    "p75": 7000
+   },
+   "maisons": {
+    "n": 139,
+    "p25": 6813,
+    "mediane": 8000,
+    "p75": 9570
+   }
+  },
+  {
+   "cp": "92300",
+   "commune": "Levallois-Perret",
+   "pm2": 9815,
+   "pm2Maison": 17785,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 945,
+    "p25": 7857,
+    "mediane": 8792,
+    "p75": 9815
+   },
+   "appartements": {
+    "n": 1593,
+    "p25": 7959,
+    "mediane": 8938,
+    "p75": 10000
+   },
+   "maisons": {
+    "n": 12,
+    "p25": 10052,
+    "mediane": 11875,
+    "p75": 17785
+   }
+  },
+  {
+   "cp": "92390",
+   "commune": "Villeneuve-la-Garenne",
+   "pm2": 4485,
+   "pm2Maison": 4445,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 100,
+    "p25": 3005,
+    "mediane": 3423,
+    "p75": 4485
+   },
+   "appartements": {
+    "n": 165,
+    "p25": 2589,
+    "mediane": 3243,
+    "p75": 3981
+   },
+   "maisons": {
+    "n": 26,
+    "p25": 3438,
+    "mediane": 3942,
+    "p75": 4445
+   }
+  },
+  {
+   "cp": "92400",
+   "commune": "Courbevoie",
+   "pm2": 7554,
+   "pm2Maison": 10520,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 989,
+    "p25": 5938,
+    "mediane": 6711,
+    "p75": 7554
+   },
+   "appartements": {
+    "n": 1820,
+    "p25": 5794,
+    "mediane": 6661,
+    "p75": 7557
+   },
+   "maisons": {
+    "n": 59,
+    "p25": 7740,
+    "mediane": 9196,
+    "p75": 10520
+   }
+  },
+  {
+   "cp": "92600",
+   "commune": "Asnières-sur-Seine",
+   "pm2": 6958,
+   "pm2Maison": 9719,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1135,
+    "p25": 5335,
+    "mediane": 6176,
+    "p75": 6958
+   },
+   "appartements": {
+    "n": 2049,
+    "p25": 5322,
+    "mediane": 6200,
+    "p75": 7020
+   },
+   "maisons": {
+    "n": 178,
+    "p25": 6674,
+    "mediane": 7988,
+    "p75": 9719
+   }
+  },
+  {
+   "cp": "92700",
+   "commune": "Colombes",
+   "pm2": 5785,
+   "pm2Maison": 8362,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 696,
+    "p25": 4321,
+    "mediane": 5107,
+    "p75": 5785
+   },
+   "appartements": {
+    "n": 1120,
+    "p25": 4169,
+    "mediane": 5000,
+    "p75": 5753
+   },
+   "maisons": {
+    "n": 529,
+    "p25": 5446,
+    "mediane": 6956,
+    "p75": 8362
+   }
+  },
+  {
+   "cp": "93100",
+   "commune": "Montreuil",
+   "pm2": 7103,
+   "pm2Maison": 7812,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 1006,
+    "p25": 4975,
+    "mediane": 6066,
+    "p75": 7103
+   },
+   "appartements": {
+    "n": 1615,
+    "p25": 4714,
+    "mediane": 5932,
+    "p75": 7049
+   },
+   "maisons": {
+    "n": 349,
+    "p25": 4686,
+    "mediane": 6000,
+    "p75": 7812
+   }
+  },
+  {
+   "cp": "93110",
+   "commune": "Rosny-sous-Bois",
+   "pm2": 4498,
+   "pm2Maison": 5802,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 324,
+    "p25": 3410,
+    "mediane": 3983,
+    "p75": 4498
+   },
+   "appartements": {
+    "n": 632,
+    "p25": 3063,
+    "mediane": 3734,
+    "p75": 4315
+   },
+   "maisons": {
+    "n": 157,
+    "p25": 3601,
+    "mediane": 4714,
+    "p75": 5802
+   }
+  },
+  {
+   "cp": "93130",
+   "commune": "Noisy-le-Sec",
+   "pm2": 4190,
+   "pm2Maison": 5208,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 214,
+    "p25": 3000,
+    "mediane": 3649,
+    "p75": 4190
+   },
+   "appartements": {
+    "n": 367,
+    "p25": 2870,
+    "mediane": 3407,
+    "p75": 4054
+   },
+   "maisons": {
+    "n": 163,
+    "p25": 3461,
+    "mediane": 4304,
+    "p75": 5208
+   }
+  },
+  {
+   "cp": "93140",
+   "commune": "Bondy",
+   "pm2": 3662,
+   "pm2Maison": 4396,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 242,
+    "p25": 2562,
+    "mediane": 3054,
+    "p75": 3662
+   },
+   "appartements": {
+    "n": 362,
+    "p25": 2386,
+    "mediane": 2847,
+    "p75": 3384
+   },
+   "maisons": {
+    "n": 238,
+    "p25": 2917,
+    "mediane": 3500,
+    "p75": 4396
+   }
+  },
+  {
+   "cp": "93160",
+   "commune": "Noisy-le-Grand",
+   "pm2": 5235,
+   "pm2Maison": 5253,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 500,
+    "p25": 3858,
+    "mediane": 4643,
+    "p75": 5235
+   },
+   "appartements": {
+    "n": 934,
+    "p25": 3242,
+    "mediane": 4293,
+    "p75": 4991
+   },
+   "maisons": {
+    "n": 314,
+    "p25": 3793,
+    "mediane": 4385,
+    "p75": 5253
+   }
+  },
+  {
+   "cp": "93190",
+   "commune": "Livry-Gargan",
+   "pm2": 3648,
+   "pm2Maison": 4247,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 328,
+    "p25": 2647,
+    "mediane": 3111,
+    "p75": 3648
+   },
+   "appartements": {
+    "n": 530,
+    "p25": 2383,
+    "mediane": 2839,
+    "p75": 3438
+   },
+   "maisons": {
+    "n": 341,
+    "p25": 2975,
+    "mediane": 3597,
+    "p75": 4247
+   }
+  },
+  {
+   "cp": "93220",
+   "commune": "Gagny",
+   "pm2": 3935,
+   "pm2Maison": 4402,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 175,
+    "p25": 2725,
+    "mediane": 3178,
+    "p75": 3935
+   },
+   "appartements": {
+    "n": 316,
+    "p25": 2520,
+    "mediane": 3005,
+    "p75": 3727
+   },
+   "maisons": {
+    "n": 397,
+    "p25": 3093,
+    "mediane": 3708,
+    "p75": 4402
+   }
+  },
+  {
+   "cp": "93250",
+   "commune": "Villemomble",
+   "pm2": 4302,
+   "pm2Maison": 4917,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 218,
+    "p25": 3077,
+    "mediane": 3737,
+    "p75": 4302
+   },
+   "appartements": {
+    "n": 309,
+    "p25": 2971,
+    "mediane": 3492,
+    "p75": 4162
+   },
+   "maisons": {
+    "n": 244,
+    "p25": 3356,
+    "mediane": 4118,
+    "p75": 4917
+   }
+  },
+  {
+   "cp": "93270",
+   "commune": "Sevran",
+   "pm2": 3310,
+   "pm2Maison": 3946,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 94,
+    "p25": 2496,
+    "mediane": 2809,
+    "p75": 3310
+   },
+   "appartements": {
+    "n": 251,
+    "p25": 1926,
+    "mediane": 2190,
+    "p75": 2764
+   },
+   "maisons": {
+    "n": 269,
+    "p25": 2645,
+    "mediane": 3286,
+    "p75": 3946
+   }
+  },
+  {
+   "cp": "93290",
+   "commune": "Tremblay-en-France",
+   "pm2": 3804,
+   "pm2Maison": 3957,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 87,
+    "p25": 2700,
+    "mediane": 3125,
+    "p75": 3804
+   },
+   "appartements": {
+    "n": 177,
+    "p25": 2229,
+    "mediane": 2579,
+    "p75": 3250
+   },
+   "maisons": {
+    "n": 369,
+    "p25": 2931,
+    "mediane": 3414,
+    "p75": 3957
+   }
+  },
+  {
+   "cp": "93320",
+   "commune": "Les Pavillons-sous-Bois",
+   "pm2": 3772,
+   "pm2Maison": 4607,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 192,
+    "p25": 2721,
+    "mediane": 3285,
+    "p75": 3772
+   },
+   "appartements": {
+    "n": 271,
+    "p25": 2618,
+    "mediane": 3108,
+    "p75": 3632
+   },
+   "maisons": {
+    "n": 183,
+    "p25": 3145,
+    "mediane": 3750,
+    "p75": 4607
+   }
+  },
+  {
+   "cp": "93330",
+   "commune": "Neuilly-sur-Marne",
+   "pm2": 4120,
+   "pm2Maison": 4769,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 144,
+    "p25": 2860,
+    "mediane": 3559,
+    "p75": 4120
+   },
+   "appartements": {
+    "n": 339,
+    "p25": 2269,
+    "mediane": 3012,
+    "p75": 3710
+   },
+   "maisons": {
+    "n": 125,
+    "p25": 3331,
+    "mediane": 3964,
+    "p75": 4769
+   }
+  },
+  {
+   "cp": "93340",
+   "commune": "Le Raincy",
+   "pm2": 4866,
+   "pm2Maison": 5718,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 131,
+    "p25": 3444,
+    "mediane": 4079,
+    "p75": 4866
+   },
+   "appartements": {
+    "n": 254,
+    "p25": 3125,
+    "mediane": 3977,
+    "p75": 4752
+   },
+   "maisons": {
+    "n": 122,
+    "p25": 3930,
+    "mediane": 4848,
+    "p75": 5718
+   }
+  },
+  {
+   "cp": "93360",
+   "commune": "Neuilly-Plaisance",
+   "pm2": 4734,
+   "pm2Maison": 5209,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 148,
+    "p25": 3238,
+    "mediane": 4038,
+    "p75": 4734
+   },
+   "appartements": {
+    "n": 259,
+    "p25": 3047,
+    "mediane": 3750,
+    "p75": 4620
+   },
+   "maisons": {
+    "n": 188,
+    "p25": 3393,
+    "mediane": 4393,
+    "p75": 5209
+   }
+  },
+  {
+   "cp": "93370",
+   "commune": "Montfermeil",
+   "pm2": 3671,
+   "pm2Maison": 4187,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 57,
+    "p25": 2911,
+    "mediane": 3333,
+    "p75": 3671
+   },
+   "appartements": {
+    "n": 94,
+    "p25": 2500,
+    "mediane": 3101,
+    "p75": 3469
+   },
+   "maisons": {
+    "n": 305,
+    "p25": 2948,
+    "mediane": 3526,
+    "p75": 4187
+   }
+  },
+  {
+   "cp": "93390",
+   "commune": "Clichy-sous-Bois",
+   "pm2": 2378,
+   "pm2Maison": 3940,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 107,
+    "p25": 1545,
+    "mediane": 1983,
+    "p75": 2378
+   },
+   "appartements": {
+    "n": 165,
+    "p25": 1490,
+    "mediane": 1887,
+    "p75": 2316
+   },
+   "maisons": {
+    "n": 70,
+    "p25": 2557,
+    "mediane": 3015,
+    "p75": 3940
+   }
+  },
+  {
+   "cp": "93410",
+   "commune": "Vaujours",
+   "pm2": 3758,
+   "pm2Maison": 4148,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 45,
+    "p25": 2893,
+    "mediane": 3226,
+    "p75": 3758
+   },
+   "appartements": {
+    "n": 92,
+    "p25": 2565,
+    "mediane": 3059,
+    "p75": 3580
+   },
+   "maisons": {
+    "n": 75,
+    "p25": 3042,
+    "mediane": 3499,
+    "p75": 4148
+   }
+  },
+  {
+   "cp": "93420",
+   "commune": "Villepinte",
+   "pm2": 3407,
+   "pm2Maison": 3648,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 172,
+    "p25": 2144,
+    "mediane": 2814,
+    "p75": 3407
+   },
+   "appartements": {
+    "n": 271,
+    "p25": 2063,
+    "mediane": 2469,
+    "p75": 3196
+   },
+   "maisons": {
+    "n": 258,
+    "p25": 2596,
+    "mediane": 3122,
+    "p75": 3648
+   }
+  },
+  {
+   "cp": "93460",
+   "commune": "Gournay-sur-Marne",
+   "pm2": 5047,
+   "pm2Maison": 4908,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 43,
+    "p25": 3956,
+    "mediane": 4444,
+    "p75": 5047
+   },
+   "appartements": {
+    "n": 56,
+    "p25": 3853,
+    "mediane": 4382,
+    "p75": 4990
+   },
+   "maisons": {
+    "n": 99,
+    "p25": 3350,
+    "mediane": 4000,
+    "p75": 4908
+   }
+  },
+  {
+   "cp": "93470",
+   "commune": "Coubron",
+   "pm2": 3462,
+   "pm2Maison": 3569,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 14,
+    "p25": 3288,
+    "mediane": 3441,
+    "p75": 3669
+   },
+   "appartements": {
+    "n": 29,
+    "p25": 2380,
+    "mediane": 3226,
+    "p75": 3462
+   },
+   "maisons": {
+    "n": 69,
+    "p25": 2742,
+    "mediane": 3113,
+    "p75": 3569
+   }
+  },
+  {
+   "cp": "93600",
+   "commune": "Aulnay-sous-Bois",
+   "pm2": 4333,
+   "pm2Maison": 4431,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 259,
+    "p25": 2637,
+    "mediane": 3608,
+    "p75": 4333
+   },
+   "appartements": {
+    "n": 445,
+    "p25": 2073,
+    "mediane": 3047,
+    "p75": 3977
+   },
+   "maisons": {
+    "n": 598,
+    "p25": 3095,
+    "mediane": 3703,
+    "p75": 4431
+   }
+  },
+  {
+   "cp": "95000",
+   "commune": "Boisemont / Cergy / Neuville-sur-Oise / Pontoise",
+   "pm2": 4098,
+   "pm2Maison": 3663,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 178,
+    "p25": 3015,
+    "mediane": 3522,
+    "p75": 4098
+   },
+   "appartements": {
+    "n": 402,
+    "p25": 2463,
+    "mediane": 2914,
+    "p75": 3743
+   },
+   "maisons": {
+    "n": 148,
+    "p25": 2671,
+    "mediane": 3170,
+    "p75": 3663
+   }
+  },
+  {
+   "cp": "95100",
+   "commune": "Argenteuil",
+   "pm2": 4089,
+   "pm2Maison": 4544,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 557,
+    "p25": 2869,
+    "mediane": 3436,
+    "p75": 4089
+   },
+   "appartements": {
+    "n": 933,
+    "p25": 2500,
+    "mediane": 3111,
+    "p75": 3836
+   },
+   "maisons": {
+    "n": 666,
+    "p25": 3154,
+    "mediane": 3842,
+    "p75": 4544
+   }
+  },
+  {
+   "cp": "95110",
+   "commune": "Sannois",
+   "pm2": 4385,
+   "pm2Maison": 4818,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 136,
+    "p25": 3403,
+    "mediane": 3724,
+    "p75": 4385
+   },
+   "appartements": {
+    "n": 283,
+    "p25": 2563,
+    "mediane": 3313,
+    "p75": 3859
+   },
+   "maisons": {
+    "n": 171,
+    "p25": 3561,
+    "mediane": 4194,
+    "p75": 4818
+   }
+  },
+  {
+   "cp": "95120",
+   "commune": "Ermont",
+   "pm2": 4697,
+   "pm2Maison": 5184,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 127,
+    "p25": 3378,
+    "mediane": 4049,
+    "p75": 4697
+   },
+   "appartements": {
+    "n": 296,
+    "p25": 3033,
+    "mediane": 3634,
+    "p75": 4387
+   },
+   "maisons": {
+    "n": 196,
+    "p25": 3724,
+    "mediane": 4413,
+    "p75": 5184
+   }
+  },
+  {
+   "cp": "95130",
+   "commune": "Franconville / Le Plessis-Bouchard",
+   "pm2": 3920,
+   "pm2Maison": 4730,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 349,
+    "p25": 2846,
+    "mediane": 3341,
+    "p75": 3920
+   },
+   "appartements": {
+    "n": 773,
+    "p25": 2500,
+    "mediane": 2964,
+    "p75": 3608
+   },
+   "maisons": {
+    "n": 280,
+    "p25": 3382,
+    "mediane": 4045,
+    "p75": 4730
+   }
+  },
+  {
+   "cp": "95140",
+   "commune": "Garges-lès-Gonesse",
+   "pm2": 2877,
+   "pm2Maison": 3891,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 105,
+    "p25": 2223,
+    "mediane": 2549,
+    "p75": 2877
+   },
+   "appartements": {
+    "n": 223,
+    "p25": 1964,
+    "mediane": 2279,
+    "p75": 2661
+   },
+   "maisons": {
+    "n": 85,
+    "p25": 2698,
+    "mediane": 3266,
+    "p75": 3891
+   }
+  },
+  {
+   "cp": "95150",
+   "commune": "Taverny",
+   "pm2": 3755,
+   "pm2Maison": 4386,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 113,
+    "p25": 2742,
+    "mediane": 3191,
+    "p75": 3755
+   },
+   "appartements": {
+    "n": 264,
+    "p25": 2448,
+    "mediane": 2766,
+    "p75": 3265
+   },
+   "maisons": {
+    "n": 243,
+    "p25": 3368,
+    "mediane": 3863,
+    "p75": 4386
+   }
+  },
+  {
+   "cp": "95160",
+   "commune": "Montmorency",
+   "pm2": 4600,
+   "pm2Maison": 5337,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 143,
+    "p25": 3143,
+    "mediane": 3897,
+    "p75": 4600
+   },
+   "appartements": {
+    "n": 326,
+    "p25": 3028,
+    "mediane": 3760,
+    "p75": 4454
+   },
+   "maisons": {
+    "n": 152,
+    "p25": 3840,
+    "mediane": 4602,
+    "p75": 5337
+   }
+  },
+  {
+   "cp": "95170",
+   "commune": "Deuil-la-Barre",
+   "pm2": 4345,
+   "pm2Maison": 5182,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 130,
+    "p25": 3365,
+    "mediane": 3953,
+    "p75": 4345
+   },
+   "appartements": {
+    "n": 310,
+    "p25": 2857,
+    "mediane": 3475,
+    "p75": 4018
+   },
+   "maisons": {
+    "n": 155,
+    "p25": 3583,
+    "mediane": 4318,
+    "p75": 5182
+   }
+  },
+  {
+   "cp": "95180",
+   "commune": "Menucourt",
+   "pm2": 3718,
+   "pm2Maison": 3349,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 17,
+    "p25": 2677,
+    "mediane": 3173,
+    "p75": 3718
+   },
+   "appartements": {
+    "n": 31,
+    "p25": 2675,
+    "mediane": 3051,
+    "p75": 3448
+   },
+   "maisons": {
+    "n": 92,
+    "p25": 2711,
+    "mediane": 3040,
+    "p75": 3349
+   }
+  },
+  {
+   "cp": "95190",
+   "commune": "Fontenay-en-Parisis / Goussainville",
+   "pm2": 3300,
+   "pm2Maison": 4263,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 60,
+    "p25": 2470,
+    "mediane": 2984,
+    "p75": 3300
+   },
+   "appartements": {
+    "n": 67,
+    "p25": 2366,
+    "mediane": 2857,
+    "p75": 3159
+   },
+   "maisons": {
+    "n": 271,
+    "p25": 2840,
+    "mediane": 3333,
+    "p75": 4263
+   }
+  },
+  {
+   "cp": "95200",
+   "commune": "Sarcelles",
+   "pm2": 3174,
+   "pm2Maison": 3717,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 103,
+    "p25": 2091,
+    "mediane": 2500,
+    "p75": 3174
+   },
+   "appartements": {
+    "n": 389,
+    "p25": 1714,
+    "mediane": 1938,
+    "p75": 2327
+   },
+   "maisons": {
+    "n": 110,
+    "p25": 2721,
+    "mediane": 3118,
+    "p75": 3717
+   }
+  },
+  {
+   "cp": "95210",
+   "commune": "Saint-Gratien",
+   "pm2": 4764,
+   "pm2Maison": 5845,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 94,
+    "p25": 3173,
+    "mediane": 4011,
+    "p75": 4764
+   },
+   "appartements": {
+    "n": 259,
+    "p25": 2689,
+    "mediane": 3333,
+    "p75": 4273
+   },
+   "maisons": {
+    "n": 114,
+    "p25": 3952,
+    "mediane": 4787,
+    "p75": 5845
+   }
+  },
+  {
+   "cp": "95220",
+   "commune": "Herblay-sur-Seine / Pierrelaye",
+   "pm2": 4354,
+   "pm2Maison": 4450,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 142,
+    "p25": 3528,
+    "mediane": 3969,
+    "p75": 4354
+   },
+   "appartements": {
+    "n": 255,
+    "p25": 3182,
+    "mediane": 3636,
+    "p75": 4167
+   },
+   "maisons": {
+    "n": 336,
+    "p25": 3334,
+    "mediane": 3867,
+    "p75": 4450
+   }
+  },
+  {
+   "cp": "95230",
+   "commune": "Soisy-sous-Montmorency",
+   "pm2": 4048,
+   "pm2Maison": 5193,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 83,
+    "p25": 2795,
+    "mediane": 3372,
+    "p75": 4048
+   },
+   "appartements": {
+    "n": 167,
+    "p25": 2740,
+    "mediane": 3245,
+    "p75": 3730
+   },
+   "maisons": {
+    "n": 153,
+    "p25": 3772,
+    "mediane": 4495,
+    "p75": 5193
+   }
+  },
+  {
+   "cp": "95240",
+   "commune": "Cormeilles-en-Parisis",
+   "pm2": 4838,
+   "pm2Maison": 5031,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 146,
+    "p25": 3760,
+    "mediane": 4388,
+    "p75": 4838
+   },
+   "appartements": {
+    "n": 247,
+    "p25": 3733,
+    "mediane": 4233,
+    "p75": 4705
+   },
+   "maisons": {
+    "n": 295,
+    "p25": 3718,
+    "mediane": 4338,
+    "p75": 5031
+   }
+  },
+  {
+   "cp": "95250",
+   "commune": "Beauchamp",
+   "pm2": 4446,
+   "pm2Maison": 4988,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 22,
+    "p25": 3337,
+    "mediane": 3580,
+    "p75": 4446
+   },
+   "appartements": {
+    "n": 63,
+    "p25": 2840,
+    "mediane": 3214,
+    "p75": 3519
+   },
+   "maisons": {
+    "n": 138,
+    "p25": 3528,
+    "mediane": 4044,
+    "p75": 4988
+   }
+  },
+  {
+   "cp": "95260",
+   "commune": "Beaumont-sur-Oise / Mours",
+   "pm2": 3669,
+   "pm2Maison": 3611,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 102,
+    "p25": 2821,
+    "mediane": 3259,
+    "p75": 3669
+   },
+   "appartements": {
+    "n": 141,
+    "p25": 2579,
+    "mediane": 3000,
+    "p75": 3593
+   },
+   "maisons": {
+    "n": 121,
+    "p25": 2593,
+    "mediane": 3007,
+    "p75": 3611
+   }
+  },
+  {
+   "cp": "95270",
+   "commune": "Asnières-sur-Oise / Bellefontaine / Belloy-en-France / Chaumontel / Lassy / Le Plessis-Luzarches / Luzarches / Noisy-sur-Oise / Saint-Martin-du-Tertre / Seugy / Viarmes / Épinay-Champlâtreux",
+   "pm2": 4241,
+   "pm2Maison": 3722,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 55,
+    "p25": 2885,
+    "mediane": 3561,
+    "p75": 4241
+   },
+   "appartements": {
+    "n": 88,
+    "p25": 2640,
+    "mediane": 3238,
+    "p75": 3995
+   },
+   "maisons": {
+    "n": 437,
+    "p25": 2761,
+    "mediane": 3200,
+    "p75": 3722
+   }
+  },
+  {
+   "cp": "95280",
+   "commune": "Jouy-le-Moutier",
+   "pm2": 4062,
+   "pm2Maison": 3452,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 52,
+    "p25": 3283,
+    "mediane": 3594,
+    "p75": 4062
+   },
+   "appartements": {
+    "n": 70,
+    "p25": 2908,
+    "mediane": 3422,
+    "p75": 3831
+   },
+   "maisons": {
+    "n": 224,
+    "p25": 2613,
+    "mediane": 3053,
+    "p75": 3452
+   }
+  },
+  {
+   "cp": "95290",
+   "commune": "L'Isle-Adam",
+   "pm2": 5061,
+   "pm2Maison": 4662,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 96,
+    "p25": 3640,
+    "mediane": 4385,
+    "p75": 5061
+   },
+   "appartements": {
+    "n": 189,
+    "p25": 3266,
+    "mediane": 4242,
+    "p75": 5102
+   },
+   "maisons": {
+    "n": 150,
+    "p25": 3515,
+    "mediane": 4069,
+    "p75": 4662
+   }
+  },
+  {
+   "cp": "95300",
+   "commune": "Ennery / Hérouville-en-Vexin / Livilliers / Pontoise",
+   "pm2": 4070,
+   "pm2Maison": 4132,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 200,
+    "p25": 2966,
+    "mediane": 3510,
+    "p75": 4070
+   },
+   "appartements": {
+    "n": 413,
+    "p25": 2340,
+    "mediane": 3056,
+    "p75": 3750
+   },
+   "maisons": {
+    "n": 183,
+    "p25": 2947,
+    "mediane": 3524,
+    "p75": 4132
+   }
+  },
+  {
+   "cp": "95310",
+   "commune": "Saint-Ouen-l'Aumône",
+   "pm2": 3750,
+   "pm2Maison": 3780,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 147,
+    "p25": 2909,
+    "mediane": 3365,
+    "p75": 3750
+   },
+   "appartements": {
+    "n": 256,
+    "p25": 2429,
+    "mediane": 3113,
+    "p75": 3535
+   },
+   "maisons": {
+    "n": 148,
+    "p25": 3018,
+    "mediane": 3340,
+    "p75": 3780
+   }
+  },
+  {
+   "cp": "95320",
+   "commune": "Saint-Leu-la-Forêt",
+   "pm2": 4677,
+   "pm2Maison": 4859,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 94,
+    "p25": 3327,
+    "mediane": 3947,
+    "p75": 4677
+   },
+   "appartements": {
+    "n": 163,
+    "p25": 2684,
+    "mediane": 3655,
+    "p75": 4394
+   },
+   "maisons": {
+    "n": 190,
+    "p25": 3333,
+    "mediane": 4077,
+    "p75": 4859
+   }
+  },
+  {
+   "cp": "95330",
+   "commune": "Domont",
+   "pm2": 3793,
+   "pm2Maison": 4113,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 74,
+    "p25": 2706,
+    "mediane": 3009,
+    "p75": 3793
+   },
+   "appartements": {
+    "n": 154,
+    "p25": 2428,
+    "mediane": 2785,
+    "p75": 3246
+   },
+   "maisons": {
+    "n": 157,
+    "p25": 2983,
+    "mediane": 3617,
+    "p75": 4113
+   }
+  },
+  {
+   "cp": "95340",
+   "commune": "Bernes-sur-Oise / Persan / Ronquerolles",
+   "pm2": 3532,
+   "pm2Maison": 3363,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 105,
+    "p25": 2817,
+    "mediane": 3167,
+    "p75": 3532
+   },
+   "appartements": {
+    "n": 130,
+    "p25": 2617,
+    "mediane": 3063,
+    "p75": 3430
+   },
+   "maisons": {
+    "n": 129,
+    "p25": 2521,
+    "mediane": 2946,
+    "p75": 3363
+   }
+  },
+  {
+   "cp": "95350",
+   "commune": "Piscop / Saint-Brice-sous-Forêt",
+   "pm2": 4019,
+   "pm2Maison": 4595,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 68,
+    "p25": 3056,
+    "mediane": 3615,
+    "p75": 4019
+   },
+   "appartements": {
+    "n": 140,
+    "p25": 2655,
+    "mediane": 3084,
+    "p75": 3695
+   },
+   "maisons": {
+    "n": 106,
+    "p25": 3181,
+    "mediane": 3741,
+    "p75": 4595
+   }
+  },
+  {
+   "cp": "95360",
+   "commune": "Montmagny",
+   "pm2": 4081,
+   "pm2Maison": 4229,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 55,
+    "p25": 2708,
+    "mediane": 3396,
+    "p75": 4081
+   },
+   "appartements": {
+    "n": 118,
+    "p25": 2313,
+    "mediane": 2711,
+    "p75": 3436
+   },
+   "maisons": {
+    "n": 94,
+    "p25": 3098,
+    "mediane": 3447,
+    "p75": 4229
+   }
+  },
+  {
+   "cp": "95370",
+   "commune": "Montigny-lès-Cormeilles",
+   "pm2": 3754,
+   "pm2Maison": 4309,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 46,
+    "p25": 2594,
+    "mediane": 2857,
+    "p75": 3754
+   },
+   "appartements": {
+    "n": 127,
+    "p25": 2075,
+    "mediane": 2393,
+    "p75": 3091
+   },
+   "maisons": {
+    "n": 164,
+    "p25": 3105,
+    "mediane": 3607,
+    "p75": 4309
+   }
+  },
+  {
+   "cp": "95380",
+   "commune": "Chennevières-lès-Louvres / Louvres / Puiseux-en-France / Villeron",
+   "pm2": 4172,
+   "pm2Maison": 3661,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 82,
+    "p25": 3271,
+    "mediane": 3735,
+    "p75": 4172
+   },
+   "appartements": {
+    "n": 116,
+    "p25": 3027,
+    "mediane": 3473,
+    "p75": 4039
+   },
+   "maisons": {
+    "n": 177,
+    "p25": 2539,
+    "mediane": 3000,
+    "p75": 3661
+   }
+  },
+  {
+   "cp": "95390",
+   "commune": "Saint-Prix",
+   "pm2": 4671,
+   "pm2Maison": 4503,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 12,
+    "p25": 3225,
+    "mediane": 4050,
+    "p75": 4913
+   },
+   "appartements": {
+    "n": 26,
+    "p25": 3317,
+    "mediane": 3847,
+    "p75": 4671
+   },
+   "maisons": {
+    "n": 99,
+    "p25": 3430,
+    "mediane": 4029,
+    "p75": 4503
+   }
+  },
+  {
+   "cp": "95400",
+   "commune": "Arnouville / Villiers-le-Bel",
+   "pm2": 3327,
+   "pm2Maison": 3811,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 117,
+    "p25": 2133,
+    "mediane": 2614,
+    "p75": 3327
+   },
+   "appartements": {
+    "n": 240,
+    "p25": 1839,
+    "mediane": 2320,
+    "p75": 2973
+   },
+   "maisons": {
+    "n": 215,
+    "p25": 2630,
+    "mediane": 3092,
+    "p75": 3811
+   }
+  },
+  {
+   "cp": "95410",
+   "commune": "Groslay",
+   "pm2": 3563,
+   "pm2Maison": 4321,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 44,
+    "p25": 2667,
+    "mediane": 2947,
+    "p75": 3563
+   },
+   "appartements": {
+    "n": 69,
+    "p25": 2658,
+    "mediane": 2899,
+    "p75": 3526
+   },
+   "maisons": {
+    "n": 83,
+    "p25": 3235,
+    "mediane": 3865,
+    "p75": 4321
+   }
+  },
+  {
+   "cp": "95420",
+   "commune": "Arthies / Banthelu / Cléry-en-Vexin / Genainville / Hodent / La Chapelle-en-Vexin / Magny-en-Vexin / Maudétour-en-Vexin / Nucourt / Omerville / Saint-Gervais / Wy-dit-Joli-Village",
+   "pm2": 3171,
+   "pm2Maison": 3213,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 19,
+    "p25": 2450,
+    "mediane": 2704,
+    "p75": 3171
+   },
+   "appartements": {
+    "n": 24,
+    "p25": 2392,
+    "mediane": 2700,
+    "p75": 3159
+   },
+   "maisons": {
+    "n": 162,
+    "p25": 2103,
+    "mediane": 2597,
+    "p75": 3213
+   }
+  },
+  {
+   "cp": "95430",
+   "commune": "Auvers-sur-Oise / Butry-sur-Oise",
+   "pm2": 3993,
+   "pm2Maison": 4160,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 19,
+    "p25": 2935,
+    "mediane": 3489,
+    "p75": 3993
+   },
+   "appartements": {
+    "n": 37,
+    "p25": 2357,
+    "mediane": 3026,
+    "p75": 3901
+   },
+   "maisons": {
+    "n": 163,
+    "p25": 2978,
+    "mediane": 3600,
+    "p75": 4160
+   }
+  },
+  {
+   "cp": "95440",
+   "commune": "Écouen",
+   "pm2": 3894,
+   "pm2Maison": 4118,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 30,
+    "p25": 3055,
+    "mediane": 3510,
+    "p75": 3894
+   },
+   "appartements": {
+    "n": 75,
+    "p25": 2338,
+    "mediane": 2778,
+    "p75": 3276
+   },
+   "maisons": {
+    "n": 59,
+    "p25": 3271,
+    "mediane": 3727,
+    "p75": 4118
+   }
+  },
+  {
+   "cp": "95450",
+   "commune": "Ableiges / Avernes / Commeny / Condécourt / Frémainville / Guiry-en-Vexin / Le Perchay / Longuesse / Sagy / Seraincourt / Théméricourt / Us / Vigny",
+   "pm2": 3186,
+   "pm2Maison": 3611,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 6,
+    "p25": 2344,
+    "mediane": 2905,
+    "p75": 3195
+   },
+   "appartements": {
+    "n": 12,
+    "p25": 2251,
+    "mediane": 2905,
+    "p75": 3186
+   },
+   "maisons": {
+    "n": 185,
+    "p25": 2442,
+    "mediane": 3063,
+    "p75": 3611
+   }
+  },
+  {
+   "cp": "95460",
+   "commune": "Ézanville",
+   "pm2": 4134,
+   "pm2Maison": 4197,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 42,
+    "p25": 2760,
+    "mediane": 3419,
+    "p75": 4134
+   },
+   "appartements": {
+    "n": 113,
+    "p25": 2435,
+    "mediane": 2764,
+    "p75": 3427
+   },
+   "maisons": {
+    "n": 94,
+    "p25": 3140,
+    "mediane": 3580,
+    "p75": 4197
+   }
+  },
+  {
+   "cp": "95470",
+   "commune": "Fosses / Saint-Witz / Survilliers / Vémars",
+   "pm2": 3809,
+   "pm2Maison": 3571,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 49,
+    "p25": 3181,
+    "mediane": 3575,
+    "p75": 3809
+   },
+   "appartements": {
+    "n": 100,
+    "p25": 2225,
+    "mediane": 3065,
+    "p75": 3591
+   },
+   "maisons": {
+    "n": 267,
+    "p25": 2500,
+    "mediane": 3000,
+    "p75": 3571
+   }
+  },
+  {
+   "cp": "95480",
+   "commune": "Pierrelaye",
+   "pm2": 3992,
+   "pm2Maison": 4003,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 35,
+    "p25": 3036,
+    "mediane": 3570,
+    "p75": 3992
+   },
+   "appartements": {
+    "n": 44,
+    "p25": 2822,
+    "mediane": 3493,
+    "p75": 3913
+   },
+   "maisons": {
+    "n": 78,
+    "p25": 2985,
+    "mediane": 3537,
+    "p75": 4003
+   }
+  },
+  {
+   "cp": "95490",
+   "commune": "Vauréal",
+   "pm2": 4048,
+   "pm2Maison": 3858,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 70,
+    "p25": 3518,
+    "mediane": 3845,
+    "p75": 4048
+   },
+   "appartements": {
+    "n": 106,
+    "p25": 3394,
+    "mediane": 3675,
+    "p75": 4005
+   },
+   "maisons": {
+    "n": 154,
+    "p25": 3025,
+    "mediane": 3385,
+    "p75": 3858
+   }
+  },
+  {
+   "cp": "95500",
+   "commune": "Bonneuil-en-France / Gonesse / Le Thillay",
+   "pm2": 3526,
+   "pm2Maison": 3899,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 117,
+    "p25": 2730,
+    "mediane": 3092,
+    "p75": 3526
+   },
+   "appartements": {
+    "n": 192,
+    "p25": 2451,
+    "mediane": 2870,
+    "p75": 3334
+   },
+   "maisons": {
+    "n": 182,
+    "p25": 2700,
+    "mediane": 3259,
+    "p75": 3899
+   }
+  },
+  {
+   "cp": "95510",
+   "commune": "Aincourt / Amenucourt / Chérence / Saint-Cyr-en-Arthies / Vienne-en-Arthies / Villers-en-Arthies / Vétheuil",
+   "pm2": null,
+   "pm2Maison": 3085,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 4,
+    "p25": 976,
+    "mediane": 1668,
+    "p75": 3178
+   },
+   "appartements": {
+    "n": 4,
+    "p25": 976,
+    "mediane": 1668,
+    "p75": 3178
+   },
+   "maisons": {
+    "n": 62,
+    "p25": 2025,
+    "mediane": 2526,
+    "p75": 3085
+   }
+  },
+  {
+   "cp": "95520",
+   "commune": "Osny",
+   "pm2": 4077,
+   "pm2Maison": 3870,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 53,
+    "p25": 3347,
+    "mediane": 3663,
+    "p75": 4077
+   },
+   "appartements": {
+    "n": 85,
+    "p25": 3113,
+    "mediane": 3485,
+    "p75": 3938
+   },
+   "maisons": {
+    "n": 181,
+    "p25": 2875,
+    "mediane": 3274,
+    "p75": 3870
+   }
+  },
+  {
+   "cp": "95530",
+   "commune": "La Frette-sur-Seine",
+   "pm2": 4536,
+   "pm2Maison": 5392,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 15,
+    "p25": 3246,
+    "mediane": 3684,
+    "p75": 4536
+   },
+   "appartements": {
+    "n": 28,
+    "p25": 3029,
+    "mediane": 3484,
+    "p75": 4170
+   },
+   "maisons": {
+    "n": 86,
+    "p25": 3534,
+    "mediane": 4618,
+    "p75": 5392
+   }
+  },
+  {
+   "cp": "95540",
+   "commune": "Méry-sur-Oise",
+   "pm2": 3898,
+   "pm2Maison": 3854,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 33,
+    "p25": 3091,
+    "mediane": 3400,
+    "p75": 3898
+   },
+   "appartements": {
+    "n": 70,
+    "p25": 2634,
+    "mediane": 3099,
+    "p75": 3490
+   },
+   "maisons": {
+    "n": 120,
+    "p25": 3113,
+    "mediane": 3543,
+    "p75": 3854
+   }
+  },
+  {
+   "cp": "95550",
+   "commune": "Bessancourt",
+   "pm2": 4368,
+   "pm2Maison": 4450,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 64,
+    "p25": 3435,
+    "mediane": 3955,
+    "p75": 4368
+   },
+   "appartements": {
+    "n": 96,
+    "p25": 3379,
+    "mediane": 3938,
+    "p75": 4253
+   },
+   "maisons": {
+    "n": 102,
+    "p25": 2985,
+    "mediane": 3755,
+    "p75": 4450
+   }
+  },
+  {
+   "cp": "95560",
+   "commune": "Baillet-en-France / Chauvry / Maffliers / Montsoult",
+   "pm2": 4027,
+   "pm2Maison": 3842,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 29,
+    "p25": 2798,
+    "mediane": 3600,
+    "p75": 4027
+   },
+   "appartements": {
+    "n": 58,
+    "p25": 2361,
+    "mediane": 3339,
+    "p75": 3850
+   },
+   "maisons": {
+    "n": 138,
+    "p25": 2992,
+    "mediane": 3292,
+    "p75": 3842
+   }
+  },
+  {
+   "cp": "95570",
+   "commune": "Attainville / Bouffémont / Moisselles / Villaines-sous-Bois",
+   "pm2": 3997,
+   "pm2Maison": 3721,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 28,
+    "p25": 3303,
+    "mediane": 3721,
+    "p75": 3997
+   },
+   "appartements": {
+    "n": 48,
+    "p25": 2951,
+    "mediane": 3660,
+    "p75": 3930
+   },
+   "maisons": {
+    "n": 144,
+    "p25": 2823,
+    "mediane": 3287,
+    "p75": 3721
+   }
+  },
+  {
+   "cp": "95580",
+   "commune": "Andilly / Margency",
+   "pm2": 4284,
+   "pm2Maison": 4330,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 11,
+    "p25": 3292,
+    "mediane": 3708,
+    "p75": 4333
+   },
+   "appartements": {
+    "n": 26,
+    "p25": 3192,
+    "mediane": 3773,
+    "p75": 4284
+   },
+   "maisons": {
+    "n": 48,
+    "p25": 3336,
+    "mediane": 3970,
+    "p75": 4330
+   }
+  },
+  {
+   "cp": "95590",
+   "commune": "Nerville-la-Forêt / Nointel / Presles",
+   "pm2": 4409,
+   "pm2Maison": 3885,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 24,
+    "p25": 3074,
+    "mediane": 3739,
+    "p75": 4409
+   },
+   "appartements": {
+    "n": 39,
+    "p25": 2927,
+    "mediane": 3444,
+    "p75": 4242
+   },
+   "maisons": {
+    "n": 121,
+    "p25": 2792,
+    "mediane": 3370,
+    "p75": 3885
+   }
+  },
+  {
+   "cp": "95600",
+   "commune": "Eaubonne",
+   "pm2": 4917,
+   "pm2Maison": 5100,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 96,
+    "p25": 3180,
+    "mediane": 4435,
+    "p75": 4917
+   },
+   "appartements": {
+    "n": 239,
+    "p25": 2842,
+    "mediane": 3346,
+    "p75": 4533
+   },
+   "maisons": {
+    "n": 217,
+    "p25": 3497,
+    "mediane": 4375,
+    "p75": 5100
+   }
+  },
+  {
+   "cp": "95610",
+   "commune": "Éragny",
+   "pm2": 3943,
+   "pm2Maison": 3866,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 70,
+    "p25": 3144,
+    "mediane": 3600,
+    "p75": 3943
+   },
+   "appartements": {
+    "n": 166,
+    "p25": 2491,
+    "mediane": 3066,
+    "p75": 3613
+   },
+   "maisons": {
+    "n": 142,
+    "p25": 2915,
+    "mediane": 3348,
+    "p75": 3866
+   }
+  },
+  {
+   "cp": "95620",
+   "commune": "Parmain",
+   "pm2": 3200,
+   "pm2Maison": 3806,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 4,
+    "p25": 2702,
+    "mediane": 3097,
+    "p75": 3623
+   },
+   "appartements": {
+    "n": 8,
+    "p25": 2662,
+    "mediane": 2990,
+    "p75": 3200
+   },
+   "maisons": {
+    "n": 81,
+    "p25": 2779,
+    "mediane": 3112,
+    "p75": 3806
+   }
+  },
+  {
+   "cp": "95630",
+   "commune": "Mériel",
+   "pm2": 4176,
+   "pm2Maison": 4192,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 16,
+    "p25": 3215,
+    "mediane": 3807,
+    "p75": 4176
+   },
+   "appartements": {
+    "n": 30,
+    "p25": 2931,
+    "mediane": 3513,
+    "p75": 4053
+   },
+   "maisons": {
+    "n": 102,
+    "p25": 3094,
+    "mediane": 3575,
+    "p75": 4192
+   }
+  },
+  {
+   "cp": "95640",
+   "commune": "Brignancourt / Bréançon / Haravilliers / Le Heaulme / Marines / Moussy / Neuilly-en-Vexin / Santeuil",
+   "pm2": 3438,
+   "pm2Maison": 3718,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 7,
+    "p25": 2517,
+    "mediane": 2692,
+    "p75": 3947
+   },
+   "appartements": {
+    "n": 11,
+    "p25": 2517,
+    "mediane": 2692,
+    "p75": 3438
+   },
+   "maisons": {
+    "n": 115,
+    "p25": 2482,
+    "mediane": 2964,
+    "p75": 3718
+   }
+  },
+  {
+   "cp": "95650",
+   "commune": "Boissy-l'Aillerie / Courcelles-sur-Viosne / Génicourt / Montgeroult / Puiseux-Pontoise",
+   "pm2": null,
+   "pm2Maison": 3682,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 3,
+    "p25": 1932,
+    "mediane": 3257,
+    "p75": 3286
+   },
+   "appartements": {
+    "n": 6,
+    "p25": 2667,
+    "mediane": 3088,
+    "p75": 3264
+   },
+   "maisons": {
+    "n": 61,
+    "p25": 2573,
+    "mediane": 3364,
+    "p75": 3682
+   }
+  },
+  {
+   "cp": "95660",
+   "commune": "Champagne-sur-Oise",
+   "pm2": 3145,
+   "pm2Maison": 3585,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 2,
+    "p25": 2556,
+    "mediane": 3018,
+    "p75": 3480
+   },
+   "appartements": {
+    "n": 11,
+    "p25": 2366,
+    "mediane": 2585,
+    "p75": 3145
+   },
+   "maisons": {
+    "n": 85,
+    "p25": 2656,
+    "mediane": 3176,
+    "p75": 3585
+   }
+  },
+  {
+   "cp": "95670",
+   "commune": "Marly-la-Ville",
+   "pm2": 3919,
+   "pm2Maison": 3408,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 18,
+    "p25": 2606,
+    "mediane": 3001,
+    "p75": 3919
+   },
+   "appartements": {
+    "n": 27,
+    "p25": 2667,
+    "mediane": 3572,
+    "p75": 4226
+   },
+   "maisons": {
+    "n": 108,
+    "p25": 2580,
+    "mediane": 3031,
+    "p75": 3408
+   }
+  },
+  {
+   "cp": "95680",
+   "commune": "Montlignon",
+   "pm2": 3816,
+   "pm2Maison": 4673,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 18,
+    "p25": 2837,
+    "mediane": 3375,
+    "p75": 3816
+   },
+   "appartements": {
+    "n": 26,
+    "p25": 2837,
+    "mediane": 3297,
+    "p75": 3816
+   },
+   "maisons": {
+    "n": 39,
+    "p25": 3500,
+    "mediane": 4070,
+    "p75": 4673
+   }
+  },
+  {
+   "cp": "95690",
+   "commune": "Frouville / Hédouville / Labbeville / Nesles-la-Vallée",
+   "pm2": 2902,
+   "pm2Maison": 4042,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 3,
+    "p25": 2130,
+    "mediane": 2895,
+    "p75": 3981
+   },
+   "appartements": {
+    "n": 9,
+    "p25": 1958,
+    "mediane": 2804,
+    "p75": 2902
+   },
+   "maisons": {
+    "n": 69,
+    "p25": 2910,
+    "mediane": 3446,
+    "p75": 4042
+   }
+  },
+  {
+   "cp": "95700",
+   "commune": "Roissy-en-France",
+   "pm2": 4905,
+   "pm2Maison": 3823,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 15,
+    "p25": 3927,
+    "mediane": 4361,
+    "p75": 4905
+   },
+   "appartements": {
+    "n": 21,
+    "p25": 3626,
+    "mediane": 3958,
+    "p75": 4759
+   },
+   "maisons": {
+    "n": 14,
+    "p25": 3003,
+    "mediane": 3454,
+    "p75": 3823
+   }
+  },
+  {
+   "cp": "95710",
+   "commune": "Ambleville / Bray-et-Lû / Chaussy",
+   "pm2": null,
+   "pm2Maison": 3094,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": null,
+   "appartements": null,
+   "maisons": {
+    "n": 39,
+    "p25": 2000,
+    "mediane": 2551,
+    "p75": 3094
+   }
+  },
+  {
+   "cp": "95720",
+   "commune": "Bouqueval / Le Mesnil-Aubry / Villiers-le-Sec",
+   "pm2": null,
+   "pm2Maison": 3464,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 1,
+    "p25": 2037,
+    "mediane": 2037,
+    "p75": 2037
+   },
+   "appartements": {
+    "n": 2,
+    "p25": 2037,
+    "mediane": 2590,
+    "p75": 3143
+   },
+   "maisons": {
+    "n": 22,
+    "p25": 2428,
+    "mediane": 3066,
+    "p75": 3464
+   }
+  },
+  {
+   "cp": "95740",
+   "commune": "Frépillon",
+   "pm2": 3594,
+   "pm2Maison": 3972,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 8,
+    "p25": 3220,
+    "mediane": 3478,
+    "p75": 3632
+   },
+   "appartements": {
+    "n": 11,
+    "p25": 2909,
+    "mediane": 3236,
+    "p75": 3594
+   },
+   "maisons": {
+    "n": 56,
+    "p25": 2767,
+    "mediane": 3392,
+    "p75": 3972
+   }
+  },
+  {
+   "cp": "95750",
+   "commune": "Chars / Le Bellay-en-Vexin",
+   "pm2": 2925,
+   "pm2Maison": 3107,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 6,
+    "p25": 2514,
+    "mediane": 2689,
+    "p75": 3337
+   },
+   "appartements": {
+    "n": 10,
+    "p25": 2281,
+    "mediane": 2576,
+    "p75": 2925
+   },
+   "maisons": {
+    "n": 40,
+    "p25": 2058,
+    "mediane": 2563,
+    "p75": 3107
+   }
+  },
+  {
+   "cp": "95760",
+   "commune": "Valmondois",
+   "pm2": 4280,
+   "pm2Maison": 4076,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 6,
+    "p25": 3191,
+    "mediane": 3732,
+    "p75": 4990
+   },
+   "appartements": {
+    "n": 9,
+    "p25": 2832,
+    "mediane": 3547,
+    "p75": 4280
+   },
+   "maisons": {
+    "n": 29,
+    "p25": 2908,
+    "mediane": 3575,
+    "p75": 4076
+   }
+  },
+  {
+   "cp": "95770",
+   "commune": "Buhy / Montreuil-sur-Epte / Saint-Clair-sur-Epte",
+   "pm2": null,
+   "pm2Maison": 3061,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 2,
+    "p25": 1667,
+    "mediane": 2100,
+    "p75": 2533
+   },
+   "appartements": {
+    "n": 2,
+    "p25": 1667,
+    "mediane": 2100,
+    "p75": 2533
+   },
+   "maisons": {
+    "n": 29,
+    "p25": 1908,
+    "mediane": 2550,
+    "p75": 3061
+   }
+  },
+  {
+   "cp": "95780",
+   "commune": "Haute-Isle / La Roche-Guyon",
+   "pm2": null,
+   "pm2Maison": 3296,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 3,
+    "p25": 1351,
+    "mediane": 2816,
+    "p75": 3995
+   },
+   "appartements": {
+    "n": 3,
+    "p25": 1351,
+    "mediane": 2816,
+    "p75": 3995
+   },
+   "maisons": {
+    "n": 17,
+    "p25": 2199,
+    "mediane": 2654,
+    "p75": 3296
+   }
+  },
+  {
+   "cp": "95800",
+   "commune": "Cergy / Courdimanche",
+   "pm2": 3774,
+   "pm2Maison": 3498,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 288,
+    "p25": 3165,
+    "mediane": 3516,
+    "p75": 3774
+   },
+   "appartements": {
+    "n": 541,
+    "p25": 2923,
+    "mediane": 3292,
+    "p75": 3712
+   },
+   "maisons": {
+    "n": 184,
+    "p25": 2759,
+    "mediane": 3099,
+    "p75": 3498
+   }
+  },
+  {
+   "cp": "95810",
+   "commune": "Arronville / Berville / Grisy-les-Plâtres / Vallangoujard / Épiais-Rhus",
+   "pm2": null,
+   "pm2Maison": 3531,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 3,
+    "p25": 1390,
+    "mediane": 4808,
+    "p75": 6364
+   },
+   "appartements": {
+    "n": 4,
+    "p25": 1739,
+    "mediane": 3796,
+    "p75": 5975
+   },
+   "maisons": {
+    "n": 50,
+    "p25": 2245,
+    "mediane": 2908,
+    "p75": 3531
+   }
+  },
+  {
+   "cp": "95820",
+   "commune": "Bruyères-sur-Oise",
+   "pm2": null,
+   "pm2Maison": 3305,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 3,
+    "p25": 2405,
+    "mediane": 3024,
+    "p75": 3073
+   },
+   "appartements": {
+    "n": 7,
+    "p25": 1592,
+    "mediane": 2405,
+    "p75": 3024
+   },
+   "maisons": {
+    "n": 57,
+    "p25": 2441,
+    "mediane": 2841,
+    "p75": 3305
+   }
+  },
+  {
+   "cp": "95830",
+   "commune": "Cormeilles-en-Vexin / Frémécourt",
+   "pm2": null,
+   "pm2Maison": 4122,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 1,
+    "p25": 4821,
+    "mediane": 4821,
+    "p75": 4821
+   },
+   "appartements": {
+    "n": 2,
+    "p25": 1520,
+    "mediane": 3171,
+    "p75": 4821
+   },
+   "maisons": {
+    "n": 24,
+    "p25": 2626,
+    "mediane": 3353,
+    "p75": 4122
+   }
+  },
+  {
+   "cp": "95840",
+   "commune": "Béthemont-la-Forêt / Villiers-Adam",
+   "pm2": null,
+   "pm2Maison": 3877,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 2,
+    "p25": 1600,
+    "mediane": 2717,
+    "p75": 3833
+   },
+   "appartements": {
+    "n": 2,
+    "p25": 1600,
+    "mediane": 2717,
+    "p75": 3833
+   },
+   "maisons": {
+    "n": 29,
+    "p25": 2671,
+    "mediane": 3123,
+    "p75": 3877
+   }
+  },
+  {
+   "cp": "95850",
+   "commune": "Jagny-sous-Bois / Mareil-en-France",
+   "pm2": null,
+   "pm2Maison": 3492,
+   "base": "tous appartements",
+   "appartements_20_60": {
+    "n": 1,
+    "p25": 4250,
+    "mediane": 4250,
+    "p75": 4250
+   },
+   "appartements": {
+    "n": 1,
+    "p25": 4250,
+    "mediane": 4250,
+    "p75": 4250
+   },
+   "maisons": {
+    "n": 19,
+    "p25": 2532,
+    "mediane": 3052,
+    "p75": 3492
+   }
+  },
+  {
+   "cp": "95870",
+   "commune": "Bezons",
+   "pm2": 4651,
+   "pm2Maison": 5714,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 178,
+    "p25": 3202,
+    "mediane": 3905,
+    "p75": 4651
+   },
+   "appartements": {
+    "n": 324,
+    "p25": 3174,
+    "mediane": 3771,
+    "p75": 4302
+   },
+   "maisons": {
+    "n": 183,
+    "p25": 3712,
+    "mediane": 4416,
+    "p75": 5714
+   }
+  },
+  {
+   "cp": "95880",
+   "commune": "Enghien-les-Bains",
+   "pm2": 5641,
+   "pm2Maison": 6793,
+   "base": "appartements 20-60 m²",
+   "appartements_20_60": {
+    "n": 105,
+    "p25": 4452,
+    "mediane": 4971,
+    "p75": 5641
+   },
+   "appartements": {
+    "n": 228,
+    "p25": 4221,
+    "mediane": 4879,
+    "p75": 5652
+   },
+   "maisons": {
+    "n": 52,
+    "p25": 4704,
+    "mediane": 5759,
+    "p75": 6793
+   }
+  }
+ ]
+}
