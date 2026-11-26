@@ -142,6 +142,7 @@
   }
 
   global.Donnees = {
+    action: (nom, donnees) => appeler(nom, donnees),
     COLLS, nouvelId, liste, obtenir, enregistrer, supprimer, synchroniser, demarrer, connexion, deconnexion,
     quitterDemo, reinitialiserDemo, oublierServeur, exporter, importer, conf,
     etat: () => etat, abonner: f => { abonnes.add(f); return () => abonnes.delete(f); }, enAttente: () => file.length

@@ -19,6 +19,10 @@
     margeBruteMin: 10,      // marge brute minimum, en % du prix de revente
     negoMax: 15,            // négociation maximum jugée réaliste sur le prix affiché (%)
     types: ['appt', 'maison', 'local', 'box'], // types analysés ; les autres sont écartés d'office
+    /* Budget travaux de l'analyse des annonces, hors aléas : prix au m² et minimum par bien, selon le niveau.
+       Remplace le chiffrage poste par poste, inconnu à ce stade. Aléas de chantier de la simulation en plus. */
+    /* budget HT = max(minimum, €/m² × surface + € par pièce à vivre × pièces) ; F2 = 2 pièces à vivre */
+    travaux: { r: { m2: 200, piece: 200, min: 3000 }, c: { m2: 550, piece: 800, min: 8000 }, l: { m2: 900, piece: 1200, min: 12000 }, defaut: 'r' },
     /* Zone : départements entiers (2 chiffres), codes postaux (5 chiffres) ou noms de communes. Vide = partout.
        92 nord, 93 est et 78 nord : communes listées une à une, liste à ajuster. */
     zone: ['75', '95',
@@ -49,12 +53,34 @@
     if (/appartement|studio|duplex|loft|\bt\d\b|\bf\d\b/.test(x)) return 'appt';
     return '';
   }
-  function niveauDepuisTexte(t, dpe) {
+  function niveauDepuisTexte(t, dpe, defaut) {
     const x = norm(t);
     if (/gros (oeuvre|travaux)|a rehabiliter|insalubre|plateau|a restaurer entierement|ruine/.test(x)) return 'l';
     if (/a renover|renovation complete|travaux a prevoir|a restaurer|a moderniser/.test(x) || /[FG]/.test(dpe || '')) return 'c';
     if (/a rafraichir|rafraichissement|bon etat|refait|renove/.test(x)) return 'r';
-    return 'c';
+    return defaut || 'c';
+  }
+  /* Pièces à vivre : studio = 1, T2 ou F2 = 2, « 3 pièces » = 3, « 2 chambres » = 3 */
+  function piecesDepuisTexte(t) {
+    const x = norm(t);
+    let m = x.match(/\b[tf]\s?(\d)\b/) || x.match(/(\d+)\s*pieces?\b/);
+    if (m) return +m[1];
+    if (/\bstudio|studette|chambre de service\b/.test(x)) return 1;
+    m = x.match(/(\d+)\s*chambres?\b/);
+    return m ? +m[1] + 1 : 0;
+  }
+  /* Lecture d'un texte d'annonce collé (page copiée) : prix, surface, pièces, code postal, ville, DPE */
+  function lireTexte(t) {
+    t = String(t || '');
+    const prixM = t.match(/(\d{1,3}(?:[\s\u00a0\u202f.]\d{3})+|\d{4,})\s?€(?!\s?\/)/);
+    const surfM = t.replace(/\d[\d\s\u00a0\u202f.]*€\s?\/\s?m²/g, ' ').match(/(\d+(?:[.,]\d+)?)\s?m(?:²|2)(?![\w])/);
+    const villeCp = t.match(/([A-ZÀ-Ü][\wÀ-ÿ' -]{1,40}?)\s*\((\d{5})\)/);
+    const cpM = villeCp ? [villeCp[0], villeCp[2], villeCp[1]] : t.match(/\b((?:75|77|78|91|92|93|94|95|[0-8]\d|9[0-8])\d{3})\b\s*([A-ZÀ-Ü][\wÀ-ÿ' -]{1,40})?/);
+    const dpeM = t.match(/(?:DPE|classe énergie|classe energie)\s*:?\s*([A-G])\b/i);
+    const premiere = t.split(/\r?\n/).map(l => l.trim()).filter(Boolean)[0] || '';
+    const n = v => parseFloat(String(v).replace(/[\s\u00a0\u202f.]/g, '').replace(',', '.'));
+    return { titre: premiere.slice(0, 120), prix: prixM ? n(prixM[1]) : 0, surface: surfM ? n(surfM[1]) : 0, pieces: piecesDepuisTexte(t),
+      cp: cpM ? cpM[1] : '', ville: cpM && cpM[2] ? cpM[2].replace(/[\s-]+(\d.*)?$/, '').replace(/[\s-]+$/, '').trim() : '', dpe: dpeM ? dpeM[1].toUpperCase() : '', type: typeDepuisTexte(t) };
   }
   const trouve = (t, liste) => (liste || []).filter(m => norm(t).includes(norm(m)));
   /* Zone : un élément « 95 » couvre le département, « 92600 Asnières-sur-Seine » le code postal ou la commune. */
@@ -113,9 +139,14 @@
     if (type === 'box') { S.pieces = +(k.lots || a.lots) || Math.max(1, Math.round((surface || 12 * 8) / 12)); S.surf = surface || S.pieces * 12; }
     else {
       S.surf = surface;
-      S.pieces = +(k.lots || a.pieces) || Math.max(1, Math.round(surface / 20));
+      S.pieces = +(k.pieces || k.lots || a.pieces) || piecesDepuisTexte(texte) || Math.max(1, Math.round(surface / 20));
     }
-    S.niveau = k.niveau || niveauDepuisTexte(texte, a.dpe); M.applyLevel(S);
+    const BT = Object.assign({}, CRITERES_DEF.travaux, C.travaux || {});
+    S.niveau = k.niveau || niveauDepuisTexte(texte, a.dpe, BT.defaut); M.applyLevel(S);
+    /* Travaux : budget forfaitaire au m² (minimum par bien), aléas en plus ; remplace le détail des postes */
+    const bt = BT[S.niveau] || CRITERES_DEF.travaux[S.niveau], parPiece = (+bt.piece || 0) * (type === 'box' ? 0 : S.pieces);
+    const travauxHT = Math.max(+bt.min || 0, (+bt.m2 || 0) * S.surf + parPiece);
+    S.trvForfait = Math.round(travauxHT * (1 + S.aleas / 100)); S.trvReel = S.trvForfait;
     S.achat = prix; S.pm2 = pm2; S.vente = Math.round(pm2 * (type === 'box' ? S.pieces : S.surf));
     S.adresse = [a.titre, a.ville].filter(Boolean).join(', ');
     const mb = (+C.margeBruteMin || 0) / 100, brute = q => q.vente ? (q.vente - q.C) / q.vente : 0;
@@ -135,9 +166,10 @@
     score = Math.max(0, Math.min(100, score));
     const statut = motifs.length ? 'ecartee' : 'signalee';
     return Object.assign(base, { statut, motifs, manque, score, S, r, achatMax, nego, marge: r.m, vente: S.vente, niveau: S.niveau, lots: S.pieces,
+      pieces: S.pieces, travaux: { niveau: S.niveau, m2: +bt.m2, piece: +bt.piece || 0, pieces: S.pieces, min: +bt.min, ht: travauxHT, total: S.trvForfait, aleas: S.aleas },
       tresoAffiche: r.treso, tresoAuMax: qMax ? qMax.treso : null, margeBrute: brute(r), margeBruteEur: r.vente - r.C, criteres: C });
   }
 
-  const api = { DVF, CRITERES_DEF, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, evaluer, secteur };
+  const api = { DVF, CRITERES_DEF, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, piecesDepuisTexte, lireTexte, evaluer, secteur };
   if (typeof module === 'object' && module.exports) module.exports = api; else global.MarcheoAnnonces = api;
 })(typeof window !== 'undefined' ? window : globalThis);

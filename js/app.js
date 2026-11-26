@@ -81,6 +81,7 @@
     S.env = R.enveloppe;
     S.trvReel = null;
     if (b.travaux && b.travaux.utiliserReel && (b.travaux.lignes || []).length) S.trvReel = M.totauxChantier(b.travaux.lignes, S.aleas, seuilTravaux(b)).reel;
+    else if (S.trvForfait != null) S.trvReel = S.trvForfait; // budget forfaitaire repris de l'annonce, tant que le détail des postes n'est pas choisi
     return S;
   }
   const seuilTravaux = b => (b.travaux && b.travaux.seuil != null) ? b.travaux.seuil : reglages().seuilTravaux;
@@ -106,7 +107,7 @@
   const MODULES = [
     { g: 'Pilotage', id: 'tableau', l: 'Tableau de bord', d: 'Pipeline, capital, alertes', i: I.tableau },
     { g: 'Acquisition', id: 'annonces', l: 'Annonces', d: 'Alertes e-mail analysées', i: I.annonces },
-    { g: 'Acquisition', id: 'biens', l: 'Biens', d: 'Pipeline et fiches', i: I.biens },
+    { g: 'Acquisition', id: 'biens', l: 'Projets en cours', d: 'Du repérage à la vente', i: I.biens },
     { g: 'Acquisition', id: 'comparateur', l: 'Comparateur', d: 'Deux à quatre biens', i: I.comparateur },
     { g: 'Suivi', id: 'relances', l: 'Relances', d: 'Aujourd\'hui et en retard', i: I.relances },
     { g: 'Suivi', id: 'contacts', l: 'Contacts', d: 'Agents, notaires, artisans', i: I.contacts },
@@ -160,7 +161,7 @@
 
   /* ================= Tableau de bord ================= */
   function vueTableau(c) {
-    titre('Tableau de bord', 'Indicateurs calculés, sans saisie', I.tableau);
+    titre('Tableau de bord', 'Prospection, projets, capital, bilan', I.tableau);
     const R = reglages(), biens = D.liste('biens'), t = aujourdhui();
     const parEtape = Object.fromEntries(ETAPES.map(e => [e[0], biens.filter(b => (b.etape || 'repere') === e[0])]));
     const engages = biens.filter(b => ENGAGE.includes(b.etape)), engage = engages.reduce((s, b) => s + analyse(b).r.treso, 0);
@@ -169,30 +170,44 @@
     const rel = D.liste('relances').filter(x => !x.fait), duJour = rel.filter(x => x.date === t), retard = rel.filter(x => x.date && x.date < t);
     const depass = biens.filter(b => b.etape === 'chantier' && analyse(b).chantier && analyse(b).chantier.alerte);
     const actifs = biens.filter(b => !['ecarte', 'vendu'].includes(b.etape));
+    const suivis = actifs.filter(b => RANG[b.etape || 'repere'] >= RANG.compromis).map(b => [b, suiviProjet(b)]), enRetard = suivis.filter(x => x[1].retard > 0);
     const margeMoy = actifs.length ? actifs.reduce((s, b) => s + analyse(b).r.m, 0) / actifs.length : 0;
     const dispo = R.enveloppe - engage;
+    const annonces = D.liste('annonces').filter(aExaminer).sort((x, y) => (evalAnnonce(y).score || 0) - (evalAnnonce(x).score || 0));
     c.innerHTML = `
-      <div class="en-tete-page"><div><h1>Tableau de bord</h1><p>Au ${dateFr(t)} · enveloppe ${eur(R.enveloppe)}</p></div>
-        <div class="actions"><button class="bouton bouton-principal" id="nouveauBien">+ Nouveau bien</button></div></div>
+      <div class="en-tete-page"><div><h1>Tableau de bord</h1><p>Au ${dateFr(t)}</p></div>
+        <div class="actions"><button class="bouton bouton-principal" id="nouveauBien">+ Nouveau projet</button></div></div>
+      <div class="section-titre"><h2>Prospection</h2></div>
       <div class="indicateurs">
-        ${indic('Dossiers actifs', actifs.length, { detail: biens.length + ' au total, ' + parEtape.ecarte.length + ' écartés', lien: '#/biens' })}
-        ${indic('Offres en cours', offres.length, { detail: offres.length ? eur(offres.reduce((s, b) => s + montantOffre(b), 0)) + ' offerts' : 'aucune', lien: '#/biens' })}
-        ${indic('Capital engagé', eur(engage), { detail: engages.length + ' opération(s), trésorerie maximale', etat: engage > R.enveloppe ? 'rouge' : '' })}
-        ${indic('Capital disponible', eur(dispo), { detail: pc(R.enveloppe ? dispo / R.enveloppe : 0, 0) + ' de l\'enveloppe', etat: dispo < 0 ? 'rouge' : dispo < R.enveloppe * .2 ? 'orange' : 'vert', c: dispo < 0 ? 'rouge' : '' })}
+        ${indic('Annonces à examiner', annonces.length, { etat: annonces.length ? 'vert' : '', detail: annonces.length ? 'passent les trois étapes du tri' : 'aucune pour l\'instant', lien: '#/annonces/examiner' })}
         ${indic('Relances du jour', duJour.length, { detail: retard.length ? retard.length + ' en retard' : 'aucune en retard', etat: retard.length ? 'rouge' : '', lien: '#/relances' })}
-        ${indic('Chantiers en dépassement', depass.length, { detail: depass.length ? depass.map(b => esc(titreBien(b))).join(', ') : 'aucun', etat: depass.length ? 'rouge' : '' })}
-        ${(() => { const n = D.liste('annonces').filter(aExaminer).length; return indic('Annonces à examiner', n, { etat: n ? 'vert' : '', detail: n ? 'signalées par l\'analyse' : 'aucune pour l\'instant', lien: '#/annonces' }); })()}
-        ${indic('Marge nette moyenne', pc(margeMoy), { detail: 'dossiers actifs, objectif ' + R.obj + ' %', etat: margeMoy >= R.obj / 100 ? 'vert' : 'orange' })}
+        ${indic('Offres en cours', offres.length, { detail: offres.length ? eur(offres.reduce((s, b) => s + montantOffre(b), 0)) + ' offerts' : 'aucune', lien: '#/biens' })}
       </div>
       <div class="deux-colonnes">
-        <div class="carte"><h2>Dossiers par étape</h2>
-          <div class="compte">${ETAPES.map(e => ligneCompte(`<a href="#/biens" data-filtre-etape="${e[0]}">${e[1]}</a>`, parEtape[e[0]].length + (ENGAGE.includes(e[0]) && parEtape[e[0]].length ? ' · ' + eur(parEtape[e[0]].reduce((s, b) => s + analyse(b).r.treso, 0)) : ''))).join('')}</div>
+        <div class="carte"><h2>Annonces à examiner</h2>${annonces.length ? `<div class="compte">${annonces.slice(0, 6).map(a => { const e = evalAnnonce(a); return ligneCompte(`<a href="#/annonces/a/${a.id}">${esc(a.titre || 'Annonce')}</a><small class="discret">${esc([a.ville, e.surface ? e.surface + ' m²' : '', a.source].filter(Boolean).join(' · '))}</small>`, eur(e.prix) + `<small class="sous-ligne vert">marge brute ${pc(e.margeBrute, 0)}</small>`); }).join('')}</div>${annonces.length > 6 ? `<p class="aide"><a href="#/annonces/examiner">Voir les ${annonces.length} annonces</a></p>` : ''}` : '<div class="vide">Aucune annonce à examiner.</div>'}</div>
+        <div class="carte"><h2>À faire</h2>${listeRelances(retard.concat(duJour), true) || '<div class="vide">Rien d\'échu.</div>'}</div>
+      </div>
+      <div class="section-titre"><h2>Projets en cours</h2></div>
+      <div class="indicateurs">
+        ${indic('Projets actifs', actifs.length, { detail: parEtape.vendu.length + ' vendu(s), ' + parEtape.ecarte.length + ' écarté(s)', lien: '#/biens' })}
+        ${indic('Projets en retard', enRetard.length, { detail: enRetard.length ? enRetard.map(x => esc(titreBien(x[0]))).join(', ') : 'aucun', etat: enRetard.length ? 'rouge' : '' })}
+        ${indic('Chantiers en dépassement', depass.length, { detail: depass.length ? depass.map(b => esc(titreBien(b))).join(', ') : 'aucun', etat: depass.length ? 'rouge' : '' })}
+        ${indic('Marge nette moyenne', pc(margeMoy), { detail: 'projets actifs, objectif ' + R.obj + ' %', etat: margeMoy >= R.obj / 100 ? 'vert' : 'orange' })}
+      </div>
+      <div class="deux-colonnes">
+        <div class="carte"><h2>Projets par étape</h2>
+          <div class="compte">${ETAPES.filter(e => parEtape[e[0]].length || !['ecarte', 'vendu'].includes(e[0])).map(e => ligneCompte(`<a href="#/biens" data-filtre-etape="${e[0]}">${e[1]}</a>`, parEtape[e[0]].length + (ENGAGE.includes(e[0]) && parEtape[e[0]].length ? ' · ' + eur(parEtape[e[0]].reduce((s, b) => s + analyse(b).r.treso, 0)) : ''))).join('')}</div>
         </div>
-        <div class="colonne">
-          <div class="carte"><h2>À faire</h2>${listeRelances(retard.concat(duJour), true) || '<div class="vide">Rien d\'échu.</div>'}</div>
-          <div class="carte"><h2>Prochaines actions</h2>${prochainesActions(actifs)}</div>
-        </div>
-      </div>`;
+        <div class="carte"><h2>Prochaines actions</h2>${prochainesActions(actifs)}</div>
+      </div>
+      <div class="section-titre"><h2>Capital</h2></div>
+      <div class="indicateurs">
+        ${indic('Enveloppe', eur(R.enveloppe), { detail: 'modifiable dans les Réglages', lien: '#/reglages' })}
+        ${indic('Capital engagé', eur(engage), { detail: engages.length + ' projet(s), trésorerie maximale', etat: engage > R.enveloppe ? 'rouge' : '' })}
+        ${indic('Capital disponible', eur(dispo), { detail: pc(R.enveloppe ? dispo / R.enveloppe : 0, 0) + ' de l\'enveloppe', etat: dispo < 0 ? 'rouge' : dispo < R.enveloppe * .2 ? 'orange' : 'vert', c: dispo < 0 ? 'rouge' : '' })}
+      </div>
+      <div class="section-titre"><h2>Bilan comptable</h2></div>
+      ${bilanComptable(biens)}`;
     $('#nouveauBien').onclick = nouveauBien;
     $$('[data-filtre-etape]', c).forEach(a => a.onclick = () => { filtres.etape = a.dataset.filtreEtape; });
     brancherRelances(c);
@@ -207,11 +222,11 @@
   /* ================= Biens : liste et colonnes ================= */
   const filtres = { q: '', etape: '', type: '', vue: localStorage.getItem('marcheo-vue') || 'liste', tri: 'maj', sens: -1, ecartes: false };
   function vueBiens(c) {
-    titre('Biens', 'Pipeline d\'acquisition', I.biens);
+    titre('Projets en cours', 'Du repérage à la vente', I.biens);
     c.innerHTML = `
-      <div class="en-tete-page"><div><h1>Biens</h1></div><div class="actions">
+      <div class="en-tete-page"><div><h1>Projets en cours</h1></div><div class="actions">
         <div class="segments" role="group" aria-label="Affichage"><button data-vue="liste" aria-pressed="${filtres.vue === 'liste'}">Liste</button><button data-vue="colonnes" aria-pressed="${filtres.vue === 'colonnes'}">Colonnes</button></div>
-        <button class="bouton bouton-principal" id="nouveauBien">+ Nouveau bien</button></div></div>
+        <button class="bouton bouton-principal" id="nouveauBien">+ Nouveau projet</button></div></div>
       <div class="barre-outils">
         <input type="search" id="fQ" placeholder="Rechercher : adresse, source…" value="${esc(filtres.q)}" aria-label="Rechercher">
         <select id="fEtape" aria-label="Étape"><option value="">Toutes les étapes</option>${ETAPES.map(e => `<option value="${e[0]}"${filtres.etape === e[0] ? ' selected' : ''}>${e[1]}</option>`).join('')}</select>
@@ -261,7 +276,7 @@
     }
     const col = COLONNES.find(x => x[0] === filtres.tri) || COLONNES[7];
     l.sort((a, b) => { const x = col[2](a), y = col[2](b); return (x < y ? -1 : x > y ? 1 : 0) * filtres.sens; });
-    if (!l.length) { z.innerHTML = '<div class="vide">Aucun bien ne correspond.</div>'; return; }
+    if (!l.length) { z.innerHTML = '<div class="vide">Aucun projet ne correspond.</div>'; return; }
     const th = (k, lib, n) => `<th class="triable${n ? ' nombre' : ''}" data-tri="${k}">${lib}${filtres.tri === k ? (filtres.sens > 0 ? ' ▲' : ' ▼') : ''}</th>`;
     z.innerHTML = `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr>${th('adresse', 'Bien')}${th('etape', 'Étape')}${th('surface', 'Surface', 1)}${th('prix', 'Prix affiché', 1)}${th('source', 'Source')}${th('marge', 'Marge nette', 1)}${th('action', 'Prochaine action')}</tr></thead><tbody>${l.map(b => {
       const A = analyse(b), p = b.prochaine || {};
@@ -273,7 +288,7 @@
 
   function nouveauBien() {
     const R = reglages();
-    modale('Nouveau bien', `<div class="grille-champs">
+    modale('Nouveau projet', `<div class="grille-champs">
       <div class="champ large" style="grid-column:1/-1"><label for="nbAdr">Adresse ou référence</label><input id="nbAdr" autocomplete="off"></div>
       <div class="champ"><label for="nbType">Type</label><select id="nbType">${Object.entries(M.TYPES).map(([k, t]) => `<option value="${k}">${t.n}</option>`).join('')}</select></div>
       <div class="champ"><label for="nbPrix">Prix affiché (€)</label><input id="nbPrix" type="number" inputmode="numeric" min="0" step="1000"></div>
@@ -308,7 +323,7 @@
   }
 
   /* ================= Fiche bien ================= */
-  const ONGLETS = [['synthese', 'Synthèse'], ['simulation', 'Simulation'], ['travaux', 'Travaux'], ['journal', 'Journal'], ['contacts', 'Contacts'], ['pieces', 'Pièces'], ['comparables', 'Comparables']];
+  const ONGLETS = [['synthese', 'Synthèse'], ['avancement', 'Avancement'], ['simulation', 'Simulation'], ['travaux', 'Travaux'], ['journal', 'Journal'], ['contacts', 'Contacts'], ['pieces', 'Pièces'], ['comparables', 'Comparables']];
   function vueBien(c, r) {
     const b = D.obtenir('biens', r.id);
     if (!b) { c.innerHTML = '<div class="vide">Bien introuvable. <a href="#/biens">Retour à la liste</a></div>'; return; }
@@ -317,7 +332,7 @@
     titre(titreBien(b), typeBien(b) + ' · ' + ETAPE[b.etape || 'repere'], I.biens);
     const courant = RANG[b.etape || 'repere'];
     c.innerHTML = `
-      <div class="fiche-tete"><div><a class="bouton-lien" href="#/biens">${'‹'} Biens</a><h1>${esc(titreBien(b))}</h1><div class="sous">${esc(typeBien(b))} · ${surfaceBien(b)}${b.source ? ' · ' + esc(b.source) : ''}${b.lien ? ` · <a href="${esc(b.lien)}" target="_blank" rel="noopener">annonce</a>` : ''}</div></div>
+      <div class="fiche-tete"><div><a class="bouton-lien" href="#/biens">${'‹'} Projets en cours</a><h1>${esc(titreBien(b))}</h1><div class="sous">${esc(typeBien(b))} · ${surfaceBien(b)}${b.source ? ' · ' + esc(b.source) : ''}${b.lien ? ` · <a href="${esc(b.lien)}" target="_blank" rel="noopener">annonce</a>` : ''}</div></div>
         <div class="actions"><span id="enteteMarge">${voyantEtat(A.etat)}</span><button class="bouton bouton-petit" id="bPdf">PDF</button><button class="bouton bouton-petit" id="bDup">Dupliquer</button><button class="bouton bouton-petit bouton-danger" id="bSuppr">Supprimer</button></div></div>
       <div class="etapes" role="group" aria-label="Étape">${ETAPES.map((e, i) => `<button data-etape="${e[0]}" class="${e[0] === 'ecarte' ? 'ecarte ' : ''}${e[0] === (b.etape || 'repere') ? 'courante' : (b.etape !== 'ecarte' && i < courant ? 'passee' : '')}" aria-pressed="${e[0] === (b.etape || 'repere')}">${e[1]}</button>`).join('')}</div>
       ${b.etape === 'ecarte' && b.motif ? `<div class="info-bandeau">Écarté : ${esc(b.motif)}</div>` : ''}
@@ -333,7 +348,7 @@
       D.supprimer('biens', b.id); aller('#/biens');
     });
     const z = $('#ongletContenu');
-    ({ synthese: ongletSynthese, simulation: ongletSimulation, travaux: ongletTravaux, journal: ongletJournal, contacts: ongletContacts, pieces: ongletPieces, comparables: ongletComparables }[o])(z, b);
+    ({ synthese: ongletSynthese, avancement: ongletAvancement, simulation: ongletSimulation, travaux: ongletTravaux, journal: ongletJournal, contacts: ongletContacts, pieces: ongletPieces, comparables: ongletComparables }[o])(z, b);
   }
   const compteJournal = b => { const n = D.liste('journal').filter(j => j.bienId === b.id).length; return n ? `<small class="discret">${n}</small>` : ''; };
   const compteurPieces = b => `<small class="discret">${PIECES.filter(p => (b.pieces[p[0]] || {}).ok).length}/${PIECES.length}</small>`;
@@ -483,7 +498,11 @@
       ligne('n', 'not', { on: true, val: S.notaire }, { v: M.notaire(S.achat), h: pc(M.notaire(S.achat) / (S.achat || 1)) + ' du prix' }, true);
       [['m1', M.M1], ['m2', M.M2]].forEach(([k, L]) => L.forEach((p, i) => { $(`[data-misv="${k}-${i}"]`, z).textContent = S[k][i] ? eur(S.vente * p[1] / 100) : ''; }));
       $('#trvBase').textContent = eur(r.tr.base); $('#trvRef').textContent = eur(r.tr.ref); $('#trvTot').textContent = eur(r.tr.tot);
-      const note = $('#trvReelNote'); note.hidden = !r.reel; if (r.reel) note.textContent = 'Le calcul retient le coût réel du chantier : ' + eur(r.T) + ' (onglet Travaux).';
+      const note = $('#trvReelNote'); note.hidden = !r.reel;
+      if (r.reel && S.trvForfait != null && !(b.travaux && b.travaux.utiliserReel)) {
+        note.innerHTML = 'Le calcul retient le budget forfaitaire de l\'annonce : <b>' + eur(r.T) + '</b>, aléas compris. Les postes ci-dessus ne comptent pas. <button type="button" class="bouton-lien" id="trvDetail">Chiffrer poste par poste</button>';
+        $('#trvDetail').onclick = () => { S.trvForfait = null; maj(); };
+      } else if (r.reel) note.textContent = 'Le calcul retient le coût réel du chantier : ' + eur(r.T) + ' (onglet Travaux).';
       $('#resultats').innerHTML = panneauResultats(A, A.S);
       majEntete(b);
     };
@@ -700,6 +719,127 @@
     dessiner();
   }
 
+  /* ================= Projet : avancement, budget, comptabilité ================= */
+  /* Jalons d'un projet, de la visite à la distribution. Dates prévues déduites de la durée de l'opération
+     (acte d'achat → acte de vente = durée), modifiables ; dates réelles saisies au fil de l'eau. */
+  const JALONS = [
+    { id: 'visite', l: 'Visite', g: 'Acquisition' },
+    { id: 'offre', l: 'Offre acceptée', g: 'Acquisition' },
+    { id: 'compromis', l: 'Compromis signé', g: 'Acquisition' },
+    { id: 'financement', l: 'Financement obtenu', g: 'Acquisition' },
+    { id: 'autorisation', l: 'Autorisations de travaux', g: 'Administratif' },
+    { id: 'acte', l: 'Acte d\'achat signé', g: 'Acquisition' },
+    { id: 'assurance', l: 'Assurances souscrites', g: 'Administratif' },
+    { id: 'comptaAchat', l: 'Achat et frais comptabilisés', g: 'Comptable' },
+    { id: 'debutTravaux', l: 'Début des travaux', g: 'Chantier' },
+    { id: 'finTravaux', l: 'Réception des travaux', g: 'Chantier' },
+    { id: 'miseEnVente', l: 'Mise en vente', g: 'Revente' },
+    { id: 'compromisVente', l: 'Compromis de vente', g: 'Revente' },
+    { id: 'acteVente', l: 'Acte de vente signé', g: 'Revente' },
+    { id: 'tva', l: 'Déclaration de TVA sur marge', g: 'Comptable' },
+    { id: 'cloture', l: 'Clôture et impôt sur les sociétés', g: 'Comptable' },
+    { id: 'distribution', l: 'Distribution aux associés', g: 'Comptable' }
+  ];
+  const COULEUR_GROUPE = { Acquisition: 'var(--accent)', Administratif: 'var(--texte-2)', Chantier: 'var(--laiton)', Revente: 'var(--vert)', Comptable: '#5b3a52' };
+  const CATEGORIES_DEPENSE = [['achat', 'Achat'], ['notaire', 'Notaire et agence'], ['travaux', 'Travaux hors chantier suivi'], ['annexes', 'Frais annexes'], ['autre', 'Autre']];
+  const jours = (d, n) => { const x = new Date(d + 'T12:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  const mois = (d, n) => { const x = new Date(d + 'T12:00'); x.setMonth(x.getMonth() + n); return x.toISOString().slice(0, 10); };
+  const ecartJours = (a, b) => Math.round((new Date(b + 'T12:00') - new Date(a + 'T12:00')) / 86400000);
+  /* Dates prévues par défaut, ancrées sur l'acte d'achat (réel, sinon prévu, sinon création + 3,5 mois) */
+  function datesPrevues(b) {
+    const av = (b.avancement || {}).jalons || {}, S = b.sim || {}, duree = Math.max(1, +S.duree || 9);
+    const debut = av.visite && av.visite.reelle || (b.creeLe || aujourdhui());
+    const acte = (av.acte && (av.acte.reelle || av.acte.prevue)) || jours(debut, 111);
+    const acteVente = mois(acte, duree), compromisVente = jours(acteVente, -90), miseEnVente = jours(compromisVente, -45);
+    const def = { visite: debut, offre: jours(debut, 7), compromis: jours(debut, 21), financement: jours(acte, -45), autorisation: jours(acte, -30), acte,
+      assurance: acte, comptaAchat: jours(acte, 30), debutTravaux: jours(acte, 14), finTravaux: jours(miseEnVente, -7), miseEnVente, compromisVente, acteVente,
+      tva: jours(acteVente, 30), cloture: jours(acteVente, 120), distribution: jours(acteVente, 180) };
+    return Object.fromEntries(JALONS.map(j => [j.id, (av[j.id] && av[j.id].prevue) || def[j.id]]));
+  }
+  /* Synthèse d'avancement : jalons, retard, fin projetée, budget prévu / dépensé / projeté, marge projetée */
+  function suiviProjet(b) {
+    const A = analyse(b), r = A.r, t = aujourdhui(), av = b.avancement || {}, J = av.jalons || {}, P = datesPrevues(b);
+    const liste = JALONS.map(j => { const x = J[j.id] || {}; return Object.assign({}, j, { prevue: P[j.id], reelle: x.reelle || '', fait: !!x.reelle, retard: !x.reelle && P[j.id] < t ? ecartJours(P[j.id], t) : 0 }); });
+    const premierOuvert = liste.find(j => !j.fait), retard = premierOuvert ? Math.max(0, premierOuvert.retard) : 0;
+    const finPrevue = P.acteVente, finProjetee = J.acteVente && J.acteVente.reelle ? J.acteVente.reelle : jours(finPrevue, retard);
+    const debut = P.visite, faits = liste.filter(j => j.fait).length;
+    /* Budget */
+    const dep = (av.depenses || []), somme = c => dep.filter(d => d.categorie === c).reduce((s, d) => s + (+d.montant || 0), 0);
+    const ch = A.chantier, travauxPayes = (ch ? ch.paye : 0) + somme('travaux');
+    const prevu = { achat: r.achat, notaire: r.acq, travaux: r.T, annexes: r.anx + r.agV + r.mis };
+    const depense = { achat: somme('achat'), notaire: somme('notaire'), travaux: travauxPayes, annexes: somme('annexes') + somme('autre') };
+    const travauxProjete = Math.max(prevu.travaux, ch ? ch.reel : 0, ch ? ch.engage : 0, depense.travaux);
+    const projete = { achat: Math.max(prevu.achat, depense.achat), notaire: Math.max(prevu.notaire, depense.notaire), travaux: travauxProjete, annexes: Math.max(prevu.annexes, depense.annexes) };
+    const tot = o => o.achat + o.notaire + o.travaux + o.annexes;
+    const S2 = clone(A.S); S2.trvReel = travauxProjete; S2.agA = (+S2.agA || 0) + (projete.achat - prevu.achat) + (projete.notaire - prevu.notaire) + (projete.annexes - prevu.annexes);
+    const rProj = M.compute(S2);
+    return { A, liste, retard, finPrevue, finProjetee, debut, faits, avancementJalons: faits / liste.length,
+      avancementTemps: Math.min(1, Math.max(0, ecartJours(debut, t) / Math.max(1, ecartJours(debut, finProjetee)))),
+      moisRestants: Math.max(0, ecartJours(t, finProjetee) / 30.4), prevu, depense, projete, totalPrevu: tot(prevu), totalDepense: tot(depense), totalProjete: tot(projete), rProj };
+  }
+  function ongletAvancement(z, b) {
+    b.avancement = b.avancement || { jalons: {}, depenses: [] }; b.avancement.jalons = b.avancement.jalons || {}; b.avancement.depenses = b.avancement.depenses || [];
+    const P = suiviProjet(b), t = aujourdhui(), r = P.A.r;
+    const pos = d => Math.min(100, Math.max(0, ecartJours(P.debut, d) / Math.max(1, ecartJours(P.debut, P.finProjetee > P.liste[P.liste.length - 1].prevue ? P.finProjetee : P.liste[P.liste.length - 1].prevue)) * 100));
+    const ecart = P.totalProjete - P.totalPrevu;
+    z.innerHTML = `
+      ${P.retard ? `<div class="alerte-bandeau">Retard de ${P.retard} jour(s) sur « ${esc(P.liste.find(j => !j.fait).l)} » : fin projetée au ${dateFr(P.finProjetee)} au lieu du ${dateFr(P.finPrevue)}.</div>` : ''}
+      <div class="indicateurs">
+        ${indic('Avancement', pc(P.avancementJalons, 0), { detail: P.faits + ' jalon(s) sur ' + P.liste.length + ' · temps écoulé ' + pc(P.avancementTemps, 0) })}
+        ${indic('Temps restant', P.moisRestants.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' mois', { detail: 'fin projetée le ' + dateFr(P.finProjetee), etat: P.retard ? 'rouge' : '' })}
+        ${indic('Dépensé', eur(P.totalDepense), { detail: pc(P.totalPrevu ? P.totalDepense / P.totalPrevu : 0, 0) + ' du budget prévu' })}
+        ${indic('Budget projeté', eur(P.totalProjete), { detail: (ecart > 0 ? '+ ' : ecart < 0 ? '− ' : '') + eur(Math.abs(ecart)) + ' sur le prévu', etat: ecart > 0 ? 'orange' : '' })}
+        ${indic('Bénéfice net projeté', eur(P.rProj.N), { detail: 'prévu ' + eur(r.N) + ' · marge ' + pc(P.rProj.m), etat: P.rProj.N < r.N ? 'orange' : 'vert' })}
+      </div>
+      <div class="carte"><h2>Frise chronologique</h2>
+        <div class="frise"><div class="frise-ligne"></div><div class="frise-aujourdhui" style="left:${pos(t)}%"><span>aujourd'hui</span></div>
+          ${P.liste.map(j => `<div class="frise-point${j.fait ? ' fait' : j.retard ? ' retard' : ''}" style="left:${pos(j.reelle || j.prevue)}%;--c:${COULEUR_GROUPE[j.g]}" title="${esc(j.l)} · ${dateFr(j.reelle || j.prevue)}"></div>`).join('')}
+        </div>
+        <div class="frise-legende">${Object.entries(COULEUR_GROUPE).map(([g, c]) => `<span><i style="background:${c}"></i>${g}</span>`).join('')}<span><i class="cercle"></i>à venir</span><span><i class="cercle plein"></i>fait</span><span><i class="cercle rouge"></i>en retard</span></div>
+      </div>
+      <div class="tableau-conteneur" style="margin-top:.8rem"><table class="tableau adaptable"><thead><tr><th>Jalon</th><th>Famille</th><th>Prévu</th><th>Réalisé</th><th>État</th></tr></thead><tbody>
+        ${P.liste.map(j => `<tr><td data-titre="Jalon"><strong>${esc(j.l)}</strong></td><td data-titre="Famille"><span class="pastille-groupe" style="--c:${COULEUR_GROUPE[j.g]}"></span>${j.g}</td>
+          <td data-titre="Prévu"><input type="date" data-jprev="${j.id}" value="${j.prevue}"></td><td data-titre="Réalisé"><input type="date" data-jreel="${j.id}" value="${j.reelle}"></td>
+          <td data-titre="État">${j.fait ? voyant('vert', 'Fait') : j.retard ? voyant('rouge', j.retard + ' j de retard') : voyant('gris', 'À venir')}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="section-titre"><h2>Budget</h2>${!b.avancement.depenses.some(d => d.categorie === 'achat') && b.avancement.jalons.acte && b.avancement.jalons.acte.reelle ? '<button class="bouton bouton-petit" id="avAchat">Comptabiliser l\'achat et le notaire</button>' : ''}</div>
+      <div class="tableau-conteneur"><table class="tableau"><thead><tr><th>Poste</th><th class="nombre">Prévu</th><th class="nombre">Dépensé</th><th class="nombre">Reste prévu</th><th class="nombre">Projection finale</th></tr></thead><tbody>
+        ${[['achat', 'Achat'], ['notaire', 'Notaire et agence'], ['travaux', 'Travaux'], ['annexes', 'Frais annexes et prestations']].map(([k, l]) => `<tr><td>${l}${k === 'travaux' && P.A.chantier ? '<span class="sous-ligne">paiements du chantier suivi compris</span>' : ''}</td><td class="nombre">${eur(P.prevu[k])}</td><td class="nombre">${eur(P.depense[k])}</td><td class="nombre">${eur(Math.max(0, P.prevu[k] - P.depense[k]))}</td><td class="nombre ${P.projete[k] > P.prevu[k] ? 'orange' : ''}">${eur(P.projete[k])}</td></tr>`).join('')}
+      </tbody><tfoot><tr><td>Coût de revient</td><td class="nombre">${eur(P.totalPrevu)}</td><td class="nombre">${eur(P.totalDepense)}</td><td class="nombre">${eur(Math.max(0, P.totalPrevu - P.totalDepense))}</td><td class="nombre">${eur(P.totalProjete)}</td></tr></tfoot></table></div>
+      <div class="section-titre"><h2>Dépenses</h2><button class="bouton bouton-petit" id="avDep">+ Dépense</button></div>
+      ${b.avancement.depenses.length ? `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th class="nombre">Montant</th><th></th></tr></thead><tbody>${b.avancement.depenses.slice().sort((x, y) => (y.date || '').localeCompare(x.date || '')).map(d => `<tr><td data-titre="Date">${dateFr(d.date)}</td><td data-titre="Libellé">${esc(d.libelle || '')}</td><td data-titre="Catégorie">${(CATEGORIES_DEPENSE.find(c => c[0] === d.categorie) || ['', ''])[1]}</td><td class="nombre" data-titre="Montant">${eur(d.montant)}</td><td><button class="bouton-icone" data-depsuppr="${d.id}" aria-label="Supprimer">${I.fermer}</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="vide">Aucune dépense saisie. Les paiements du chantier (onglet Travaux) sont comptés automatiquement.</div>'}`;
+    const sauver = () => { sauverMaintenant('biens', b); cacheAnalyse.clear(); afficher(); };
+    $$('[data-jprev]', z).forEach(el => el.onchange = () => { const k = el.dataset.jprev; b.avancement.jalons[k] = Object.assign({}, b.avancement.jalons[k], { prevue: el.value }); sauver(); });
+    $$('[data-jreel]', z).forEach(el => el.onchange = () => {
+      const k = el.dataset.jreel; b.avancement.jalons[k] = Object.assign({}, b.avancement.jalons[k], { reelle: el.value });
+      const etape = { offre: 'offre', compromis: 'compromis', acte: 'acte', debutTravaux: 'chantier', miseEnVente: 'vente', acteVente: 'vendu' }[k];
+      if (el.value && etape && RANG[etape] > RANG[b.etape || 'repere']) { b.etape = etape; notifier('Étape du projet : ' + ETAPE[etape] + '.', 'succes'); }
+      sauver();
+    });
+    const ach = $('#avAchat'); if (ach) ach.onclick = () => { const d = b.avancement.jalons.acte.reelle; b.avancement.depenses.push({ id: D.nouvelId('d'), date: d, libelle: 'Prix d\'achat', categorie: 'achat', montant: Math.round(r.achat) }, { id: D.nouvelId('d'), date: d, libelle: 'Notaire et agence à l\'achat', categorie: 'notaire', montant: Math.round(r.acq) }); sauver(); };
+    $('#avDep').onclick = () => modale('Nouvelle dépense', `<div class="grille-champs alignee">
+        <div class="champ"><label for="dDate">Date</label><input id="dDate" type="date" value="${t}"></div>
+        <div class="champ"><label for="dCat">Catégorie</label><select id="dCat">${CATEGORIES_DEPENSE.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('')}</select></div>
+        <div class="champ"><label for="dMont">Montant (€)</label><input id="dMont" type="number" inputmode="decimal"></div>
+        <div class="champ" style="grid-column:1/-1"><label for="dLib">Libellé</label><input id="dLib" placeholder="Facture, appel de fonds, taxe…"></div></div>`,
+      [{ l: 'Annuler' }, { l: 'Ajouter', classe: 'bouton-principal', f: f => { const m = nb($('#dMont', f).value); if (!m) { notifier('Saisir le montant.', 'erreur'); return false; } b.avancement.depenses.push({ id: D.nouvelId('d'), date: $('#dDate', f).value, categorie: $('#dCat', f).value, libelle: $('#dLib', f).value.trim(), montant: m }); sauver(); } }]);
+    $$('[data-depsuppr]', z).forEach(x => x.onclick = () => confirmer('Supprimer cette dépense ?', () => { b.avancement.depenses = b.avancement.depenses.filter(d => d.id !== x.dataset.depsuppr); sauver(); }));
+  }
+
+  /* Bilan comptable du tableau de bord : projets acquis (acte signé, chantier, en vente) et vendus */
+  function bilanComptable(biens) {
+    const port = biens.filter(b => ['acte', 'chantier', 'vente'].includes(b.etape)), vendus = biens.filter(b => b.etape === 'vendu');
+    const cumul = l => l.reduce((o, b) => { const P = suiviProjet(b), r = P.A.r; o.n++; o.achat += r.achat; o.notaire += r.acq; o.travaux += r.T; o.travauxPayes += P.depense.travaux; o.annexes += r.anx + r.agV + r.mis; o.C += r.C; o.vente += r.vente; o.tva += r.tva; o.int += r.int; o.is += r.is; o.N += r.N; o.depense += P.totalDepense; o.projete += P.totalProjete; o.Nproj += P.rProj.N; return o; },
+      { n: 0, achat: 0, notaire: 0, travaux: 0, travauxPayes: 0, annexes: 0, C: 0, vente: 0, tva: 0, int: 0, is: 0, N: 0, depense: 0, projete: 0, Nproj: 0 });
+    const a = cumul(port), v = cumul(vendus), T = Object.fromEntries(Object.keys(a).map(k => [k, a[k] + v[k]]));
+    const L = [['Nombre de projets', 'n', x => x], ['Achats', 'achat'], ['Notaire et agence', 'notaire'], ['Travaux prévus', 'travaux'], ['Travaux payés', 'travauxPayes'], ['Frais annexes et prestations', 'annexes'], ['Coût de revient', 'C', null, 1], ['Dépensé à ce jour', 'depense'], ['Coût de revient projeté', 'projete'],
+      ['Revente', 'vente', null, 1], ['Marge brute', null, null, 0, x => x.vente - x.C], ['TVA sur marge', 'tva'], ['Intérêts associé investisseur', 'int'], ['Impôt sur les sociétés', 'is'], ['Bénéfice net prévu', 'N', null, 1], ['Bénéfice net projeté', 'Nproj']];
+    if (!a.n && !v.n) return '<div class="vide">Aucun projet acquis pour l\'instant : le bilan se remplit à la signature de l\'acte d\'achat.</div>';
+    return `<div class="tableau-conteneur"><table class="tableau"><thead><tr><th></th><th class="nombre">En portefeuille</th><th class="nombre">Vendus</th><th class="nombre">Total</th></tr></thead><tbody>
+      ${L.map(([l, k, f, gras, calc]) => { const val = o => calc ? calc(o) : o[k], fmt = f || eur; return `<tr${gras ? ' class="ligne-forte"' : ''}><td>${l}</td><td class="nombre">${fmt(val(a))}</td><td class="nombre">${fmt(val(v))}</td><td class="nombre">${fmt(val(T))}</td></tr>`; }).join('')}
+    </tbody></table></div><p class="aide">Portefeuille : acte signé, chantier, en vente. Chiffres prévisionnels des simulations ; « projeté » tient compte des dépenses et du chantier réels.</p>`;
+  }
+
   /* ================= Annonces (alertes e-mail) ================= */
   const MA = window.MarcheoAnnonces;
   const cacheAnn = new Map();
@@ -709,11 +849,17 @@
     if (!cacheAnn.has(k)) cacheAnn.set(k, MA.evaluer(a, R));
     return cacheAnn.get(k);
   }
-  const STATUTS_ANALYSE = { signalee: ['vert', 'Signalée'], ecartee: ['gris', 'Écartée par l\'analyse'], a_completer: ['orange', 'À compléter'] };
+  const STATUTS_ANALYSE = { signalee: ['vert', 'À examiner'], ecartee: ['gris', 'Écartée par l\'analyse'], a_completer: ['orange', 'À compléter'] };
   const aExaminer = a => !['retenue', 'ecartee'].includes(a.statutTri) && evalAnnonce(a).statut === 'signalee';
-  const fa = { onglet: 'examiner', q: '', source: '', type: '' };
-  function vueAnnonces(c) {
+  const statutAnnonce = (a, e) => a.statutTri === 'retenue' ? ['vert', 'Retenue'] : a.statutTri === 'ecartee' ? ['gris', 'Écartée'] : STATUTS_ANALYSE[e.statut];
+  const nomSite = a => a.source || ((a.lien || '').match(/https?:\/\/(?:www\.)?([^\/.]+)/) || [])[1] || 'le site';
+  const fa = { onglet: 'examiner', q: '', source: '', type: '', surligne: '' };
+  /* Routes : #/annonces/<onglet> ou #/annonces/a/<identifiant> (ouvre la fiche et met la ligne en évidence) */
+  function vueAnnonces(c, r) {
     titre('Annonces', 'Alertes e-mail analysées', I.annonces);
+    const ouvrir = r && r.id === 'a' ? r.o : '';
+    if (r && r.id && r.id !== 'a') fa.onglet = r.id;
+    if (ouvrir) fa.surligne = ouvrir;
     const toutes = D.liste('annonces'), E = new Map(toutes.map(a => [a.id, evalAnnonce(a)]));
     const groupes = {
       examiner: toutes.filter(aExaminer),
@@ -722,18 +868,18 @@
       ecartees: toutes.filter(a => !['retenue', 'ecartee'].includes(a.statutTri) && E.get(a.id).statut === 'ecartee'),
       traitees: toutes.filter(a => ['retenue', 'ecartee'].includes(a.statutTri))
     };
+    if (ouvrir) {
+      const x = toutes.find(a => a.id === ouvrir); if (x && !groupes[fa.onglet].includes(x)) fa.onglet = 'toutes';
+      /* l'adresse « ouvrir telle annonce » ne sert qu'une fois : sinon chaque enregistrement rouvrirait la fiche */
+      history.replaceState(null, '', '#/annonces/' + fa.onglet); vueCourante = 'annonces/' + fa.onglet + '/';
+    }
     const ONG = [['examiner', 'À examiner'], ['completer', 'À compléter'], ['ecartees', 'Écartées par l\'analyse'], ['traitees', 'Traitées'], ['toutes', 'Toutes']];
     const sources = [...new Set(toutes.map(a => a.source).filter(Boolean))].sort();
     const derniere = toutes.reduce((m, a) => (a.vueLe || a.recueLe || '') > m ? (a.vueLe || a.recueLe) : m, '');
     c.innerHTML = `
-      <div class="en-tete-page"><div><h1>Annonces</h1><p>${toutes.length} reçue(s)${derniere ? ' · dernière alerte le ' + dateFr(derniere.slice(0, 10)) : ''} · tri automatique selon les critères des Réglages</p></div>
+      <div class="en-tete-page"><div><h1>Annonces</h1><p>${toutes.length} reçue(s)${derniere ? ' · dernière alerte le ' + dateFr(derniere.slice(0, 10)) : ''}</p></div>
         <div class="actions"><button class="bouton" id="anAjout">+ Annonce</button><button class="bouton" id="anCrit">Modifier les critères</button></div></div>
       <div class="info-bandeau">${esc(resumeCriteres(reglages()))}</div>
-      <div class="indicateurs">
-        ${indic('À examiner', groupes.examiner.length, { etat: groupes.examiner.length ? 'vert' : '', detail: 'passent les trois étapes du tri' })}
-        ${indic('À compléter', groupes.completer.length, { etat: groupes.completer.length ? 'orange' : '', detail: 'surface ou prix du secteur manquant' })}
-        ${indic('Écartées par l\'analyse', groupes.ecartees.length, { detail: 'consultables à tout moment' })}
-      </div>
       <nav class="onglets">${ONG.map(o => `<button class="${fa.onglet === o[0] ? 'actif' : ''}" data-ong="${o[0]}">${o[1]} <small class="discret">${groupes[o[0]].length}</small></button>`).join('')}</nav>
       <div class="barre-outils"><input type="search" id="anQ" placeholder="Rechercher : ville, titre…" value="${esc(fa.q)}" aria-label="Rechercher">
         <select id="anSrc" aria-label="Source"><option value="">Toutes les sources</option>${sources.map(s => `<option${fa.source === s ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>
@@ -742,112 +888,187 @@
     const zone = () => {
       const q = fa.q.trim().toLowerCase();
       const l = groupes[fa.onglet].filter(a => (!fa.source || a.source === fa.source) && (!fa.type || E.get(a.id).type === fa.type) && (!q || [a.titre, a.ville, a.cp, a.texte].join(' ').toLowerCase().includes(q)))
-        .sort((x, y) => (E.get(y.id).score ?? -1) - (E.get(x.id).score ?? -1) || (y.recueLe || '').localeCompare(x.recueLe || ''));
+        .sort((x, y) => (aExaminer(y) - aExaminer(x)) || (E.get(y.id).score ?? -1) - (E.get(x.id).score ?? -1) || (y.recueLe || '').localeCompare(x.recueLe || ''));
       const vis = l.slice(0, 200);
       $('#anZone').innerHTML = !l.length ? `<div class="vide">${fa.onglet === 'examiner' ? 'Aucune annonce ne mérite l\'attention pour l\'instant.' : 'Aucune annonce.'}</div>` :
-        `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente estimée</th><th class="nombre">Argent à sortir</th><th class="nombre">Marge brute</th><th class="nombre">Prix maximum</th><th class="nombre">Négociation</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
-          const e = E.get(a.id), st = a.statutTri === 'retenue' ? ['vert', 'Retenue'] : a.statutTri === 'ecartee' ? ['gris', 'Écartée'] : STATUTS_ANALYSE[e.statut];
-          return `<tr class="cliquable" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.lots && e.type === 'immeuble' ? e.lots + ' lots' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span></td>
+        `<div class="tableau-conteneur"><table class="tableau adaptable tableau-annonces"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente</th><th class="nombre">Travaux</th><th class="nombre">À sortir</th><th class="nombre">Marge brute</th><th class="nombre">Prix max.</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
+          const e = E.get(a.id), st = statutAnnonce(a, e), ex = aExaminer(a);
+          return `<tr class="cliquable${ex ? ' a-examiner' : ''}${a.id === fa.surligne ? ' surligne' : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span></td>
             <td class="nombre" data-titre="Prix affiché">${eur(e.prix)}${e.surface ? `<span class="sous-ligne">${eur(e.prix / e.surface)} /m²</span>` : ''}${a.prixPrecedent ? `<span class="sous-ligne vert">avant ${eur(a.prixPrecedent)}</span>` : ''}</td>
-            <td class="nombre" data-titre="Revente estimée">${e.vente ? eur(e.vente) : '—'}</td>
-            <td class="nombre" data-titre="Argent à sortir">${e.tresoAffiche ? `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span><span class="sous-ligne">au prix affiché</span>` : '—'}</td>
+            <td class="nombre" data-titre="Revente">${e.vente ? eur(e.vente) : '—'}</td>
+            <td class="nombre" data-titre="Travaux">${e.travaux ? eur(e.travaux.total) + `<span class="sous-ligne">${M.NIVEAUX[e.travaux.niveau].toLowerCase()}</span>` : '—'}</td>
+            <td class="nombre" data-titre="À sortir">${e.tresoAffiche ? `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>` : '—'}</td>
             <td class="nombre" data-titre="Marge brute">${e.margeBrute != null ? `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)}</span><span class="sous-ligne">${eur(e.margeBruteEur)}</span>` : '—'}</td>
-            <td class="nombre" data-titre="Prix maximum">${e.achatMax ? eur(Math.floor(e.achatMax / 1000) * 1000) : '—'}</td>
-            <td class="nombre" data-titre="Négociation">${e.nego != null ? `<span class="${e.nego <= 0 ? 'vert' : e.statut === 'signalee' ? 'orange' : 'rouge'}">${e.nego <= 0 ? 'aucune' : '− ' + pc(e.nego, 0)}</span>` : '—'}</td>
+            <td class="nombre" data-titre="Prix max.">${e.achatMax ? eur(Math.floor(e.achatMax / 1000) * 1000) + `<span class="sous-ligne ${e.nego <= 0 ? 'vert' : e.statut === 'signalee' ? 'orange' : 'rouge'}">${e.nego <= 0 ? 'sans négociation' : '− ' + pc(e.nego, 0)}</span>` : '—'}</td>
             <td data-titre="Analyse">${voyant(st[0], st[1])}${e.score != null ? ` <b class="montant">${e.score}</b>` : ''}<span class="sous-ligne">${esc(e.motifs.join(' · '))}</span></td></tr>`;
         }).join('')}</tbody></table></div>${l.length > 200 ? `<p class="aide">200 premières sur ${l.length}. Affiner la recherche.</p>` : ''}`;
       $$('tr[data-id]', $('#anZone')).forEach(tr => tr.onclick = () => ficheAnnonce(D.obtenir('annonces', tr.dataset.id)));
+      const sl = $('tr.surligne', $('#anZone')); if (sl) sl.scrollIntoView({ block: 'center' });
     };
-    $$('[data-ong]', c).forEach(b => b.onclick = () => { fa.onglet = b.dataset.ong; vueAnnonces(c); });
+    $$('[data-ong]', c).forEach(b => b.onclick = () => aller('#/annonces/' + b.dataset.ong));
     $('#anQ').oninput = e => { fa.q = e.target.value; zone(); };
     $('#anSrc').onchange = e => { fa.source = e.target.value; zone(); };
     $('#anType').onchange = e => { fa.type = e.target.value; zone(); };
     $('#anAjout').onclick = () => ajouterAnnonce();
     $('#anCrit').onclick = () => editerCriteres();
     zone();
+    if (ouvrir) { const x = D.obtenir('annonces', ouvrir); if (x) ficheAnnonce(x); }
   }
-  function ficheAnnonce(a) {
+  function ficheAnnonce(a, message) {
     if (!a) return;
     if (a.statutTri === 'nouvelle') { a.statutTri = 'vue'; D.enregistrer('annonces', a); majNav(); }
-    const e = evalAnnonce(a), k = a.corrections || {}, R = reglages();
+    const e = evalAnnonce(a), st = statutAnnonce(a, e);
     const ligne = (l, v, s) => ligneCompte(l, v, { s });
-    modale(a.titre || 'Annonce', `
+    const tv = e.travaux;
+    const fond = modale(a.titre || 'Annonce', `
+      ${message ? `<div class="info-bandeau">${message}</div>` : ''}
+      ${a.lien ? `<a class="bouton bouton-vert bouton-large" href="${esc(a.lien)}" target="_blank" rel="noopener">Voir l'annonce sur ${esc(nomSite(a))} ↗</a>` : '<p class="aide">Pas de lien vers l\'annonce.</p>'}
+      <div class="bilan-annonce">${voyant(st[0], st[1])}${e.score != null ? ` <span class="discret">score ${e.score}</span>` : ''}<span class="discret">${esc(e.motifs.join(' · '))}</span></div>
       <div class="compte">
-        ${ligne('Source', esc(a.source || '') + (a.lien ? ` · <a href="${esc(a.lien)}" target="_blank" rel="noopener">voir l'annonce</a>` : ''), 'reçue le ' + dateFr((a.recueLe || '').slice(0, 10)) + (a.alertes > 1 ? ', ' + a.alertes + ' alertes' : ''))}
-        ${ligne('Lieu', esc([a.cp, a.ville].filter(Boolean).join(' ') || '—'), e.secteur ? 'prix du secteur ' + eur(e.pm2) + ' /m² · ' + (e.secteur.origine === 'DVF' ? 'référence DVF, ' + (e.type === 'maison' ? e.secteur.nMaisons + ' ventes de maisons, médiane ' + eur(e.secteur.medianeMaison) : e.secteur.n + ' ventes d\'appartements, médiane ' + eur(e.secteur.mediane)) + ' /m²' : 'prix saisi dans les Réglages') : 'secteur sans prix de référence')}
+        ${ligne('Source', esc(a.source || '—') + (a.agence ? ' · ' + esc(a.agence) : ''), 'reçue le ' + dateFr((a.recueLe || '').slice(0, 10)) + (a.alertes > 1 ? ', ' + a.alertes + ' alertes' : ''))}
+        ${ligne('Bien', esc([M.TYPES[e.type] ? M.TYPES[e.type].n : e.type, e.surface ? e.surface + ' m²' : 'surface inconnue', e.pieces ? e.pieces + ' pièce' + (e.pieces > 1 ? 's' : '') + ' à vivre' : ''].filter(Boolean).join(' · ')), esc([a.cp, a.ville].filter(Boolean).join(' ')))}
         ${ligne('Prix affiché', eur(e.prix), (a.historiquePrix || []).length > 1 ? a.historiquePrix.map(h => dateFr(h.date.slice(0, 10)) + ' : ' + eur(h.prix)).join(' · ') : '')}
-        ${e.r ? ligne('Revente estimée', eur(e.vente), eur(e.pm2) + ' /m² × ' + e.surface + ' m²') + ligne('Travaux estimés', eur(e.r.T), M.NIVEAUX[e.niveau].toLowerCase()) + ligne('Coût de revient', eur(e.r.C)) + ligne('Argent total à sortir au prix affiché', `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>`, 'plafond ' + eur(e.criteres.tresoMax) + (e.tresoAuMax ? ' · ' + eur(e.tresoAuMax) + ' au prix maximum' : '')) + ligne('Marge brute au prix affiché', `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)} · ${eur(e.margeBruteEur)}</span>`, 'minimum ' + e.criteres.margeBruteMin + ' % de la revente') + ligne('Bénéfice net au prix affiché', eur(e.r.N), 'marge nette ' + pc(e.marge) + ', après TVA, intérêts et impôt') + ligne('Prix d\'achat maximum', e.achatMax ? eur(e.achatMax) : 'aucun', e.nego > 0 ? 'négociation nécessaire : ' + pc(e.nego, 0) : 'sous le prix maximum') : ''}
-        ${ligne('Analyse', voyant(STATUTS_ANALYSE[e.statut][0], STATUTS_ANALYSE[e.statut][1]) + (e.score != null ? ' · score ' + e.score : ''), esc(e.motifs.concat(e.signaux.length ? ['signaux : ' + e.signaux.join(', ')] : []).join(' · ')))}
+        ${e.r ? ligne('Revente estimée', eur(e.vente), eur(e.pm2) + ' /m² × ' + e.surface + ' m² · ' + (e.secteur && e.secteur.origine === 'DVF' ? 'référence DVF, ' + (e.type === 'maison' ? e.secteur.nMaisons + ' ventes de maisons' : e.secteur.n + ' ventes d\'appartements') : 'prix saisi'))
+          + ligne('Travaux estimés', eur(e.r.T), M.NIVEAUX[tv.niveau].toLowerCase() + ' · ' + eur(tv.m2) + ' /m² × ' + e.surface + ' m²' + (tv.piece && tv.pieces ? ' + ' + eur(tv.piece) + ' × ' + tv.pieces + ' pièce' + (tv.pieces > 1 ? 's' : '') : '') + (tv.ht <= tv.min ? ' (minimum ' + eur(tv.min) + ')' : '') + ', aléas ' + tv.aleas + ' % compris')
+          + ligne('Argent total à sortir', `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>`, 'au prix affiché · plafond ' + eur(e.criteres.tresoMax))
+          + ligne('Marge brute', `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)} · ${eur(e.margeBruteEur)}</span>`, 'au prix affiché · minimum ' + e.criteres.margeBruteMin + ' % de la revente')
+          + ligne('Bénéfice net', eur(e.r.N), 'au prix affiché, après TVA, intérêts et impôt')
+          + ligne('Prix d\'achat maximum', e.achatMax ? eur(e.achatMax) : 'aucun', e.nego > 0 ? 'négociation nécessaire : ' + pc(e.nego, 0) : 'le prix affiché passe') : ''}
+        ${e.signaux.length ? ligne('Signaux', `<span class="vert">${esc(e.signaux.join(', '))}</span>`) : ''}
       </div>
-      <div class="compte-titre">Corriger ou compléter</div>
-      <div class="grille-champs">
-        <div class="champ"><label for="akType">Type</label><select id="akType">${Object.entries(M.TYPES).map(([x, t]) => `<option value="${x}"${e.type === x ? ' selected' : ''}>${t.n}</option>`).join('')}</select></div>
-        <div class="champ"><label for="akSurf">Surface (m²)</label><input id="akSurf" type="number" inputmode="decimal" value="${k.surface || a.surface || ''}"></div>
-        <div class="champ"><label for="akLots">Lots ou pièces</label><input id="akLots" type="number" inputmode="numeric" value="${k.lots || a.lots || ''}"></div>
-        <div class="champ"><label for="akNiv">Travaux</label><select id="akNiv">${Object.entries(M.NIVEAUX).map(([x, l]) => `<option value="${x}"${(k.niveau || e.niveau) === x ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
-        <div class="champ"><label for="akPm2">Prix du secteur (€/m²)</label><input id="akPm2" type="number" inputmode="numeric" value="${k.pm2 || e.pm2 || ''}"></div>
-        <div class="champ"><label for="akCp">Code postal</label><input id="akCp" inputmode="numeric" value="${esc(a.cp || '')}"></div>
-      </div>
-      <label class="case"><input type="checkbox" id="akSecteur" checked> Enregistrer ce prix pour tout le secteur ${esc(a.cp || '')}</label>
       ${a.texte ? `<details style="margin-top:.6rem"><summary class="aide">Texte de l'alerte</summary><p class="aide">${esc(a.texte)}</p></details>` : ''}`,
       [{ l: 'Écarter', classe: 'bouton-danger', f: () => { a.statutTri = 'ecartee'; D.enregistrer('annonces', a); afficher(); } },
-       { l: 'Enregistrer', f: f => { corriger(a, f); afficher(); } },
-       { l: 'Retenir et prendre rendez-vous', classe: 'bouton-principal', f: f => { corriger(a, f); retenirAnnonce(D.obtenir('annonces', a.id)); } }]);
+       { l: 'Corriger', f: () => { setTimeout(() => corrigerAnnonce(D.obtenir('annonces', a.id)), 0); } },
+       { l: 'Retenir et prendre rendez-vous', classe: 'bouton-principal', f: () => retenirAnnonce(D.obtenir('annonces', a.id)) }]);
+    return fond;
   }
-  function corriger(a, f) {
+  /* Correction : nouveaux champs, recalcul complet (travaux, coûts, statut, classement) et retour sur la fiche avec les écarts */
+  function corrigerAnnonce(a) {
+    const e = evalAnnonce(a), k = a.corrections || {};
+    modale('Corriger l\'annonce', `<div class="grille-champs alignee">
+        <div class="champ"><label for="akType">Type</label><select id="akType">${Object.entries(M.TYPES).map(([x, t]) => `<option value="${x}"${e.type === x ? ' selected' : ''}>${t.n}</option>`).join('')}</select></div>
+        <div class="champ"><label for="akPrix">Prix affiché (€)</label><input id="akPrix" type="number" inputmode="numeric" value="${e.prix || ''}"></div>
+        <div class="champ"><label for="akSurf">Surface (m²)</label><input id="akSurf" type="number" inputmode="decimal" value="${e.surface || ''}"></div>
+        <div class="champ"><label for="akPieces">Pièces à vivre</label><input id="akPieces" type="number" inputmode="numeric" min="1" value="${e.pieces || ''}"><small class="aide">F2 = 2</small></div>
+        <div class="champ"><label for="akNiv">Travaux</label><select id="akNiv">${Object.entries(M.NIVEAUX).map(([x, l]) => `<option value="${x}"${(e.niveau || k.niveau) === x ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="champ"><label for="akCp">Code postal</label><input id="akCp" inputmode="numeric" value="${esc(a.cp || '')}"></div>
+        <div class="champ"><label for="akVille">Ville</label><input id="akVille" value="${esc(a.ville || '')}"></div>
+        <div class="champ"><label for="akPm2">Prix du secteur (€/m²)</label><input id="akPm2" type="number" inputmode="numeric" value="${e.pm2 || ''}"></div>
+      </div>
+      <label class="case"><input type="checkbox" id="akSecteur"> Enregistrer ce prix pour tout le code postal</label>`,
+      [k && Object.keys(k).length ? { l: 'Annuler les corrections', classe: 'bouton-danger', f: () => { const avant = evalAnnonce(a); delete a.corrections; D.enregistrer('annonces', a); cacheAnn.clear(); afficher(); setTimeout(() => montrerRecalcul(a, avant), 0); } } : null,
+       { l: 'Annuler', f: () => { setTimeout(() => ficheAnnonce(D.obtenir('annonces', a.id)), 0); } },
+       { l: 'Recalculer et enregistrer', classe: 'bouton-principal', f: f => { const avant = evalAnnonce(a); appliquerCorrection(a, f, avant); afficher(); setTimeout(() => montrerRecalcul(D.obtenir('annonces', a.id), avant), 0); } }].filter(Boolean));
+  }
+  function appliquerCorrection(a, f, e) {
     const v = id => $(id, f).value.trim(), n = id => nb($(id, f).value);
-    const e = evalAnnonce(a);
-    a.corrections = Object.assign({}, a.corrections || {});
-    if (v('#akType') !== e.type || a.corrections.type) a.corrections.type = v('#akType');
-    ['surface', 'lots'].forEach((k2, i) => { const x = n(['#akSurf', '#akLots'][i]); if (x) a.corrections[k2] = x; });
-    if (v('#akNiv') !== MA.niveauDepuisTexte([a.titre, a.texte].join(' '), a.dpe) || a.corrections.niveau) a.corrections.niveau = v('#akNiv');
+    const C = a.corrections = Object.assign({}, a.corrections || {});
+    const fixe = (cle, val, auto) => { if (val && val !== auto) C[cle] = val; else if (val === auto) delete C[cle]; };
+    fixe('type', v('#akType'), MA.typeDepuisTexte([a.titre, a.texte].join(' ')) || 'appt');
+    if (n('#akPrix')) { if (n('#akPrix') !== +a.prix) C.prix = n('#akPrix'); else delete C.prix; }
+    if (n('#akSurf')) { if (n('#akSurf') !== +a.surface) C.surface = n('#akSurf'); else delete C.surface; }
+    if (n('#akPieces')) C.pieces = Math.max(1, Math.round(n('#akPieces')));
+    C.niveau = v('#akNiv');
     if (v('#akCp')) a.cp = v('#akCp');
+    if (v('#akVille')) a.ville = v('#akVille');
     const pm2 = n('#akPm2');
+    delete C.pm2;
     if (pm2 && $('#akSecteur', f).checked && a.cp) {
-      const R = reglages(); R.criteres = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); R.criteres.secteurs = (R.criteres.secteurs || []).slice();
-      const s = R.criteres.secteurs.find(x => String(x.cp) === String(a.cp));
-      const champ = (a.corrections.type || e.type) === 'box' ? 'prixBox' : 'pm2';
+      const R = reglages(); R.criteres = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); R.criteres.secteurs = (R.criteres.secteurs || []).map(x => Object.assign({}, x));
+      const s = R.criteres.secteurs.find(x => String(x.cp) === String(a.cp)), champ = (C.type || e.type) === 'box' ? 'prixBox' : 'pm2';
       if (s) s[champ] = pm2; else R.criteres.secteurs.push({ cp: a.cp, commune: a.ville || '', [champ]: pm2 });
-      D.enregistrer('reglages', R); delete a.corrections.pm2;
-    } else if (pm2 && pm2 !== e.pm2) a.corrections.pm2 = pm2;
+      D.enregistrer('reglages', R);
+    } else if (pm2 && pm2 !== e.pm2) C.pm2 = pm2;
     D.enregistrer('annonces', a); cacheAnn.clear();
   }
+  function montrerRecalcul(a, avant) {
+    const apres = evalAnnonce(a), d = [];
+    const cmp = (l, x, y, f) => { if (Math.round(x || 0) !== Math.round(y || 0)) d.push(l + ' : ' + f(x) + ' → <b>' + f(y) + '</b>'); };
+    cmp('Travaux', avant.travaux && avant.travaux.total, apres.travaux && apres.travaux.total, eur);
+    cmp('Argent à sortir', avant.tresoAffiche, apres.tresoAffiche, eur);
+    cmp('Revente', avant.vente, apres.vente, eur);
+    if (avant.margeBrute != null || apres.margeBrute != null) cmp('Marge brute', (avant.margeBrute || 0) * 1000, (apres.margeBrute || 0) * 1000, x => pc(x / 1000));
+    cmp('Prix maximum', avant.achatMax, apres.achatMax, eur);
+    const sa = STATUTS_ANALYSE[avant.statut][1], sb = STATUTS_ANALYSE[apres.statut][1];
+    const msg = 'Recalculé. ' + (sa !== sb ? 'Statut : ' + sa + ' → <b>' + sb + '</b>. ' : 'Statut inchangé : ' + sb + '. ') + (d.length ? d.join(' · ') : 'Aucun chiffre ne change.');
+    ficheAnnonce(a, msg);
+  }
+  /* Retenir : crée le projet, relie le contact de l'agence, relance de prise de rendez-vous */
   function retenirAnnonce(a) {
     const e = evalAnnonce(a), R = reglages();
     let S = e.S ? clone(e.S) : M.fresh(e.type);
     if (!e.S) { ['taux', 'obj', 'part', 'pfu', 'dmax', 'tvaT', 'tvaMode'].forEach(k => { if (R[k] != null) S[k] = R[k]; }); if (e.surface) S.surf = e.surface; if (e.prix) S.achat = e.prix; M.applyLevel(S); }
     S.adresse = [a.titre, a.ville].filter(Boolean).join(', ');
-    const b = D.enregistrer('biens', { etape: 'repere', source: a.source, lien: a.lien || '', prixAffiche: e.prix, sim: S, comps: [], pieces: {}, liens: [], travaux: { lignes: [], utiliserReel: false }, creeLe: aujourdhui(), annonceId: a.id,
+    const liens = [];
+    if (a.agence) {
+      let ag = D.liste('contacts').find(x => x.nom && x.nom.toLowerCase() === a.agence.toLowerCase());
+      if (!ag) ag = D.enregistrer('contacts', { nom: a.agence, categorie: 'agent', notes: 'Créé depuis une alerte ' + (a.source || '') + '.' });
+      liens.push({ contactId: ag.id, role: 'Agent' });
+    }
+    const b = D.enregistrer('biens', { etape: 'repere', source: a.source, lien: a.lien || '', prixAffiche: e.prix, sim: S, comps: [], pieces: {}, liens, travaux: { lignes: [], utiliserReel: false }, creeLe: aujourdhui(), annonceId: a.id,
       prochaine: { action: 'Prendre rendez-vous de visite', date: aujourdhui() } });
-    D.enregistrer('relances', { date: aujourdhui(), objet: 'Prendre rendez-vous de visite', bienId: b.id, fait: false });
-    D.enregistrer('journal', { bienId: b.id, date: (a.recueLe || aujourdhui()).slice(0, 10), type: 'note', texte: 'Annonce ' + (a.source || '') + ' reçue par alerte. Analyse : ' + (e.score != null ? 'score ' + e.score + ', ' : '') + (e.motifs.join(', ') || 'signalée') + '.', auto: true });
+    D.enregistrer('relances', { date: aujourdhui(), objet: 'Prendre rendez-vous de visite', bienId: b.id, contactId: liens[0] ? liens[0].contactId : '', fait: false });
+    D.enregistrer('journal', { bienId: b.id, date: (a.recueLe || aujourdhui()).slice(0, 10), type: 'note', texte: 'Annonce ' + (a.source || '') + (a.agence ? ' (' + a.agence + ')' : '') + ' reçue par alerte. Analyse : ' + (e.score != null ? 'score ' + e.score + ', ' : '') + (e.motifs.join(', ') || 'à examiner') + '.', auto: true });
     a.statutTri = 'retenue'; a.bienId = b.id; D.enregistrer('annonces', a);
-    notifier('Bien créé, relance « Prendre rendez-vous » pour aujourd\'hui.', 'succes');
+    notifier('Projet créé, relance « Prendre rendez-vous » pour aujourd\'hui.', 'succes');
     aller('#/bien/' + b.id);
   }
+  /* Ajout : coller le lien (lecture par le serveur) et, si le site bloque, le texte de la page */
   function ajouterAnnonce() {
-    modale('Ajouter une annonce', `<div class="grille-champs">
-      <div class="champ" style="grid-column:1/-1"><label for="naT">Titre</label><input id="naT" placeholder="Immeuble 4 lots à rénover"></div>
-      <div class="champ"><label for="naP">Prix affiché (€)</label><input id="naP" type="number" inputmode="numeric"></div>
-      <div class="champ"><label for="naS">Surface (m²)</label><input id="naS" type="number" inputmode="decimal"></div>
-      <div class="champ"><label for="naCp">Code postal</label><input id="naCp" inputmode="numeric"></div>
-      <div class="champ"><label for="naV">Ville</label><input id="naV"></div>
-      <div class="champ"><label for="naSrc">Source</label><input id="naSrc" value="Leboncoin"></div>
-      <div class="champ" style="grid-column:1/-1"><label for="naL">Lien</label><input id="naL" type="url"></div>
-      <div class="champ" style="grid-column:1/-1"><label for="naX">Description</label><textarea id="naX" rows="3"></textarea></div></div>`,
-      [{ l: 'Annuler' }, { l: 'Ajouter', classe: 'bouton-principal', f: f => {
-        const g = id => $(id, f).value.trim(); if (!nb(g('#naP'))) { notifier('Saisir le prix.', 'erreur'); return false; }
-        D.enregistrer('annonces', { titre: g('#naT'), prix: nb(g('#naP')), surface: nb(g('#naS')) || undefined, cp: g('#naCp'), ville: g('#naV'), source: g('#naSrc'), lien: g('#naL'), texte: g('#naX'), recueLe: new Date().toISOString(), statutTri: 'nouvelle', manuel: true });
-        afficher();
+    const distant = D.etat().mode === 'distant';
+    const fond = modale('Ajouter une annonce', `
+      <div class="champ"><label for="naL">Lien de l'annonce</label><div class="actions" style="flex-wrap:nowrap"><input id="naL" type="url" inputmode="url" placeholder="https://www.leboncoin.fr/ad/…"><button type="button" class="bouton bouton-principal" id="naLire">Lire</button></div>
+        <small class="aide" id="naEtat">${distant ? 'Collez le lien puis « Lire ». Si le site bloque la lecture, collez aussi le texte de la page ci-dessous.' : 'Mode démonstration : la lecture du lien passe par le serveur. Collez le texte de la page ci-dessous.'}</small></div>
+      <div class="champ"><label for="naX">Texte de l'annonce</label><textarea id="naX" rows="4" placeholder="Sur la page de l'annonce : tout sélectionner, copier, coller ici."></textarea></div>
+      <div class="compte-titre">Annonce lue</div>
+      <div class="grille-champs alignee">
+        <div class="champ" style="grid-column:1/-1"><label for="naT">Titre</label><input id="naT"></div>
+        <div class="champ"><label for="naP">Prix affiché (€)</label><input id="naP" type="number" inputmode="numeric"></div>
+        <div class="champ"><label for="naS">Surface (m²)</label><input id="naS" type="number" inputmode="decimal"></div>
+        <div class="champ"><label for="naPi">Pièces à vivre</label><input id="naPi" type="number" inputmode="numeric"></div>
+        <div class="champ"><label for="naCp">Code postal</label><input id="naCp" inputmode="numeric"></div>
+        <div class="champ"><label for="naV">Ville</label><input id="naV"></div>
+        <div class="champ"><label for="naSrc">Source</label><input id="naSrc"></div>
+      </div>`,
+      [{ l: 'Annuler' }, { l: 'Ajouter et analyser', classe: 'bouton-principal', f: f => {
+        const g = id => $(id, f).value.trim(); if (!nb(g('#naP'))) { notifier('Prix manquant : lire le lien ou coller le texte.', 'erreur'); return false; }
+        const a = D.enregistrer('annonces', { titre: g('#naT') || 'Annonce', prix: nb(g('#naP')), surface: nb(g('#naS')) || undefined, pieces: nb(g('#naPi')) || undefined, cp: g('#naCp'), ville: g('#naV'), source: g('#naSrc'), lien: g('#naL'), texte: g('#naX').slice(0, 3000), dpe: f.dataset.dpe || '', recueLe: new Date().toISOString(), statutTri: 'vue', manuel: true });
+        setTimeout(() => aller('#/annonces/a/' + a.id), 0);
       } }]);
+    const remplir = x => {
+      const set = (id, v) => { if (v && !$(id, fond).value) $(id, fond).value = v; };
+      set('#naT', x.titre); set('#naP', x.prix); set('#naS', x.surface); set('#naPi', x.pieces); set('#naCp', x.cp); set('#naV', x.ville);
+      if (x.dpe) fond.dataset.dpe = x.dpe;
+    };
+    const sourceDuLien = u => ({ leboncoin: 'Leboncoin', seloger: 'SeLoger', bienici: "Bien'ici", pap: 'PAP', 'logic-immo': 'Logic-Immo' })[((u.match(/https?:\/\/(?:www\.)?([^\/.]+)/) || [])[1] || '')] || '';
+    $('#naL', fond).addEventListener('change', e => { const s = sourceDuLien(e.target.value); if (s) $('#naSrc', fond).value = s; });
+    $('#naX', fond).addEventListener('input', e => remplir(MA.lireTexte(e.target.value)));
+    $('#naLire', fond).onclick = async () => {
+      const url = $('#naL', fond).value.trim(), etat = $('#naEtat', fond);
+      if (!/^https:\/\//.test(url)) { etat.textContent = 'Coller un lien commençant par https://'; return; }
+      const s = sourceDuLien(url); if (s) $('#naSrc', fond).value = s;
+      if (!distant) { etat.textContent = 'Mode démonstration : coller le texte de la page ci-dessous.'; return; }
+      etat.textContent = 'Lecture en cours…';
+      try {
+        const x = await D.action('lireAnnonce', { url });
+        if (x.bloque) { etat.innerHTML = '<span class="orange">Le site refuse la lecture automatique (' + x.code + '). Copier le texte de la page et le coller ci-dessous.</span>'; return; }
+        remplir(x); etat.innerHTML = '<span class="vert">Annonce lue. Vérifier les champs puis « Ajouter et analyser ».</span>';
+      } catch (err) { etat.innerHTML = '<span class="rouge">' + esc(err.message) + ' Coller le texte de la page ci-dessous.</span>'; }
+    };
   }
   function champsCriteres(R) {
     const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {});
-    return `<div class="grille-champs">
+    return `<div class="grille-champs alignee">
         <div class="champ"><label for="crPrix">1. Prix affiché maximum (€)</label><input id="crPrix" data-cr="prixAfficheMax" type="number" inputmode="numeric" step="5000" value="${C.prixAfficheMax}"><small class="aide">au-dessus : écartée d'office, sans calcul</small></div>
         <div class="champ"><label for="crTreso">2. Argent total à sortir maximum (€)</label><input id="crTreso" data-cr="tresoMax" type="number" inputmode="numeric" step="5000" value="${C.tresoMax}"><small class="aide">achat, frais d'agence, notaire, travaux et aléas, annexes, TVA des travaux avancée</small></div>
         <div class="champ"><label for="crMb">3. Marge brute minimum (% de la revente)</label><input id="crMb" data-cr="margeBruteMin" type="number" inputmode="decimal" value="${C.margeBruteMin}"><small class="aide">revente moins coût de revient</small></div>
         <div class="champ"><label for="crNego">Négociation maximum (%)</label><input id="crNego" data-cr="negoMax" type="number" inputmode="numeric" value="${C.negoMax}"><small class="aide">les étapes 2 et 3 s'apprécient au prix négocié</small></div>
+        <div class="champ" style="grid-column:1/-1"><label>Budget travaux, hors aléas</label>
+          <table class="tableau"><thead><tr><th>Niveau</th><th class="nombre">€/m²</th><th class="nombre">Minimum par bien (€)</th></tr></thead><tbody>
+          ${['r', 'c', 'l'].map(n => { const t = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {})[n]; return `<tr><td>${M.NIVEAUX[n]}</td><td><input data-crt="${n}.m2" type="number" inputmode="numeric" step="10" value="${t.m2}" style="width:90px"></td><td><input data-crt="${n}.min" type="number" inputmode="numeric" step="500" value="${t.min}" style="width:110px"></td></tr>`; }).join('')}
+          </tbody></table>
+          <label for="crNivDef" style="margin-top:.5rem">Niveau supposé quand l'annonce ne dit rien</label><select id="crNivDef" data-crtdef>${['r', 'c', 'l'].map(n => `<option value="${n}"${Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}).defaut === n ? ' selected' : ''}>${M.NIVEAUX[n]}</option>`).join('')}</select>
+          <small class="aide">« à rénover » ou DPE F, G : rénovation complète ; « gros œuvre », « à réhabiliter » : lourde ; « bon état », « refait » : rafraîchissement. Les aléas de chantier de la simulation s'ajoutent.</small></div>
         <div class="champ" style="grid-column:1/-1"><label>Types analysés</label><div class="actions">${Object.entries(M.TYPES).map(([k, t]) => `<label class="case"><input type="checkbox" data-crtype="${k}"${C.types.includes(k) ? ' checked' : ''}> ${t.n}</label>`).join('')}</div><small class="aide">Immeubles et types non cochés : importés, écartés d'office. 0 dans un plafond le désactive.</small></div>
         <div class="champ" style="grid-column:1/-1"><label for="crZone">Zone</label><textarea id="crZone" data-crz rows="4">${esc((C.zone || []).join(', '))}</textarea><small class="aide">départements (95), codes postaux ou communes, séparés par des virgules ; vide = partout. Hors zone : importée, écartée d'office.</small></div>
         <div class="champ" style="grid-column:1/-1"><label for="crExclus">Mots exclus</label><input id="crExclus" data-crl="exclus" value="${esc(C.exclus.join(', '))}"></div>
@@ -855,7 +1076,7 @@
       </div>`;
   }
   const zoneCourte = z => { const d = {}; z.forEach(x => { const m = String(x).match(/^(\d{2})/); const k = m ? m[1] : x; d[k] = (d[k] || 0) + 1; }); return Object.entries(d).map(([k, n]) => n > 1 ? k + ' (' + n + ' communes)' : k).join(', '); };
-  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Prix affiché ≤ ' + eur(C.prixAfficheMax) + ' · argent à sortir ≤ ' + eur(C.tresoMax) + ' · marge brute ≥ ' + C.margeBruteMin + ' % de la revente · négociation ≤ ' + C.negoMax + ' % · zone : ' + (C.zone && C.zone.length ? zoneCourte(C.zone) : 'partout') + ' · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
+  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Prix affiché ≤ ' + eur(C.prixAfficheMax) + ' · argent à sortir ≤ ' + eur(C.tresoMax) + ' · marge brute ≥ ' + C.margeBruteMin + ' % de la revente · travaux ' + (() => { const t = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}); return t.r.m2 + ' / ' + t.c.m2 + ' / ' + t.l.m2 + ' €/m², par défaut ' + M.NIVEAUX[t.defaut].toLowerCase(); })() + ' · négociation ≤ ' + C.negoMax + ' % · zone : ' + (C.zone && C.zone.length ? zoneCourte(C.zone) : 'partout') + ' · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
   function editerCriteres() {
     modale('Critères d\'analyse', champsCriteres(reglages()), [{ l: 'Fermer', classe: 'bouton-principal', f: () => afficher() }], f => brancherCriteres(f));
   }
@@ -875,6 +1096,9 @@
   function brancherCriteres(c) {
     const maj = f => { const R = reglages(); R.criteres = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); R.criteres.secteurs = (R.criteres.secteurs || []).map(s => Object.assign({}, s)); f(R.criteres); D.enregistrer('reglages', R); cacheAnn.clear(); };
     $$('[data-cr]', c).forEach(el => el.onchange = () => { maj(C => C[el.dataset.cr] = nb(el.value)); notifier('Critère enregistré.', 'succes'); });
+    const majTravaux = f => maj(C => { const t = JSON.parse(JSON.stringify(Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}))); f(t); C.travaux = t; });
+    $$('[data-crt]', c).forEach(el => el.onchange = () => { const [n, k] = el.dataset.crt.split('.'); majTravaux(t => t[n][k] = nb(el.value)); notifier('Budget travaux enregistré.', 'succes'); });
+    $$('[data-crtdef]', c).forEach(el => el.onchange = () => { majTravaux(t => t.defaut = el.value); notifier('Budget travaux enregistré.', 'succes'); });
     $$('[data-crz]', c).forEach(el => el.onchange = () => { maj(C => C.zone = el.value.split(',').map(x => x.trim()).filter(Boolean)); notifier('Zone enregistrée.', 'succes'); });
     $$('[data-crtype]', c).forEach(el => el.onchange = () => { maj(C => C.types = $$('[data-crtype]', c).filter(x => x.checked).map(x => x.dataset.crtype)); notifier('Critère enregistré.', 'succes'); });
     $$('[data-crl]', c).forEach(el => el.onchange = () => { maj(C => C[el.dataset.crl] = el.value.split(',').map(x => x.trim()).filter(Boolean)); notifier('Critère enregistré.', 'succes'); });
@@ -925,7 +1149,6 @@
     const retard = l.filter(x => !x.fait && x.date < t), jour = l.filter(x => !x.fait && x.date === t), avenir = l.filter(x => !x.fait && x.date > t), faites = l.filter(x => x.fait).sort((a, z) => (z.faitLe || '').localeCompare(a.faitLe || '')).slice(0, 20);
     const bloc = (tt, l, et) => `<div class="carte"><h2>${tt} · ${l.length}</h2>${listeRelances(l) || '<div class="vide">Rien.</div>'}</div>`;
     c.innerHTML = `<div class="en-tete-page"><div><h1>Relances</h1></div><div class="actions"><button class="bouton bouton-principal" id="rNouv">+ Relance</button></div></div>
-      <div class="indicateurs">${indic('En retard', retard.length, { etat: retard.length ? 'rouge' : '' })}${indic('Aujourd\'hui', jour.length, { etat: jour.length ? 'orange' : '' })}${indic('À venir', avenir.length)}</div>
       <div class="deux-colonnes"><div class="colonne">${bloc('En retard', retard)}${bloc('Aujourd\'hui', jour)}</div><div class="colonne">${bloc('À venir', avenir)}${bloc('Faites récemment', faites)}</div></div>`;
     $('#rNouv').onclick = () => nouvelleRelance({});
     brancherRelances(c);
@@ -990,21 +1213,26 @@
   function vueReperes(c) {
     titre('Repères', 'Prix unitaires modifiables', I.reperes);
     const R = reglages(), ref = R.ref || { w: {}, x: {} }, est = new Set(M.REF_ESTIME);
-    const ligne = (g, k, lib, unite) => { const d = M.REF_DEF[g][k], v = (ref[g] || {})[k], mod = v != null && v !== d; return `<tr><td data-titre="Poste">${esc(lib)}${est.has(g + '.' + k) ? ' <span class="etiquette orange">estimation</span>' : ''}</td><td class="nombre" data-titre="Unité">${unite}</td><td class="nombre" data-titre="Par défaut">${d.toLocaleString('fr-FR')}</td><td data-titre="Retenu"><input type="number" inputmode="decimal" min="0" step="any" data-ref="${g}.${k}" value="${v != null ? v : d}" style="width:110px" class="${mod ? 'orange' : ''}"></td></tr>`; };
-    c.innerHTML = `<div class="en-tete-page"><div><h1>Repères</h1><p>Relevés fin novembre 2026. Les lignes « estimation » n'ont pas de source vérifiée.</p></div><div class="actions"><button class="bouton" id="refRaz">Valeurs par défaut</button></div></div>
-      <div class="info-bandeau">Les repères servent au calcul de tous les biens. Un montant saisi poste par poste dans une simulation reste prioritaire.</div>
+    const ligne = (g, k, lib, unite) => { const d = M.REF_DEF[g][k], v = (ref[g] || {})[k], mod = v != null && v !== d; return `<tr><td data-titre="Poste">${esc(lib)}${est.has(g + '.' + k) ? ' <span class="etiquette orange">estimation</span>' : ''}</td><td class="nombre" data-titre="Unité">${unite}</td><td class="nombre" data-titre="Par défaut">${d.toLocaleString('fr-FR')}</td><td data-titre="Retenu"><input type="number" inputmode="decimal" min="0" step="any" data-ref="${g}.${k}" data-initial="${v != null ? v : d}" value="${v != null ? v : d}" style="width:110px" class="${mod ? 'orange' : ''}"></td></tr>`; };
+    c.innerHTML = `<div class="en-tete-page"><div><h1>Repères</h1><p>Prix unitaires du chiffrage poste par poste des projets. Relevés fin novembre 2026 ; les lignes « estimation » n'ont pas de source vérifiée.</p></div><div class="actions"><button class="bouton" id="refRaz">Valeurs par défaut</button></div></div>
+      <div class="info-bandeau">Mettre ici les prix des artisans et fournisseurs habituels. L'analyse des annonces, elle, utilise le budget travaux au m² des critères.</div>
       <div class="section-titre"><h2>Travaux</h2><span class="aide">avant coefficient de gamme</span></div>
       <div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Poste</th><th class="nombre">Unité</th><th class="nombre">Par défaut</th><th>Retenu</th></tr></thead><tbody>
         ${M.W.map(i => ligne('w', i.id, i.l, UNITE_W[i.per])).join('')}${ligne('w', 'deco_min', 'Décoration et mise en scène : minimum', '€')}</tbody></table></div>
       <div class="section-titre"><h2>Frais annexes</h2></div>
       <div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Poste</th><th class="nombre">Unité</th><th class="nombre">Par défaut</th><th>Retenu</th></tr></thead><tbody>
-        ${Object.keys(M.REF_DEF.x).map(k => ligne('x', k, LIB_X[k] || k, k.endsWith('pct') ? '%' : '€')).join('')}</tbody></table></div>`;
-    $$('[data-ref]', c).forEach(el => el.addEventListener('change', () => {
-      const [g, k] = el.dataset.ref.split('.'), v = nb(el.value), R2 = reglages();
-      R2.ref = R2.ref || { w: {}, x: {} }; R2.ref[g] = R2.ref[g] || {};
-      if (v === M.REF_DEF[g][k]) delete R2.ref[g][k]; else R2.ref[g][k] = v;
-      D.enregistrer('reglages', R2); appliquerReperes(); el.classList.toggle('orange', v !== M.REF_DEF[g][k]); notifier('Repère enregistré.', 'succes');
-    }));
+        ${Object.keys(M.REF_DEF.x).map(k => ligne('x', k, LIB_X[k] || k, k.endsWith('pct') ? '%' : '€')).join('')}</tbody></table></div>
+      <div class="barre-enregistrer"><span id="refEtat" class="discret">Aucune modification</span><span class="actions"><button class="bouton" id="refAnnuler" disabled>Annuler</button><button class="bouton bouton-principal" id="refEnr" disabled>Enregistrer les modifications</button></span></div>`;
+    const modifies = () => $$('[data-ref]', c).filter(el => nb(el.value) !== nb(el.dataset.initial));
+    const majBarre = () => { const n = modifies().length; $('#refEtat').textContent = n ? n + ' modification' + (n > 1 ? 's' : '') + ' non enregistrée' + (n > 1 ? 's' : '') : 'Aucune modification'; $('#refEtat').className = n ? 'orange' : 'discret'; $('#refEnr').disabled = $('#refAnnuler').disabled = !n; };
+    $$('[data-ref]', c).forEach(el => el.addEventListener('input', () => { el.classList.toggle('modifie', nb(el.value) !== nb(el.dataset.initial)); majBarre(); }));
+    $('#refAnnuler').onclick = () => afficher();
+    $('#refEnr').onclick = () => {
+      const R2 = reglages(); R2.ref = JSON.parse(JSON.stringify(R2.ref || { w: {}, x: {} })); R2.ref.w = R2.ref.w || {}; R2.ref.x = R2.ref.x || {};
+      const l = modifies();
+      l.forEach(el => { const [g, k] = el.dataset.ref.split('.'), v = nb(el.value); if (v === M.REF_DEF[g][k]) delete R2.ref[g][k]; else R2.ref[g][k] = v; });
+      D.enregistrer('reglages', R2); appliquerReperes(); cacheAnalyse.clear(); notifier(l.length + ' repère(s) enregistré(s).', 'succes'); afficher();
+    };
     $('#refRaz').onclick = () => confirmer('Revenir à tous les repères par défaut ?', () => { const R2 = reglages(); R2.ref = { w: {}, x: {} }; D.enregistrer('reglages', R2); appliquerReperes(); afficher(); });
   }
 
@@ -1014,24 +1242,23 @@
     const R = reglages(), E = D.etat(), cf = D.conf();
     const champ = (k, l, aide) => `<div class="champ"><label for="g-${k}">${l}</label><input id="g-${k}" data-g="${k}" type="number" inputmode="decimal" min="0" step="any" value="${R[k]}">${aide ? `<small class="aide">${aide}</small>` : ''}</div>`;
     c.innerHTML = `<div class="en-tete-page"><div><h1>Réglages</h1></div></div>
-      <div class="deux-colonnes"><div class="colonne">
-        <div class="carte"><h2>Capital</h2><div class="grille-champs">${champ('enveloppe', 'Enveloppe disponible (€)', 'commune à tous les biens')}${champ('seuilTravaux', 'Alerte de dépassement des travaux (%)')}</div></div>
-        <div class="carte"><h2>Valeurs par défaut des nouveaux biens</h2><div class="grille-champs">
-          ${champ('taux', 'Intérêts de l\'associé investisseur (% par an)')}${champ('obj', 'Objectif de marge nette (%)')}${champ('part', 'Part de l\'associé opérateur (%)')}${champ('pfu', 'Prélèvement sur dividendes (%)')}${champ('dmax', 'Durée maximum (mois)')}
-          <div class="champ"><label for="g-tvaT">TVA sur les travaux</label><select id="g-tvaT" data-gs="tvaT"><option value="10">10 %</option><option value="20">20 %</option><option value="5.5">5,5 %</option></select></div>
-          <div class="champ"><label for="g-tvaMode">TVA à la revente</label><select id="g-tvaMode" data-gs="tvaMode"><option value="marge">Sur la marge</option><option value="total">Sur le prix total</option><option value="none">Aucune</option></select></div>
-        </div></div>
-        ${carteCriteres(R)}
-        <div class="carte"><h2>Affichage</h2><div class="segments" id="theme"><button data-v="clair" aria-pressed="${R.theme !== 'sombre'}">Clair</button><button data-v="sombre" aria-pressed="${R.theme === 'sombre'}">Sombre</button></div></div>
-      </div><div class="colonne">
+      <div class="pile">
         <div class="carte"><h2>Synchronisation</h2><div class="compte">
           ${ligneCompte('Mode', E.mode === 'demo' ? 'Démonstration, données dans ce navigateur' : 'Serveur Google Apps Script')}
           ${E.mode === 'distant' ? ligneCompte('État', esc(E.message || 'À jour')) + ligneCompte('Modifications en attente', D.enAttente()) + ligneCompte('Serveur', `<small>${esc((cf.url || '').replace(/^https:\/\/script\.google\.com\/macros\/s\//, '…/').slice(0, 40))}</small>`) : ''}
         </div><div class="actions" style="margin-top:.8rem">
           ${E.mode === 'demo' ? '<button class="bouton bouton-principal" id="gConnect">Connecter un serveur</button><button class="bouton" id="gVider">Partir d\'une base vide</button><button class="bouton" id="gDemo">Recharger la démonstration</button>' : '<button class="bouton" id="gSync">Synchroniser</button><button class="bouton" id="gDeco">Se déconnecter</button><button class="bouton bouton-danger" id="gOubli">Oublier ce serveur</button>'}
-        </div><p class="aide" style="margin-top:.6rem">Installation du serveur : voir marcheo/serveur/Code.gs. Gratuit, sur le compte Google de l'utilisateur.</p></div>
-        <div class="carte"><h2>Sauvegarde</h2><div class="actions"><button class="bouton" id="gExport">Exporter (JSON)</button><label class="bouton" for="gImport">Importer</label><input id="gImport" type="file" accept=".json" hidden></div></div>
-      </div></div>`;
+          <button class="bouton" id="gExport">Exporter une sauvegarde</button><label class="bouton" for="gImport">Importer une sauvegarde</label><input id="gImport" type="file" accept=".json" hidden>
+        </div></div>
+        <div class="carte"><h2>Capital</h2><div class="grille-champs alignee">${champ('enveloppe', 'Enveloppe disponible (€)', 'commune à tous les projets')}${champ('seuilTravaux', 'Alerte de dépassement des travaux (%)')}</div></div>
+        <div class="carte"><h2>Valeurs par défaut des nouveaux projets</h2><div class="grille-champs alignee">
+          ${champ('taux', 'Intérêts associé investisseur (%/an)')}${champ('obj', 'Objectif de marge nette (%)')}${champ('part', 'Part associé opérateur (%)')}${champ('pfu', 'Prélèvement sur dividendes (%)')}${champ('dmax', 'Durée maximum (mois)')}
+          <div class="champ"><label for="g-tvaT">TVA sur les travaux</label><select id="g-tvaT" data-gs="tvaT"><option value="10">10 %</option><option value="20">20 %</option><option value="5.5">5,5 %</option></select></div>
+          <div class="champ"><label for="g-tvaMode">TVA à la revente</label><select id="g-tvaMode" data-gs="tvaMode"><option value="marge">Sur la marge</option><option value="total">Sur le prix total</option><option value="none">Aucune</option></select></div>
+        </div></div>
+        ${carteCriteres(R)}
+        <div class="carte"><h2>Affichage</h2><div class="segments" id="theme"><button data-v="clair" aria-pressed="${R.theme !== 'sombre'}">Clair</button><button data-v="sombre" aria-pressed="${R.theme === 'sombre'}">Sombre</button></div></div>
+      </div>`;
     $('#g-tvaT').value = String(R.tvaT); $('#g-tvaMode').value = R.tvaMode;
     brancherCriteres(c);
     const sauver = (k, v) => { const R2 = reglages(); R2[k] = v; D.enregistrer('reglages', R2); cacheAnalyse.clear(); };

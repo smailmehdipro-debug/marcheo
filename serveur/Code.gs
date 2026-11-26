@@ -42,6 +42,7 @@ function traiter_(action, d, jeton) {
   if (action === 'lire') return lire_(String(d.depuis || ''));
   if (action === 'ecrire') return ecrire_(d.enregistrements || [], utilisateur);
   if (action === 'deconnexion') { supprimerJeton_(jeton); return { fait: true }; }
+  if (action === 'lireAnnonce') return lireAnnonce_(String(d.url || ''));
   throw erreur_('Action inconnue.', 'ACTION');
 }
 
@@ -177,11 +178,12 @@ function extraireAnnonces_(expediteur, sujet, texte, date) {
       if (!parId[m[1]]) { parId[m[1]] = { lignes: [], lien: 'https://www.bienici.com/annonce/' + m[1] }; ordre.push(m[1]); }
       parId[m[1]].lignes.push(lignes[i - 1]);
     }
+    var agence = (String(texte).match(/L[’']agence\s+(.+?)\s+(?:vous propose|a s[ée]lectionn[ée])/) || [])[1] || '';
     ordre.forEach(function (id) {
       var L = parId[id].lignes.filter(function (l) { return !/^(Voir l|Photo$|RÉFÉRENCE)/i.test(l); });
       var prix = 0, titre = '', ville = '';
       L.forEach(function (l) { var p = l.match(RE_PRIX); if (p && !prix) prix = nombre_(p[1]); else if (/^\d{5}\s/.test(l)) ville = l; else if (!titre) titre = l; });
-      out.push(enrichir_({ source: "Bien'ici", idSource: id, titre: titre, texte: L.join(' · ') + (ville ? ' ' + ville : ''), prix: prix, lien: parId[id].lien }));
+      out.push(enrichir_({ source: "Bien'ici", agence: agence, idSource: id, titre: titre, texte: L.join(' · ') + (ville ? ' ' + ville : ''), prix: prix, lien: parId[id].lien }));
     });
   } else if (de.indexOf('seloger') >= 0) {
     /* SeLoger : prix (et prix au m²), titre, lieu, puis « Voir l'annonce » précédé de son lien */
@@ -256,6 +258,34 @@ function importerAlertes() {
   return enr.length;
 }
 
+/* ---------- Lecture d'une annonce à partir de son lien ----------
+   Les sites protégés (Leboncoin, SeLoger) refusent souvent les lectures automatiques : Marchéo propose alors de coller le texte. */
+function lireAnnonce_(url) {
+  if (!/^https:\/\/[^\s]+$/.test(url)) throw erreur_('Lien invalide.', 'LIEN');
+  var rep = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true,
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36', 'Accept-Language': 'fr-FR,fr;q=0.9' } });
+  var code = rep.getResponseCode();
+  if (code >= 400) return { bloque: true, code: code };
+  return extraireDePage_(rep.getContentText(), url);
+}
+function extraireDePage_(html, url) {
+  var meta = function (nom) { var m = html.match(new RegExp('<meta[^>]+(?:property|name)=["\']' + nom + '["\'][^>]+content=["\']([^"\']*)', 'i')) || html.match(new RegExp('<meta[^>]+content=["\']([^"\']*)["\'][^>]+(?:property|name)=["\']' + nom, 'i')); return m ? decoder_(m[1]) : ''; };
+  var json = function (re) { var m = html.match(re); return m ? m[1] : ''; };
+  var titre = meta('og:title') || decoder_((html.match(/<title>([^<]*)/i) || [])[1] || '');
+  var description = meta('og:description') || meta('description');
+  var texte = decoder_(html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').slice(0, 20000);
+  var a = { titre: titre.slice(0, 160), texte: (description + ' ' + texte).slice(0, 3000), lien: url, source: (url.match(/https:\/\/(?:www\.)?([^\/.]+)/) || [])[1] || '' };
+  a.prix = nombre_(json(/"price"\s*:\s*\[?\s*"?(\d{4,9})/) || ((titre + ' ' + description).match(RE_PRIX) || [])[1] || '');
+  a.surface = nombre_(json(/"(?:square|surface|livingArea|floorSize)"[^0-9]{0,40}(\d+(?:[.,]\d+)?)/) || '');
+  a.pieces = parseInt(json(/"(?:rooms|numberOfRooms|nb_rooms)"[^0-9]{0,30}(\d+)/) || '0', 10) || 0;
+  a.cp = json(/"(?:zipcode|postalCode|postal_code)"\s*:\s*"?(\d{5})/);
+  a.ville = decoder_(json(/"(?:city|addressLocality)"\s*:\s*"([^"]{2,60})"/));
+  a.dpe = json(/"(?:energy_rate|energyClass|dpe)"[^A-G]{0,20}"([A-G])"/);
+  enrichir_(a);
+  return a;
+}
+function decoder_(t) { return String(t || '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€').replace(/&#(\d+);/g, function (m, n) { return String.fromCharCode(+n); }); }
+
 /* ---------- Installation et secours ---------- */
 function installer() {
   var p = PropertiesService.getScriptProperties();
@@ -282,4 +312,4 @@ function definirMotDePasse(identifiant, motDePasse) {
   Logger.log('Mot de passe défini pour ' + identifiant + '.');
 }
 
-if (typeof module !== 'undefined') module.exports = { doPost: doPost, installer: installer, definirMotDePasse: definirMotDePasse, versLigne_: versLigne_, depuisLigne_: depuisLigne_, extraireAnnonces_: extraireAnnonces_, fusionnerAnnonce_: fusionnerAnnonce_ };
+if (typeof module !== 'undefined') module.exports = { extraireDePage_: extraireDePage_, doPost: doPost, installer: installer, definirMotDePasse: definirMotDePasse, versLigne_: versLigne_, depuisLigne_: depuisLigne_, extraireAnnonces_: extraireAnnonces_, fusionnerAnnonce_: fusionnerAnnonce_ };

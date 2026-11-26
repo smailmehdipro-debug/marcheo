@@ -40,8 +40,11 @@ test('étape 2 : 120 000 € avec gros travaux : argent à sortir trop élevé, 
 
 test('étape 3 : marge brute calculée comme dans le simulateur', () => {
   const e = A.evaluer({ titre: 'Appartement 2 pièces à rénover', prix: 82000, surface: 42, cp: '93200' }, R);
-  const r = M.compute(M.fresh());
-  assert.equal(Math.round(e.r.C), Math.round(r.C), 'coût de revient de l\'exemple du brief : 127 491 €');
+  /* Même calcul que le simulateur, travaux au forfait : (550 €/m² × 42 m² + 800 € × 2 pièces) + 10 % d'aléas = 27 170 € */
+  assert.equal(e.travaux.niveau, 'c'); assert.equal(e.travaux.pieces, 2); assert.equal(e.travaux.total, 27170); assert.equal(e.r.T, 27170);
+  const S = M.fresh(); S.trvReel = 27170;
+  const r = M.compute(S);
+  assert.equal(Math.round(e.r.C), Math.round(r.C));
   assert.equal(Math.round(e.margeBruteEur), Math.round(r.vente - r.C));
   assert.equal(e.margeBrute, (r.vente - r.C) / r.vente);
   assert.equal(e.statut, 'signalee');
@@ -100,4 +103,28 @@ test('référence DVF : prix par code postal, prix saisi prioritaire, maison à 
   const p = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93600' }, perso);
   assert.equal(p.pm2, 3000); assert.equal(p.secteur.origine, 'saisi');
   assert.equal(A.evaluer({ titre: 'Appartement T2', prix: 80000, ville: 'Poissy', surface: 40 }, sansPerso).secteur.cp, '78300', 'commune sans code postal');
+});
+
+test('budget travaux : forfait au m² par niveau, minimum par bien, rafraîchissement par défaut', () => {
+  const D = A.CRITERES_DEF.travaux;
+  assert.deepEqual([D.r.m2, D.c.m2, D.l.m2, D.r.piece, D.c.piece, D.l.piece, D.r.min, D.c.min, D.l.min, D.defaut], [200, 550, 900, 200, 800, 1200, 3000, 8000, 12000, 'r']);
+  const muet = A.evaluer({ titre: 'Appartement 2 pièces', prix: 80000, surface: 40, cp: '93200' }, R);
+  assert.equal(muet.travaux.niveau, 'r', 'annonce muette : rafraîchissement'); assert.equal(muet.travaux.ht, 8400, '200 × 40 + 200 × 2 pièces'); assert.equal(muet.travaux.total, 9240);
+  const studio = A.evaluer({ titre: 'Studio à rénover', prix: 50000, surface: 12, cp: '93200' }, R);
+  assert.equal(studio.travaux.ht, 8000, 'minimum de 8 000 € en rénovation complète');
+  const g = A.evaluer({ titre: 'Appartement, DPE G', prix: 60000, surface: 30, cp: '93200', dpe: 'G' }, R);
+  assert.equal(g.travaux.niveau, 'c');
+  const perso = A.evaluer({ titre: 'Appartement 2 pièces', prix: 80000, surface: 40, cp: '93200' }, avec({ travaux: { r: { m2: 100, min: 1000 }, c: { m2: 400, min: 5000 }, l: { m2: 700, min: 9000 }, defaut: 'c' } }));
+  assert.equal(perso.travaux.niveau, 'c'); assert.equal(perso.travaux.ht, 16000, 'critères modifiables');
+  assert.equal(A.evaluer({ titre: 'Appartement 2 pièces', prix: 80000, surface: 40, cp: '93200', corrections: { niveau: 'l' } }, R).travaux.ht, 38400, 'correction manuelle du niveau');
+  const f3 = A.evaluer({ titre: 'Appartement F3', prix: 80000, surface: 40, cp: '93200', corrections: { niveau: 'c' } }, R), f1 = A.evaluer({ titre: 'Appartement F3', prix: 80000, surface: 40, cp: '93200', corrections: { niveau: 'c', pieces: 1 } }, R);
+  assert.equal(f3.pieces, 3); assert.equal(f3.travaux.ht - f1.travaux.ht, 1600, 'deux pièces de plus : 2 × 800 €');
+});
+
+test('lecture d\'un texte d\'annonce collé', () => {
+  const x = A.lireTexte('Appartement 2 pièces 38 m²\nSevran (93270)\n89 000 €\nDPE : F\nÀ rénover');
+  assert.deepEqual([x.prix, x.surface, x.pieces, x.cp, x.ville, x.dpe, x.type], [89000, 38, 2, '93270', 'Sevran', 'F', 'appt']);
+  const y = A.lireTexte('Studio 18 m2 - 93140 Bondy - 62 000 €');
+  assert.deepEqual([y.prix, y.surface, y.pieces, y.cp, y.ville], [62000, 18, 1, '93140', 'Bondy']);
+  assert.equal(A.piecesDepuisTexte('Appartement 2 chambres'), 3);
 });

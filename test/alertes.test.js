@@ -54,3 +54,11 @@ test('e-mails de service ignorés : alerte créée, critères avec un prix', () 
   assert.equal(ctx.extraireAnnonces_('no-reply@leboncoin.fr', 'Votre recherche a bien été enregistrée', 'Jusqu\'à 130 000 €', '').length, 0);
   assert.equal(ctx.extraireAnnonces_('annonces@alertes.seloger.com', 'Vos critères', 'Budget\n100 000 €\n130 000 €\nModifier', '').length, 0, 'SeLoger : un prix sans « Voir l\'annonce » n\'est pas une annonce');
 });
+
+test('page d\'annonce lue par le serveur : données structurées et agence', () => {
+  const html = '<html><head><title>Appartement 2 pièces 40 m² - Bondy | leboncoin</title><meta property="og:description" content="Appartement à rénover, DPE G"></head><body><script>{"price":[95000],"zipcode":"93140","city":"Bondy","attributes":[{"key":"square","value":"40"},{"key":"rooms","value":"2"}]}</script></body></html>';
+  const a = ctx.extraireDePage_(html, 'https://www.leboncoin.fr/ad/ventes_immobilieres/123');
+  assert.deepEqual([a.prix, a.surface, a.pieces, a.cp, a.ville, a.dpe], [95000, 40, 2, '93140', 'Bondy', 'G']);
+  const t = lire('bienici.txt').replace('Photo\n', "L'agence CENTURY 21 Exemple vous propose ce bien\nPhoto\n");
+  assert.equal(ctx.extraireAnnonces_('no_reply@bienici.com', 'Une annonce', t, '')[0].agence, 'CENTURY 21 Exemple');
+});

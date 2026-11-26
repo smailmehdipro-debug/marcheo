@@ -40,7 +40,13 @@
       if (l.poste === 'cloisons') Object.assign(l, { artisanId: plaquiste.id, devis: Math.round(l.budget * 1.3), devisDate: jour(-35), facture: Math.round(l.budget * .5), paye: 0, avancement: 50, debut: jour(-15) });
       if (l.poste === 'demo') Object.assign(l, { devis: l.budget, devisDate: jour(-45), facture: l.budget, paye: l.budget, avancement: 100, debut: jour(-30), fin: jour(-24) });
     });
-    b3.travaux = { lignes, utiliserReel: true }; D.enregistrer('biens', b3);
+    b3.travaux = { lignes, utiliserReel: true };
+    const r3 = MDB.compute(S3);
+    b3.avancement = { jalons: { visite: { reelle: jour(-150) }, offre: { reelle: jour(-140) }, compromis: { reelle: jour(-130) }, financement: { reelle: jour(-75) }, autorisation: { reelle: jour(-60) },
+      acte: { reelle: jour(-40) }, assurance: { reelle: jour(-40) }, comptaAchat: { reelle: jour(-10) }, debutTravaux: { reelle: jour(-30) } },
+      depenses: [{ id: 'd1', date: jour(-40), libelle: 'Prix d\'achat', categorie: 'achat', montant: Math.round(r3.achat) }, { id: 'd2', date: jour(-40), libelle: 'Notaire et agence à l\'achat', categorie: 'notaire', montant: Math.round(r3.acq) },
+        { id: 'd3', date: jour(-35), libelle: 'Assurance propriétaire non occupant', categorie: 'annexes', montant: 240 }] };
+    D.enregistrer('biens', b3);
 
     b({ etape: 'repere', source: 'Leboncoin', lien: '', prixAffiche: 62000, sim: sim('box', { adresse: 'Lot de 8 boxes, centre-ville' }), prochaine: { action: 'Demander le règlement de copropriété', date: jour(1) } });
     b({ etape: 'ecarte', motif: 'Prix vendeur trop élevé', source: 'Agence', prixAffiche: 145000, sim: sim('local', { adresse: 'Local commercial, rue principale', achat: 120000 }) });
@@ -57,7 +63,7 @@
     j({ bienId: b3.id, date: jour(-60), type: 'offre', montant: 96000, texte: 'Offre initiale.' });
     j({ bienId: b3.id, date: jour(-58), type: 'contre', montant: 98000, texte: 'Contre-proposition acceptée.' });
 
-    const an = (o, n) => D.enregistrer('annonces', Object.assign({ statutTri: 'nouvelle', alertes: 1, lien: '', recueLe: new Date(Date.now() - n * 86400000).toISOString() }, o));
+    const an = (o, n) => D.enregistrer('annonces', Object.assign({ statutTri: 'nouvelle', alertes: 1, lien: 'https://www.bienici.com/', recueLe: new Date(Date.now() - n * 86400000).toISOString() }, o));
     an({ source: 'SeLoger', titre: 'Appartement 2 pièces à rénover, succession', texte: 'Succession. 2 pièces 42 m² à rénover, 95100 Argenteuil', prix: 79000, surface: 42, cp: '95100', ville: 'Argenteuil' }, 0);
     an({ source: "Bien'ici", titre: 'Studio à rénover', texte: 'Studio 28 m², DPE G, 93600 Aulnay-sous-Bois', prix: 62000, prixPrecedent: 69000, surface: 28, cp: '93600', ville: 'Aulnay-sous-Bois', dpe: 'G' }, 1);
     an({ source: 'Leboncoin', titre: 'Appartement 3 pièces', texte: '3 pièces 58 m² bon état, 92230 Gennevilliers', prix: 149000, surface: 58, cp: '92230', ville: 'Gennevilliers' }, 1);

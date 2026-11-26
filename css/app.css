@@ -404,3 +404,48 @@ a { text-decoration: none; }
 a:hover { text-decoration: underline; text-decoration-color: var(--laiton); text-underline-offset: 3px; }
 .compte-ligne a, .tableau a, .sous-ligne a { color: var(--accent); font-weight: 500; }
 h1, h2, h3, .marque-titre, .titre-texte strong { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
+
+/* Annonces */
+.bouton-vert { background: var(--vert); border-color: var(--vert); color: #fff; }
+.bouton-vert:hover { filter: brightness(1.12); border-color: var(--laiton); text-decoration: none; }
+.bouton-large { display: flex; width: 100%; min-height: 46px; font-size: 1rem; margin-bottom: .8rem; }
+.bilan-annonce { display: flex; flex-wrap: wrap; gap: .3rem .8rem; align-items: baseline; padding: .5rem .7rem; margin-bottom: .6rem; background: var(--surface-2); border-radius: var(--rayon-petit); font-size: .88rem; }
+.tableau-annonces { font-size: .86rem; }
+.tableau-annonces th { white-space: normal; padding: .5rem .55rem; }
+.tableau-annonces td { padding: .45rem .55rem; }
+.tableau-annonces td:first-child { min-width: 170px; max-width: 250px; }
+.tableau-annonces td:last-child { min-width: 120px; max-width: 200px; }
+.tableau-annonces .voyant { white-space: normal; }
+.tableau-annonces td.nombre .sous-ligne { white-space: normal; }
+.tableau-annonces tr.a-examiner td { background: var(--vert-fond); }
+.tableau-annonces tr.a-examiner td:first-child { box-shadow: inset 4px 0 0 var(--vert); }
+.tableau-annonces tr.surligne td { background: var(--accent-doux); }
+.tableau-annonces tr.surligne td:first-child { box-shadow: inset 4px 0 0 var(--laiton); }
+.grille-champs.alignee { align-items: end; }
+@media (max-width: 640px) { .tableau-annonces td:first-child, .tableau-annonces td:last-child { max-width: none; } }
+
+/* Piles pleine largeur, champs alignés, barre d'enregistrement */
+.pile { display: flex; flex-direction: column; gap: .8rem; }
+.pile > .carte + .carte { margin-top: 0; }
+.grille-champs.alignee { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); align-items: start; }
+.grille-champs.alignee > .champ > label:first-child { min-height: 2.6em; display: flex; align-items: flex-end; }
+.grille-champs.alignee > .champ[style*="grid-column"] > label:first-child { min-height: 0; }
+.barre-enregistrer { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: .8rem; flex-wrap: wrap; margin-top: 1rem; padding: .7rem .9rem; background: var(--surface); border: 1px solid var(--laiton); border-radius: var(--rayon); box-shadow: var(--ombre); }
+input.modifie { border-color: var(--orange); background: var(--orange-fond); }
+
+/* Frise chronologique du projet */
+.frise { position: relative; height: 64px; margin: .6rem .6rem 0; }
+.frise-ligne { position: absolute; left: 0; right: 0; top: 30px; height: 3px; background: var(--surface-3); border-radius: 2px; }
+.frise-point { position: absolute; top: 23px; width: 17px; height: 17px; margin-left: -8px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c); }
+.frise-point.fait { background: var(--c); }
+.frise-point.retard { border-color: var(--rouge); box-shadow: 0 0 0 3px var(--rouge-fond); }
+.frise-aujourdhui { position: absolute; top: 4px; bottom: 0; width: 2px; background: var(--laiton); }
+.frise-aujourdhui span { position: absolute; top: -2px; left: 5px; font-size: .72rem; color: var(--laiton); white-space: nowrap; font-weight: 600; }
+.frise-legende { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: .8rem; color: var(--texte-2); margin-top: .4rem; }
+.frise-legende span { display: inline-flex; align-items: center; gap: .35rem; }
+.frise-legende i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.frise-legende i.cercle { border-radius: 50%; border: 2px solid var(--texte-2); background: transparent; }
+.frise-legende i.cercle.plein { background: var(--texte-2); }
+.frise-legende i.cercle.rouge { border-color: var(--rouge); }
+.pastille-groupe { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: .4rem; }
+.tableau tr.ligne-forte td { font-weight: 700; background: var(--surface-2); }
