@@ -43,6 +43,8 @@ function traiter_(action, d, jeton) {
   if (action === 'ecrire') return ecrire_(d.enregistrements || [], utilisateur);
   if (action === 'deconnexion') { supprimerJeton_(jeton); return { fait: true }; }
   if (action === 'lireAnnonce') return lireAnnonce_(String(d.url || ''));
+  if (action === 'deposerPhoto') return deposerPhoto_(String(d.bienId || 'divers'), String(d.nom || 'photo.jpg'), String(d.base64 || ''));
+  if (action === 'lirePhoto') return lirePhoto_(String(d.id || ''));
   throw erreur_('Action inconnue.', 'ACTION');
 }
 
@@ -311,10 +313,26 @@ function completerBienici_(a) {
   return a;
 }
 
-/* À exécuter une fois depuis l'éditeur si « + Annonce » répond « Vous n'êtes pas autorisé à appeler UrlFetchApp.fetch » */
+/* Photos de visite : un dossier Drive « Marchéo — photos », un sous-dossier par projet */
+function dossier_(parent, nom) { var it = parent.getFoldersByName(nom); return it.hasNext() ? it.next() : parent.createFolder(nom); }
+function deposerPhoto_(bienId, nom, base64) {
+  if (!base64 || base64.length > 12000000) throw erreur_('Photo absente ou trop lourde.', 'PHOTO');
+  var d = dossier_(dossier_(DriveApp.getRootFolder(), 'Marchéo — photos'), bienId.replace(/[^\w-]/g, '').slice(0, 40) || 'divers');
+  var f = d.createFile(Utilities.newBlob(Utilities.base64Decode(base64), 'image/jpeg', nom.replace(/[^\w.-]/g, '-').slice(0, 80)));
+  return { id: f.getId() };
+}
+function lirePhoto_(id) {
+  if (!/^[\w-]{10,}$/.test(id)) throw erreur_('Photo inconnue.', 'PHOTO');
+  var f = DriveApp.getFileById(id), p = f.getParents();
+  if (!p.hasNext() || !p.next().getParents().hasNext()) throw erreur_('Photo hors du dossier Marchéo.', 'PHOTO');
+  return { base64: Utilities.base64Encode(f.getBlob().getBytes()) };
+}
+
+/* À exécuter une fois depuis l'éditeur après une mise à jour : demande les autorisations (pages web, Drive pour les photos) */
 function autoriserLectureAnnonces() {
   UrlFetchApp.fetch('https://www.bienici.com/', { muteHttpExceptions: true });
-  Logger.log('Lecture des annonces autorisée.');
+  dossier_(DriveApp.getRootFolder(), 'Marchéo — photos');
+  Logger.log('Autorisations accordées : lecture des annonces et photos.');
 }
 function decoder_(t) { return String(t || '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€').replace(/&#(\d+);/g, function (m, n) { return String.fromCharCode(+n); }); }
 
@@ -345,4 +363,4 @@ function definirMotDePasse(identifiant, motDePasse) {
   Logger.log('Mot de passe défini pour ' + identifiant + '.');
 }
 
-if (typeof module !== 'undefined') module.exports = { depuisBienici_: depuisBienici_, extraireDePage_: extraireDePage_, doPost: doPost, installer: installer, definirMotDePasse: definirMotDePasse, versLigne_: versLigne_, depuisLigne_: depuisLigne_, extraireAnnonces_: extraireAnnonces_, fusionnerAnnonce_: fusionnerAnnonce_ };
+if (typeof module !== 'undefined') module.exports = { deposerPhoto_: deposerPhoto_, lirePhoto_: lirePhoto_, depuisBienici_: depuisBienici_, extraireDePage_: extraireDePage_, doPost: doPost, installer: installer, definirMotDePasse: definirMotDePasse, versLigne_: versLigne_, depuisLigne_: depuisLigne_, extraireAnnonces_: extraireAnnonces_, fusionnerAnnonce_: fusionnerAnnonce_ };

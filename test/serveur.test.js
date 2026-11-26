@@ -24,9 +24,10 @@ function environnement() {
     console, feuilles,
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] ?? null, setProperty: (k, v) => { props[k] = v; }, deleteProperty: k => { delete props[k]; } }) },
     SpreadsheetApp: { create: () => classeur, openById: () => classeur },
-    Utilities: { DigestAlgorithm: { SHA_256: 1 }, Charset: { UTF_8: 1 }, sleep() {}, getUuid: () => crypto.randomUUID(),
+    Utilities: { newBlob: (b, t, n) => ({ bytes: b, getBytes: () => b }), base64Decode: s => Array.from(Buffer.from(s, 'base64')), base64Encode: b => Buffer.from(b).toString('base64'), DigestAlgorithm: { SHA_256: 1 }, Charset: { UTF_8: 1 }, sleep() {}, getUuid: () => crypto.randomUUID(),
       computeDigest: (a, s) => Array.from(crypto.createHash('sha256').update(s, 'utf8').digest()).map(b => b > 127 ? b - 256 : b) },
     UrlFetchApp: { fetch: () => ({ getResponseCode: () => 200, getContentText: () => '' }) },
+    DriveApp: (() => { const fichiers = {}; const dossier = (nom, parent) => { const enfants = {}; const d = { nom, getFoldersByName: n => { const x = enfants[n]; return { hasNext: () => !!x, next: () => x }; }, createFolder: n => (enfants[n] = dossier(n, d)), createFile: blob => { const id = 'f' + (Object.keys(fichiers).length + 1) + 'abcdefghijk'; fichiers[id] = { blob, parent: d }; return { getId: () => id }; }, getParents: () => ({ hasNext: () => !!parent, next: () => parent }) }; return d; }; const racine = dossier('racine', null); return { getRootFolder: () => racine, getFileById: id => { const f = fichiers[id]; if (!f) throw new Error('absent'); return { getBlob: () => f.blob, getParents: () => ({ hasNext: () => true, next: () => f.parent }) }; } }; })(),
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create() {} }) }) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ContentService: { MimeType: { JSON: 1 }, createTextOutput: t => ({ setMimeType: () => ({ texte: t }) }) },
@@ -83,4 +84,15 @@ test('installation, connexion, écriture, lecture, conflit', () => {
   G.definirMotDePasse('direction', 'nouveau-mot-de-passe');
   assert.equal(G.appel('connexion', { identifiant: 'direction', motDePasse: mdp }).code, 'ACCES');
   assert.ok(G.appel('connexion', { identifiant: 'direction', motDePasse: 'nouveau-mot-de-passe' }).ok);
+});
+
+test('photos de visite : dépôt dans Drive et relecture', () => {
+  const G = environnement(); G.installer(); G.definirMotDePasse('direction', 'motdepasse-test');
+  const j = G.appel('connexion', { identifiant: 'direction', motDePasse: 'motdepasse-test' }).resultat.jeton;
+  const image = Buffer.from('image de test').toString('base64');
+  const d = G.appel('deposerPhoto', { bienId: 'b1', nom: 'sejour.jpg', base64: image }, j);
+  assert.ok(d.ok && d.resultat.id, 'photo déposée');
+  const l = G.appel('lirePhoto', { id: d.resultat.id }, j);
+  assert.equal(l.resultat.base64, image, 'photo relue à l\'identique');
+  assert.equal(G.appel('deposerPhoto', { bienId: 'b1', base64: image }, '').code, 'SESSION', 'dépôt refusé sans connexion');
 });

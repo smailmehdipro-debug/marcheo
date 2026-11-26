@@ -323,7 +323,7 @@
   }
 
   /* ================= Fiche bien ================= */
-  const ONGLETS = [['synthese', 'Synthèse'], ['avancement', 'Avancement'], ['simulation', 'Simulation'], ['travaux', 'Travaux'], ['journal', 'Journal'], ['contacts', 'Contacts'], ['pieces', 'Pièces'], ['comparables', 'Comparables']];
+  const ONGLETS = [['synthese', 'Synthèse'], ['visite', 'Visite'], ['avancement', 'Avancement'], ['simulation', 'Simulation'], ['travaux', 'Travaux'], ['journal', 'Journal'], ['contacts', 'Contacts'], ['pieces', 'Pièces'], ['comparables', 'Comparables']];
   function vueBien(c, r) {
     const b = D.obtenir('biens', r.id);
     if (!b) { c.innerHTML = '<div class="vide">Bien introuvable. <a href="#/biens">Retour à la liste</a></div>'; return; }
@@ -333,7 +333,7 @@
     const courant = RANG[b.etape || 'repere'];
     c.innerHTML = `
       <div class="fiche-tete"><div><a class="bouton-lien" href="#/biens">${'‹'} Projets en cours</a><h1>${esc(titreBien(b))}</h1><div class="sous">${esc(typeBien(b))} · ${surfaceBien(b)}${b.source ? ' · ' + esc(b.source) : ''}${b.lien ? ` · <a href="${esc(b.lien)}" target="_blank" rel="noopener">annonce</a>` : ''}</div></div>
-        <div class="actions"><span id="enteteMarge">${voyantEtat(A.etat)}</span><button class="bouton bouton-petit" id="bPdf">PDF</button><button class="bouton bouton-petit" id="bDup">Dupliquer</button><button class="bouton bouton-petit bouton-danger" id="bSuppr">Supprimer</button></div></div>
+        <div class="actions"><span id="enteteMarge">${voyantEtat(A.etat)}</span><button class="bouton bouton-petit bouton-vert" id="bVisite">${b.visiteBrouillon ? 'Reprendre la visite' : 'Visite'}</button><button class="bouton bouton-petit" id="bPdf">PDF</button><button class="bouton bouton-petit" id="bDup">Dupliquer</button><button class="bouton bouton-petit bouton-danger" id="bSuppr">Supprimer</button></div></div>
       <div class="etapes" role="group" aria-label="Étape">${ETAPES.map((e, i) => `<button data-etape="${e[0]}" class="${e[0] === 'ecarte' ? 'ecarte ' : ''}${e[0] === (b.etape || 'repere') ? 'courante' : (b.etape !== 'ecarte' && i < courant ? 'passee' : '')}" aria-pressed="${e[0] === (b.etape || 'repere')}">${e[1]}</button>`).join('')}</div>
       ${b.etape === 'ecarte' && b.motif ? `<div class="info-bandeau">Écarté : ${esc(b.motif)}</div>` : ''}
       <nav class="onglets" role="tablist">${ONGLETS.map(x => `<button role="tab" class="${x[0] === o ? 'actif' : ''}" data-onglet="${x[0]}">${x[1]}${x[0] === 'journal' ? ' ' + compteJournal(b) : x[0] === 'pieces' ? ' ' + compteurPieces(b) : ''}</button>`).join('')}</nav>
@@ -341,6 +341,7 @@
     $$('[data-etape]', c).forEach(x => x.onclick = () => { if (x.dataset.etape !== b.etape) changerEtape(b, x.dataset.etape); });
     $$('[data-onglet]', c).forEach(x => x.onclick = () => aller('#/bien/' + b.id + '/' + x.dataset.onglet));
     $('#bPdf').onclick = () => pdf(b);
+    $('#bVisite').onclick = () => ouvrirVisite(b);
     $('#bDup').onclick = () => { const n = clone(b); delete n.id; delete n._maj; n.sim.adresse = (n.sim.adresse || '') + ' (copie)'; n.etape = 'etude'; const x = D.enregistrer('biens', n); aller('#/bien/' + x.id); };
     $('#bSuppr').onclick = () => confirmer('Supprimer définitivement ce bien, son journal et ses relances ?', () => {
       D.liste('journal').filter(j => j.bienId === b.id).forEach(j => D.supprimer('journal', j.id));
@@ -348,7 +349,7 @@
       D.supprimer('biens', b.id); aller('#/biens');
     });
     const z = $('#ongletContenu');
-    ({ synthese: ongletSynthese, avancement: ongletAvancement, simulation: ongletSimulation, travaux: ongletTravaux, journal: ongletJournal, contacts: ongletContacts, pieces: ongletPieces, comparables: ongletComparables }[o])(z, b);
+    ({ synthese: ongletSynthese, visite: ongletVisite, avancement: ongletAvancement, simulation: ongletSimulation, travaux: ongletTravaux, journal: ongletJournal, contacts: ongletContacts, pieces: ongletPieces, comparables: ongletComparables }[o])(z, b);
   }
   const compteJournal = b => { const n = D.liste('journal').filter(j => j.bienId === b.id).length; return n ? `<small class="discret">${n}</small>` : ''; };
   const compteurPieces = b => `<small class="discret">${PIECES.filter(p => (b.pieces[p[0]] || {}).ok).length}/${PIECES.length}</small>`;
@@ -500,7 +501,7 @@
       $('#trvBase').textContent = eur(r.tr.base); $('#trvRef').textContent = eur(r.tr.ref); $('#trvTot').textContent = eur(r.tr.tot);
       const note = $('#trvReelNote'); note.hidden = !r.reel;
       if (r.reel && S.trvForfait != null && !(b.travaux && b.travaux.utiliserReel)) {
-        note.innerHTML = 'Le calcul retient le budget forfaitaire de l\'annonce : <b>' + eur(r.T) + '</b>, aléas compris. Les postes ci-dessus ne comptent pas. <button type="button" class="bouton-lien" id="trvDetail">Chiffrer poste par poste</button>';
+        note.innerHTML = 'Le calcul retient le budget forfaitaire ' + (S.trvForfaitOrigine === 'visite' ? 'de la visite' : 'de l\'annonce') + ' : <b>' + eur(r.T) + '</b>, aléas compris. Les postes ci-dessus ne comptent pas. <button type="button" class="bouton-lien" id="trvDetail">Chiffrer poste par poste</button>';
         $('#trvDetail').onclick = () => { S.trvForfait = null; maj(); };
       } else if (r.reel) note.textContent = 'Le calcul retient le coût réel du chantier : ' + eur(r.T) + ' (onglet Travaux).';
       $('#resultats').innerHTML = panneauResultats(A, A.S);
@@ -717,6 +718,193 @@
       const q = $('#cQuartier'); if (q) q.onclick = () => { b.sim.pm2 = Math.round(C.moy); sauverMaintenant('biens', b); notifier('Prix du quartier mis à jour.', 'succes'); dessiner(); };
     };
     dessiner();
+  }
+
+  /* ================= Mode Visite (téléphone) ================= */
+  /* Parcours en QCM, une étape par écran, photos à chaque étape. Les réponses cochent les postes de travaux,
+     fixent le niveau, les charges, la taxe foncière et le DPE du projet. */
+  const ETAT4 = ['Neufs', 'Bon état', 'Passables', 'À refaire'];
+  const VISITE = [
+    { id: 'arrivee', t: 'Arrivée et immeuble', aide: 'Photo de la façade et de l\'entrée en arrivant.', q: [
+      { id: 'communs', l: 'Parties communes', o: ['Bon état', 'Passables', 'Dégradées'] },
+      { id: 'facade', l: 'Façade et toiture vues de dehors', o: ['Bon état', 'Passables', 'Dégradées'] },
+      { id: 'etage', l: 'Étage', o: ['RDC', '1er', '2e', '3e', '4e et +'] },
+      { id: 'ascenseur', l: 'Ascenseur', o: ['Oui', 'Non'] }] },
+    { id: 'sejour', t: 'Pièce de vie', q: [
+      { id: 'sols', l: 'Sols', o: ETAT4 },
+      { id: 'murs', l: 'Murs et plafonds', o: ['Bon état', 'À rafraîchir', 'À reprendre (enduits, fissures)'] },
+      { id: 'fenetres', l: 'Fenêtres', o: ['Double vitrage récent', 'Double vitrage ancien', 'Simple vitrage'] },
+      { id: 'lumiere', l: 'Luminosité', o: ['Lumineux', 'Moyen', 'Sombre'] }] },
+    { id: 'chambre', t: 'Chambre', saut: 'Pas de chambre (studio)', q: [
+      { id: 'sols', l: 'Sols', o: ETAT4 },
+      { id: 'murs', l: 'Murs et plafonds', o: ['Bon état', 'À rafraîchir', 'À reprendre (enduits, fissures)'] },
+      { id: 'fenetres', l: 'Fenêtres', o: ['Double vitrage récent', 'Double vitrage ancien', 'Simple vitrage'] }] },
+    { id: 'cuisine', t: 'Cuisine', q: [
+      { id: 'etat', l: 'État', o: ['Récente', 'Correcte', 'À refaire', 'Absente'] },
+      { id: 'type', l: 'Disposition', o: ['Ouverte', 'Séparée', 'Coin cuisine'] }] },
+    { id: 'sdb', t: 'Salle d\'eau et WC', q: [
+      { id: 'etat', l: 'Salle d\'eau', o: ['Récente', 'Correcte', 'À refaire'] },
+      { id: 'wc', l: 'WC', o: ['Séparés, bon état', 'Séparés, à refaire', 'Dans la salle d\'eau'] },
+      { id: 'ventilation', l: 'Ventilation', o: ['VMC', 'Fenêtre', 'Aucune'] }] },
+    { id: 'chauffage', t: 'Chauffage et eau chaude', q: [
+      { id: 'energie', l: 'Chauffage', o: ['Gaz, chaudière', 'Électrique', 'Pompe à chaleur', 'Collectif'] },
+      { id: 'mode', l: 'Installation', o: ['Individuelle', 'Collective'] },
+      { id: 'radiateurs', l: 'Radiateurs', o: ['Neufs', 'Bon état', 'Passables', 'À changer'] },
+      { id: 'ecs', l: 'Eau chaude', o: ['Chaudière', 'Ballon électrique', 'Collective'] },
+      { id: 'ballon', l: 'Ballon ou chaudière', o: ['Récent', 'Ancien', 'Sans objet'] }] },
+    { id: 'electricite', t: 'Électricité', q: [
+      { id: 'tableau', l: 'Tableau électrique', o: ['Récent, aux normes', 'Ancien', 'Vétuste, à fusibles'] },
+      { id: 'terre', l: 'Prises reliées à la terre', o: ['Oui', 'En partie', 'Non'] }] },
+    { id: 'eau', t: 'Plomberie et humidité', q: [
+      { id: 'humidite', l: 'Traces d\'humidité', o: ['Aucune', 'Légères', 'Importantes'] },
+      { id: 'fuites', l: 'Fuites ou dégâts des eaux', o: ['Non', 'Traces anciennes', 'Oui'] },
+      { id: 'canalisations', l: 'Canalisations visibles', o: ['Récentes', 'Anciennes', 'Plomb'] }] },
+    { id: 'questions', t: 'Questions à poser', aide: 'À poser en fin de rendez-vous.', photo: false, q: [
+      { id: 'dpe', l: 'DPE', o: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'Inconnu'] },
+      { id: 'charges', l: 'Charges de copropriété par an', o: ['Moins de 600 €', '600 à 1 200 €', '1 200 à 2 000 €', 'Plus de 2 000 €'], saisie: '€ par an, si connu' },
+      { id: 'travauxVotes', l: 'Travaux votés en copropriété', o: ['Aucun', 'Oui', 'Ne sait pas'], saisie: 'montant, si connu' },
+      { id: 'procedures', l: 'Procédures en cours dans la copropriété', o: ['Non', 'Oui', 'Ne sait pas'] },
+      { id: 'taxeFonciere', l: 'Taxe foncière par an', o: [], saisie: '€ par an' },
+      { id: 'motif', l: 'Motif de la vente', o: ['Succession', 'Mutation', 'Divorce', 'Investisseur', 'Autre'] },
+      { id: 'enVente', l: 'En vente depuis', o: ['Moins d\'1 mois', '1 à 3 mois', '3 à 6 mois', 'Plus de 6 mois'] },
+      { id: 'offres', l: 'Offres déjà reçues', o: ['Aucune', 'Oui'] },
+      { id: 'negociable', l: 'Prix négociable', o: ['Oui', 'Peut-être', 'Non'] },
+      { id: 'occupation', l: 'Occupation', o: ['Libre', 'Occupé par le vendeur', 'Loué'] }] },
+    { id: 'bilan', t: 'Bilan', photo: false, q: [
+      { id: 'suite', l: 'Suite à donner', o: ['Faire une offre', 'Rappeler', 'Écarter'] }] }
+  ];
+  const CHARGES_MILIEU = { 'Moins de 600 €': 450, '600 à 1 200 €': 900, '1 200 à 2 000 €': 1600, 'Plus de 2 000 €': 2500 };
+  /* Réponses → postes de travaux, niveau, alertes */
+  function analyseVisite(R, b) {
+    const v = (e, q) => (R[e] || {})[q] || '', postes = new Set(['nett', 'peint', 'deco']), alertes = [], lourds = new Set();
+    const ajoute = (p, lourd) => { postes.add(p); if (lourd) lourds.add(p); };
+    ['sejour', 'chambre'].forEach(e => {
+      if (R[e] && R[e]._saute) return;
+      if (['Passables', 'À refaire'].includes(v(e, 'sols'))) ajoute('sols');
+      if (v(e, 'murs').startsWith('À reprendre')) { ajoute('enduit', true); ajoute('peint'); }
+      if (v(e, 'fenetres') === 'Simple vitrage') ajoute('fen', true);
+    });
+    if (['À refaire', 'Absente'].includes(v('cuisine', 'etat'))) ajoute('cuis', true);
+    if (v('sdb', 'etat') === 'À refaire') ajoute('sdb', true);
+    if (v('sdb', 'wc') === 'Séparés, à refaire') ajoute('wc');
+    if (v('sdb', 'ventilation') === 'Aucune') ajoute('vmc');
+    if (['Passables', 'À changer'].includes(v('chauffage', 'radiateurs'))) ajoute('chauf', v('chauffage', 'radiateurs') === 'À changer');
+    if (v('chauffage', 'ballon') === 'Ancien') ajoute('ecs');
+    if (v('electricite', 'tableau') !== '' && v('electricite', 'tableau') !== 'Récent, aux normes' || v('electricite', 'terre') === 'Non') ajoute('elec', true);
+    if (v('eau', 'fuites') === 'Oui' || ['Anciennes', 'Plomb'].includes(v('eau', 'canalisations'))) ajoute('plomb', true);
+    if (v('eau', 'humidite') === 'Importante' || v('eau', 'humidite') === 'Importantes') { ajoute('macon', true); alertes.push('Humidité importante : chercher la cause avant toute offre.'); }
+    if (v('eau', 'canalisations') === 'Plomb') alertes.push('Canalisations en plomb : à remplacer.');
+    if (v('electricite', 'tableau') === 'Vétuste, à fusibles') alertes.push('Électricité vétuste : réfection complète.');
+    if (v('questions', 'procedures') === 'Oui') alertes.push('Procédure en cours dans la copropriété : demander les procès-verbaux.');
+    if (v('questions', 'travauxVotes') === 'Oui') alertes.push('Travaux votés : qui les paie ? À négocier dans le prix.');
+    if (v('questions', 'occupation') === 'Loué') alertes.push('Bien loué : vente occupée, délai de libération.');
+    if (['Dégradées'].includes(v('arrivee', 'communs')) || v('arrivee', 'facade') === 'Dégradées') alertes.push('Immeuble dégradé : risque de travaux de copropriété.');
+    if (['F', 'G'].includes(v('questions', 'dpe'))) alertes.push('DPE ' + v('questions', 'dpe') + (v('questions', 'dpe') === 'G' ? ' : location interdite depuis 2025' : ' : location interdite à partir de 2028') + '. Argument de négociation ; viser une meilleure étiquette après travaux.');
+    const niveau = lourds.size >= 5 || (lourds.has('elec') && lourds.has('plomb') && lourds.has('macon')) ? 'l' : lourds.size >= 2 ? 'c' : 'r';
+    /* Budgets : au m² selon les critères, et poste par poste selon les repères */
+    const S = M.normalize(clone(b.sim)), C = Object.assign({}, MA.CRITERES_DEF, reglages().criteres || {}), BT = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}), bt = BT[niveau];
+    const pieces = R.chambre && R.chambre._saute ? 1 : Math.max(+S.pieces || 1, R.chambre && Object.keys(R.chambre).length ? 2 : 1);
+    const budgetM2 = Math.round(Math.max(+bt.min || 0, (+bt.m2 || 0) * S.surf + (+bt.piece || 0) * pieces) * (1 + S.aleas / 100));
+    M.W.forEach(i => { if (S.w[i.id]) { S.w[i.id].on = M.vis(i, S.type) && postes.has(i.id); S.w[i.id].val = null; } });
+    S.niveau = niveau; S.trvForfait = null; S.trvReel = null;
+    const budgetPostes = Math.round(M.travaux(S).tot);
+    return { postes: [...postes], niveau, alertes, budgetM2, budgetPostes, pieces };
+  }
+  function compteRendu(R) {
+    return VISITE.filter(e => e.id !== 'bilan').map(e => {
+      const x = R[e.id] || {}; if (x._saute) return e.t + ' : sans objet.';
+      const l = e.q.map(q => x[q.id] || x[q.id + '_saisie'] ? q.l + ' : ' + [x[q.id], x[q.id + '_saisie'] ? x[q.id + '_saisie'] + (q.saisie && q.saisie.startsWith('€') ? ' €' : '') : ''].filter(Boolean).join(', ') : '').filter(Boolean);
+      return l.length ? e.t + ' — ' + l.join(' ; ') + (x._note ? ' ; note : ' + x._note : '') + '.' : '';
+    }).filter(Boolean).join('\n');
+  }
+  function ouvrirVisite(b) {
+    b.visiteBrouillon = b.visiteBrouillon || { debut: new Date().toISOString(), etape: 0, reponses: {}, photos: [], budget: 'm2' };
+    const V = b.visiteBrouillon, ecran = document.createElement('div');
+    ecran.className = 'visite'; document.body.appendChild(ecran);
+    const etapes = () => VISITE;
+    const sauver = () => sauverPlusTard('biens', b, 300);
+    const dessiner = () => {
+      const E = etapes()[V.etape], R = V.reponses[E.id] = V.reponses[E.id] || {}, A = E.id === 'bilan' ? analyseVisite(V.reponses, b) : null;
+      const photos = V.photos.filter(p => p.etape === E.id);
+      const nbRep = e => Object.keys(V.reponses[e.id] || {}).filter(k => !k.startsWith('_')).length;
+      ecran.innerHTML = `
+        <header class="visite-tete"><button class="bouton-icone" data-v="fermer" aria-label="Fermer">${I.fermer}</button><div><strong>Visite</strong><small>${esc(titreBien(b))}</small></div><span class="visite-chrono">${Math.max(0, Math.round((Date.now() - new Date(V.debut)) / 60000))} min</span></header>
+        <nav class="visite-etapes">${etapes().map((e, i) => `<button data-aller="${i}" class="${i === V.etape ? 'actif' : (V.reponses[e.id] && (nbRep(e) || V.reponses[e.id]._saute)) ? 'fait' : ''}" aria-label="${esc(e.t)}"></button>`).join('')}</nav>
+        <main class="visite-corps">
+          <h2>${esc(E.t)}</h2>${E.aide ? `<p class="aide">${esc(E.aide)}</p>` : ''}
+          ${E.saut ? `<button class="puce${R._saute ? ' choisie' : ''}" data-saut>${esc(E.saut)}</button>` : ''}
+          ${R._saute ? '' : E.q.map(q => `<div class="visite-q"><div class="visite-l">${esc(q.l)}</div><div class="puces">${q.o.map(o => `<button class="puce${R[q.id] === o ? ' choisie' : ''}" data-q="${q.id}" data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div>${q.saisie ? `<input class="visite-saisie" data-saisie="${q.id}" inputmode="numeric" placeholder="${esc(q.saisie)}" value="${esc(R[q.id + '_saisie'] || '')}">` : ''}</div>`).join('')}
+          ${A ? `<div class="visite-bilan">
+              <div class="compte">${ligneCompte('Niveau de travaux', M.NIVEAUX[A.niveau])}${ligneCompte('Budget au m² (tes critères)', eur(A.budgetM2), { s: A.pieces + ' pièce(s), aléas compris' })}${ligneCompte('Budget poste par poste (repères)', eur(A.budgetPostes))}</div>
+              <div class="visite-l" style="margin-top:.8rem">Postes à prévoir</div><div class="etiquettes">${A.postes.map(p => `<span class="etiquette">${esc((M.W.find(i => i.id === p) || { l: p }).l.split(',')[0])}</span>`).join('')}</div>
+              <div class="segments" style="margin:.6rem 0"><button data-budget="m2" aria-pressed="${V.budget !== 'postes'}">Retenir le budget au m²</button><button data-budget="postes" aria-pressed="${V.budget === 'postes'}">Retenir le détail</button></div>
+              ${A.alertes.map(x => `<div class="alerte-bandeau">${esc(x)}</div>`).join('')}
+              ${etapes().filter(e => !['bilan'].includes(e.id) && !nbRep(e) && !(V.reponses[e.id] || {})._saute).length ? `<p class="aide orange">Étapes sans réponse : ${etapes().filter(e => e.id !== 'bilan' && !nbRep(e) && !(V.reponses[e.id] || {})._saute).map(e => e.t).join(', ')}.</p>` : ''}
+            </div>` : ''}
+          ${E.photo === false ? '' : `<div class="visite-photos">${photos.map(p => `<img data-photo="${p.id}" alt="Photo ${esc(E.t)}">`).join('')}<label class="bouton visite-photo">Photo<input type="file" accept="image/*" capture="environment" multiple hidden data-prise></label></div>`}
+          <textarea class="visite-note" data-note rows="2" placeholder="Note (facultatif)">${esc(R._note || '')}</textarea>
+        </main>
+        <footer class="visite-pied"><button class="bouton" data-v="prec"${V.etape === 0 ? ' disabled' : ''}>‹ Précédent</button>${E.id === 'bilan' ? '<button class="bouton bouton-principal" data-v="fin">Enregistrer la visite</button>' : '<button class="bouton bouton-principal" data-v="suiv">Suivant ›</button>'}</footer>`;
+      $$('img[data-photo]', ecran).forEach(img => { const m = V.photos.find(p => p.id === img.dataset.photo); MarcheoPhotos.url(m).then(u => { if (u) img.src = u; }).catch(() => {}); });
+      $$('[data-q]', ecran).forEach(x => x.onclick = () => { R[x.dataset.q] = R[x.dataset.q] === x.dataset.o ? '' : x.dataset.o; sauver(); dessiner(); });
+      $$('[data-saisie]', ecran).forEach(x => x.oninput = () => { R[x.dataset.saisie + '_saisie'] = x.value.replace(/[^\d]/g, ''); sauver(); });
+      const s = $('[data-saut]', ecran); if (s) s.onclick = () => { R._saute = !R._saute; sauver(); dessiner(); };
+      $('[data-note]', ecran).oninput = e => { R._note = e.target.value; sauver(); };
+      $$('[data-budget]', ecran).forEach(x => x.onclick = () => { V.budget = x.dataset.budget; sauver(); dessiner(); });
+      const prise = $('[data-prise]', ecran);
+      if (prise) prise.onchange = async () => { for (const f of prise.files) { try { V.photos.push(await MarcheoPhotos.ajouter(b.id, E.id, f)); } catch (e) { notifier(e.message, 'erreur'); } } sauverMaintenant('biens', b); dessiner(); };
+      $$('[data-aller]', ecran).forEach(x => x.onclick = () => { V.etape = +x.dataset.aller; sauver(); dessiner(); });
+      $('[data-v="fermer"]', ecran).onclick = () => { sauverMaintenant('biens', b); ecran.remove(); notifier('Visite gardée en brouillon : « Reprendre la visite » dans l\'onglet Visite.'); afficher(); };
+      $('[data-v="prec"]', ecran).onclick = () => { V.etape = Math.max(0, V.etape - 1); sauver(); dessiner(); };
+      const suiv = $('[data-v="suiv"]', ecran); if (suiv) suiv.onclick = () => { V.etape = Math.min(etapes().length - 1, V.etape + 1); sauver(); dessiner(); };
+      const fin = $('[data-v="fin"]', ecran); if (fin) fin.onclick = () => { enregistrerVisite(b, analyseVisite(V.reponses, b)); ecran.remove(); aller('#/bien/' + b.id + '/visite'); afficher(); };
+      $('.visite-corps', ecran).scrollTop = 0;
+    };
+    dessiner();
+  }
+  /* Fin de visite : tout part dans le projet */
+  function enregistrerVisite(b, A) {
+    const V = b.visiteBrouillon, R = V.reponses, q = (e, k) => (R[e] || {})[k] || '', saisie = (e, k) => +((R[e] || {})[k + '_saisie'] || 0);
+    const S = b.sim = M.normalize(b.sim);
+    M.W.forEach(i => { if (S.w[i.id] && M.vis(i, S.type)) { S.w[i.id].on = A.postes.includes(i.id); S.w[i.id].val = null; } });
+    S.niveau = A.niveau;
+    S.trvForfait = V.budget === 'postes' ? null : A.budgetM2; S.trvForfaitOrigine = 'visite';
+    const charges = saisie('questions', 'charges') || CHARGES_MILIEU[q('questions', 'charges')] || 0;
+    if (charges && S.x.copro) S.x.copro = { on: true, val: Math.round(charges * S.duree / 12 / 50) * 50 };
+    const tf = saisie('questions', 'taxeFonciere');
+    if (tf && S.x.tf) S.x.tf = { on: true, val: Math.round(tf * S.duree / 12 / 50) * 50 };
+    if (q('questions', 'dpe') && q('questions', 'dpe') !== 'Inconnu') b.dpe = q('questions', 'dpe');
+    b.visite = Object.assign({}, V, { fin: new Date().toISOString(), analyse: A, chargesAnnuelles: charges || null, taxeFonciere: tf || null });
+    delete b.visiteBrouillon;
+    const suite = q('bilan', 'suite');
+    if (RANG[b.etape || 'repere'] < RANG.visite) b.etape = 'visite';
+    b.avancement = b.avancement || { jalons: {}, depenses: [] }; b.avancement.jalons = b.avancement.jalons || {};
+    b.avancement.jalons.visite = Object.assign({}, b.avancement.jalons.visite, { reelle: aujourdhui() });
+    if (suite === 'Faire une offre') b.prochaine = { action: 'Faire une offre', date: aujourdhui() };
+    if (suite === 'Rappeler') { b.prochaine = { action: 'Rappeler après la visite', date: jours(aujourdhui(), 1) }; D.enregistrer('relances', { date: jours(aujourdhui(), 1), objet: 'Rappeler après la visite', bienId: b.id, contactId: ((b.liens || [])[0] || {}).contactId || '', fait: false }); }
+    if (suite === 'Écarter') { b.etape = 'ecarte'; b.motif = 'Après visite' + (A.alertes[0] ? ' : ' + A.alertes[0] : ''); }
+    sauverMaintenant('biens', b); cacheAnalyse.clear();
+    D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'visite', texte: 'Visite (' + Math.max(1, Math.round((Date.now() - new Date(V.debut)) / 60000)) + ' min, ' + V.photos.length + ' photo(s)). Travaux : ' + M.NIVEAUX[A.niveau].toLowerCase() + ', ' + eur(V.budget === 'postes' ? A.budgetPostes : A.budgetM2) + '.\n' + compteRendu(R) + (A.alertes.length ? '\nPoints d\'attention : ' + A.alertes.join(' ') : ''), auto: true });
+    notifier('Visite enregistrée : simulation, travaux, charges et journal mis à jour.', 'succes');
+  }
+  function ongletVisite(z, b) {
+    const V = b.visite, B = b.visiteBrouillon;
+    if (!V && !B) { z.innerHTML = `<div class="vide"><p>Pas encore de visite.</p><button class="bouton bouton-vert bouton-large" id="viDemarrer">Démarrer la visite</button><p class="aide">Pensé pour le téléphone : une étape par écran, réponses en un toucher, photos à chaque étape. Environ 10 minutes pour un studio.</p></div>`; $('#viDemarrer').onclick = () => ouvrirVisite(b); return; }
+    const X = V || B, A = V ? V.analyse : analyseVisite(B.reponses, b);
+    z.innerHTML = `
+      ${B ? `<div class="info-bandeau">Visite en cours, commencée le ${dateFr(B.debut.slice(0, 10))}. <button class="bouton bouton-petit bouton-principal" id="viReprendre">Reprendre la visite</button></div>` : ''}
+      ${V ? `<div class="actions" style="margin-bottom:.8rem"><button class="bouton" id="viRefaire">Refaire une visite</button><span class="discret">Visite du ${dateFr(V.fin.slice(0, 10))}, ${Math.max(1, Math.round((new Date(V.fin) - new Date(V.debut)) / 60000))} min</span></div>` : ''}
+      <div class="indicateurs">
+        ${indic('Niveau de travaux', M.NIVEAUX[A.niveau])}
+        ${indic('Budget travaux', eur(X.budget === 'postes' ? A.budgetPostes : A.budgetM2), { detail: X.budget === 'postes' ? 'détail poste par poste' : 'au m², selon tes critères' })}
+        ${indic('Points d\'attention', A.alertes.length, { etat: A.alertes.length ? 'orange' : '' })}
+        ${indic('Photos', X.photos.length)}
+      </div>
+      ${A.alertes.map(x => `<div class="alerte-bandeau">${esc(x)}</div>`).join('')}
+      ${VISITE.filter(e => e.id !== 'bilan').map(e => { const R = X.reponses[e.id] || {}, ph = X.photos.filter(p => p.etape === e.id); if (!Object.keys(R).length && !ph.length) return ''; return `<div class="carte"><h2>${esc(e.t)}</h2>${R._saute ? '<p class="discret">Sans objet.</p>' : `<div class="compte">${e.q.filter(q => R[q.id] || R[q.id + '_saisie']).map(q => ligneCompte(esc(q.l), esc([R[q.id], R[q.id + '_saisie'] ? Number(R[q.id + '_saisie']).toLocaleString('fr-FR') + ' €' : ''].filter(Boolean).join(' · ')))).join('')}</div>`}${R._note ? `<p class="aide">Note : ${esc(R._note)}</p>` : ''}${ph.length ? `<div class="visite-photos">${ph.map(p => `<img data-photo="${p.id}" alt="">`).join('')}</div>` : ''}</div>`; }).join('')}`;
+    $$('img[data-photo]', z).forEach(img => { const m = X.photos.find(p => p.id === img.dataset.photo); MarcheoPhotos.url(m).then(u => { if (u) { img.src = u; img.onclick = () => window.open(u, '_blank'); } }).catch(() => { img.alt = 'Photo non disponible sur cet appareil'; }); });
+    const rp = $('#viReprendre'); if (rp) rp.onclick = () => ouvrirVisite(b);
+    const rf = $('#viRefaire'); if (rf) rf.onclick = () => confirmer('Commencer une nouvelle visite ? Les réponses de la précédente restent dans le journal.', () => { b.visiteBrouillon = null; ouvrirVisite(b); });
   }
 
   /* ================= Projet : avancement, budget, comptabilité ================= */

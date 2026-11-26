@@ -14,8 +14,9 @@ function serveur() {
   const ctx = { journal: [],
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] ?? null, setProperty: (k, v) => { props[k] = v; }, deleteProperty: k => { delete props[k]; } }) },
     SpreadsheetApp: { create: () => cl, openById: () => cl },
-    Utilities: { DigestAlgorithm: {}, Charset: {}, sleep() {}, getUuid: () => crypto.randomUUID(), computeDigest: (a, s) => Array.from(crypto.createHash('sha256').update(s, 'utf8').digest()) },
+    Utilities: { newBlob: (b) => ({ getBytes: () => b }), base64Decode: s => Array.from(Buffer.from(s, 'base64')), base64Encode: b => Buffer.from(b).toString('base64'), DigestAlgorithm: {}, Charset: {}, sleep() {}, getUuid: () => crypto.randomUUID(), computeDigest: (a, s) => Array.from(crypto.createHash('sha256').update(s, 'utf8').digest()) },
     UrlFetchApp: { fetch: () => ({ getResponseCode: () => 200, getContentText: () => '' }) },
+    DriveApp: (() => { const fichiers = {}; const dossier = (nom, parent) => { const enfants = {}; const d = { nom, getFoldersByName: n => { const x = enfants[n]; return { hasNext: () => !!x, next: () => x }; }, createFolder: n => (enfants[n] = dossier(n, d)), createFile: blob => { const id = 'f' + (Object.keys(fichiers).length + 1) + 'abcdefghijk'; fichiers[id] = { blob, parent: d }; return { getId: () => id }; }, getParents: () => ({ hasNext: () => !!parent, next: () => parent }) }; return d; }; const racine = dossier('racine', null); return { getRootFolder: () => racine, getFileById: id => { const f = fichiers[id]; if (!f) throw new Error('absent'); return { getBlob: () => f.blob, getParents: () => ({ hasNext: () => true, next: () => f.parent }) }; } }; })(),
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create() {} }) }) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ContentService: { MimeType: {}, createTextOutput: t => ({ setMimeType: () => t }) }, Logger: { log: m => ctx.journal.push(m) } };
