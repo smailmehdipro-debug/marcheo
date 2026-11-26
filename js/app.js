@@ -728,7 +728,8 @@
      fixent le niveau, les charges, la taxe foncière et le DPE du projet. */
   const ETAT4 = ['Neufs', 'Bon état', 'Passables', 'À refaire'];
   const VISITE = [
-    { id: 'arrivee', t: 'Arrivée et immeuble', aide: 'Photo de la façade et de l\'entrée en arrivant.', q: [
+    { id: 'arrivee', t: 'Arrivée et immeuble', q: [
+      { id: 'devanture', l: 'Photo de la devanture', o: [], photoSeule: true },
       { id: 'typologie', l: 'Typologie', o: ['Studio', 'F2', 'F3 ou plus'] },
       { id: 'communs', l: 'Parties communes', o: ['Bon état', 'Passables', 'Dégradées'] },
       { id: 'facade', l: 'Façade et toiture vues de dehors', o: ['Bon état', 'Passables', 'Dégradées'] },
@@ -840,7 +841,7 @@
       const { e: E, q: Q, rang, total } = P[V.point], R = V.reponses[E.id] = V.reponses[E.id] || {};
       const bilan = E.id === 'bilan', A = bilan ? analyseVisite(V.reponses, b) : null;
       const photos = V.photos.filter(p => p.etape === E.id && (p.point || '') === Q.id);
-      const repondu = Q.o.length ? !!R[Q.id] : !!R[Q.id + '_saisie'];
+      const repondu = Q.photoSeule ? photos.length > 0 : Q.o.length ? !!R[Q.id] : !!R[Q.id + '_saisie'];
       const faits = P.filter(x => (V.reponses[x.e.id] || {})[x.q.id] || (V.reponses[x.e.id] || {})[x.q.id + '_saisie']).length;
       ecran.innerHTML = `
         <header class="visite-tete"><button class="bouton-icone" data-v="fermer" aria-label="Fermer">${I.fermer}</button><div><strong>Visite</strong><small>${esc(titreBien(b))}</small></div><button class="bouton bouton-petit visite-sommaire-bouton" data-v="sommaire">Sommaire</button><span class="visite-chrono">${Math.max(0, Math.round((Date.now() - new Date(V.debut)) / 60000))} min</span></header>
@@ -875,7 +876,7 @@
       const no = $('[data-note]', ecran); if (no) no.oninput = () => { R[Q.id + '_note'] = no.value; sauver(); };
       $$('[data-budget]', ecran).forEach(x => x.onclick = () => { V.budget = x.dataset.budget; sauver(); dessiner(); });
       const prise = $('[data-prise]', ecran);
-      if (prise) prise.onchange = async () => { clearTimeout(minuteurAvance); for (const f of prise.files) { try { const m = await MarcheoPhotos.ajouter(b.id, E.id, f); m.point = Q.id; V.photos.push(m); } catch (err) { notifier(err.message, 'erreur'); } } sauverMaintenant('biens', b); dessiner(); };
+      if (prise) prise.onchange = async () => { clearTimeout(minuteurAvance); for (const f of prise.files) { try { const m = await MarcheoPhotos.ajouter(b.id, E.id, f); m.point = Q.id; V.photos.push(m); } catch (err) { notifier(err.message, 'erreur'); } } if (Q.photoSeule) R[Q.id] = 'Photo prise'; sauverMaintenant('biens', b); dessiner(); };
       $$('[data-saut-point]', ecran).forEach(x => x.onclick = () => aller_(+x.dataset.sautPoint));
       $('[data-v="sommaire"]', ecran).onclick = () => { clearTimeout(minuteurAvance); sommaire = !sommaire; dessiner(); };
       $('[data-v="fermer"]', ecran).onclick = () => { clearTimeout(minuteurAvance); sauverMaintenant('biens', b); ecran.remove(); notifier('Visite gardée en brouillon : « Reprendre la visite » ' + (MODE_VISITE ? 'dans la liste.' : 'sur la fiche du projet.')); afficher(); };
@@ -1235,23 +1236,11 @@
     return b;
   }
   /* Ajout : coller le lien (lecture par le serveur) et, si le site bloque, le texte de la page */
-  /* Bouton de favori « Envoyer à Marchéo » : lu par le navigateur de l'utilisateur sur la page qu'il consulte.
-     Données structurées quand le site en publie (Leboncoin, JSON-LD), sinon texte de la page analysé par Marchéo. */
-  function favoriMarcheo(cible, memeOnglet) {
-    cible = cible || location.origin + location.pathname + '#/annonces/importer/';
-    const ouvrir = memeOnglet ? 'location.assign' : 'window.open';
-    const code = `(()=>{const d=document,x={lien:location.href};try{const n=d.getElementById('__NEXT_DATA__');const ad=n&&JSON.parse(n.textContent).props.pageProps.ad;if(ad){const t={};(ad.attributes||[]).forEach(a=>t[a.key]=a.value);Object.assign(x,{titre:ad.subject,prix:+(ad.price||[])[0]||0,surface:+t.square||0,pieces:+t.rooms||0,dpe:t.energy_rate||'',cp:(ad.location||{}).zipcode,ville:(ad.location||{}).city,texte:String(ad.body||'').slice(0,3000)})}}catch(e){}try{d.querySelectorAll('script[type="application/ld+json"]').forEach(s=>{[].concat(JSON.parse(s.textContent)).forEach(o=>{const of=o.offers||{};if(!x.prix&&(of.price||o.price))x.prix=+(of.price||o.price);if(!x.titre&&o.name)x.titre=o.name;const fs=o.floorSize||{};if(!x.surface&&fs.value)x.surface=+fs.value;if(!x.pieces&&o.numberOfRooms)x.pieces=+o.numberOfRooms;const ad=o.address||{};if(!x.cp&&ad.postalCode)x.cp=ad.postalCode;if(!x.ville&&ad.addressLocality)x.ville=ad.addressLocality})})}catch(e){}if(!x.titre){const h=d.querySelector('h1');x.titre=(h&&h.innerText.trim())||d.title}x.page=(d.title+'\\n'+(d.body.innerText||'')).slice(0,6000);${ouvrir}('${cible}'+encodeURIComponent(JSON.stringify(x)))})()`;
-    return 'javascript:' + encodeURI(code);
-  }
   function ajouterAnnonce(recue) {
     const distant = D.etat().mode === 'distant';
     const fond = modale('Ajouter une annonce', `
       <div class="champ"><label for="naL">Lien de l'annonce</label><div class="actions" style="flex-wrap:nowrap"><input id="naL" type="url" inputmode="url" placeholder="https://www.leboncoin.fr/ad/…"><button type="button" class="bouton bouton-principal" id="naLire">Lire</button></div>
         <small class="aide" id="naEtat">${distant ? 'Collez le lien puis « Lire ». Si le site bloque la lecture, collez aussi le texte de la page ci-dessous.' : 'Mode démonstration : la lecture du lien passe par le serveur. Collez le texte de la page ci-dessous.'}</small></div>
-      <details class="favori"><summary>Plus rapide : le bouton « Envoyer à Marchéo » dans les favoris</summary>
-        <p class="aide">Une fois installé, un clic sur ce favori depuis une annonce Leboncoin, SeLoger, Bien'ici ou autre ouvre cette fenêtre déjà remplie. C'est le navigateur qui lit la page affichée : aucun blocage.</p>
-        <p><a class="bouton bouton-vert" href="${favoriMarcheo()}" onclick="return false" draggable="true">Envoyer à Marchéo</a></p>
-        <p class="aide">Installation sur ordinateur : afficher la barre de favoris (Ctrl + Maj + B), puis glisser ce bouton vert dessus.</p></details>
       <div class="champ"><label for="naX">Texte de l'annonce</label><textarea id="naX" rows="4" placeholder="Sur la page de l'annonce : tout sélectionner, copier, coller ici."></textarea></div>
       <div class="compte-titre">Annonce lue</div>
       <div class="grille-champs alignee">
@@ -1551,37 +1540,20 @@
   /* ================= Page Visite (visite.html) : accueil mobile ================= */
   const MODE_VISITE = document.documentElement.dataset.mode === 'visite';
   const fv = { q: '', fin: null };
-  const favoriVisite = () => favoriMarcheo(location.origin + location.pathname + '#importer/', true);
   function vueVisiteAccueil() {
     const c = $('#contenu'); if (!c) return;
-    let recu = null;
-    if (location.hash.startsWith('#importer/')) {
-      try { recu = JSON.parse(decodeURIComponent(location.hash.slice('#importer/'.length))); } catch (e) { notifier('Annonce reçue illisible.', 'erreur'); }
-      history.replaceState(null, '', location.pathname); fv.fin = null;
-    }
     if (fv.fin) return resumeVisite(c, D.obtenir('biens', fv.fin));
     const q = fv.q.trim().toLowerCase();
     const l = D.liste('biens').filter(b => !['ecarte', 'vendu'].includes(b.etape) && (!q || (titreBien(b) + ' ' + (b.source || '')).toLowerCase().includes(q)))
       .sort((a, z) => (!!z.visiteBrouillon - !!a.visiteBrouillon) || (z._maj || '').localeCompare(a._maj || ''));
     c.innerHTML = `
       <button class="bouton bouton-vert bouton-large" id="vNouveau">+ Nouveau bien</button>
-      <details class="favori" id="vFavori"><summary>Remplir le bien depuis Leboncoin, SeLoger ou tout autre site</summary>
-        <p class="aide">Ces sites refusent la lecture par lien. La solution : sur la page de l'annonce, toucher le favori « Envoyer à la Visite ». Le navigateur lit la page et ouvre ici le nouveau bien déjà rempli.</p>
-        <p><strong>Sur ordinateur</strong> : afficher la barre de favoris (Ctrl + Maj + B) et y glisser ce bouton : <a class="bouton bouton-vert bouton-petit" href="${favoriVisite()}" onclick="return false" draggable="true">Envoyer à la Visite</a></p>
-        <p><strong>Sur iPhone, dans Safari</strong> :</p>
-        <ol class="aide"><li><button class="bouton bouton-petit" id="vCopier">Copier le code du favori</button></li>
-          <li>Partager → « Ajouter un signet » sur cette page, nom : « Envoyer à la Visite ».</li>
-          <li>Signets → Modifier → toucher ce signet → effacer l'adresse et coller le code → OK.</li>
-          <li>Sur une annonce ouverte dans Safari (depuis l'appli Leboncoin : Partager → Ouvrir dans Safari), ouvrir les signets et toucher « Envoyer à la Visite ».</li></ol>
-        <p class="aide">Dans Safari, se connecter une fois à Marchéo : Safari et l'icône d'écran d'accueil ont chacun leur mémoire.</p></details>
       <div class="vacc-titre">Biens en cours</div>
       <input type="search" id="vQ" placeholder="Rechercher : adresse, ville…" value="${esc(fv.q)}" aria-label="Rechercher">
       <div class="vacc-liste">${l.map(b => { const B = b.visiteBrouillon, V = b.visite; return `<button class="vacc-bien" data-id="${b.id}"><span><strong>${esc(titreBien(b))}</strong><small>${esc([typeBien(b), surfaceBien(b), b.prixAffiche ? eur(b.prixAffiche) : ''].filter(Boolean).join(' · '))}</small></span><span class="vacc-etat">${B ? '<b class="orange">Visite en cours</b>' : V ? '<b class="vert">Visité le ' + dateFr(V.fin.slice(0, 10)) + '</b>' : esc(ETAPE[b.etape || 'repere'])}</span></button>`; }).join('') || '<div class="vide">Aucun bien en cours. « + Nouveau bien » pour commencer.</div>'}</div>`;
     $('#vNouveau').onclick = () => nouveauBienVisite();
-    $('#vCopier').onclick = async () => { const code = decodeURI(favoriVisite()); try { await navigator.clipboard.writeText(code); notifier('Code copié : le coller comme adresse du signet.', 'succes'); } catch (e) { modale('Code du favori', `<p class="aide">Tout sélectionner puis copier :</p><textarea rows="8" readonly>${esc(code)}</textarea>`, [{ l: 'Fermer' }]); } };
     $('#vQ').oninput = e => { fv.q = e.target.value; const pos = e.target.selectionStart; vueVisiteAccueil(); const x = $('#vQ'); x.focus(); x.setSelectionRange(pos, pos); };
     $$('[data-id]', c).forEach(x => x.onclick = () => ouvrirVisite(D.obtenir('biens', x.dataset.id), b => { fv.fin = b.id; vueVisiteAccueil(); }));
-    if (recu) nouveauBienVisite(recu);
   }
   function resumeVisite(c, b) {
     if (!b || !b.visite) { fv.fin = null; return vueVisiteAccueil(); }
@@ -1600,50 +1572,37 @@
     $('#vAutre').onclick = () => { fv.fin = null; vueVisiteAccueil(); };
   }
   /* Nouveau bien depuis la page Visite : lien (Bien'ici lu par le serveur), texte collé ou saisie */
-  function nouveauBienVisite(recu) {
-    const distant = D.etat().mode === 'distant';
-    const fond = modale('Nouveau bien', `
-      <div class="champ"><label for="nvL">Lien de l'annonce</label><div class="actions" style="flex-wrap:nowrap"><input id="nvL" type="url" inputmode="url" placeholder="https://…"><button type="button" class="bouton bouton-principal" id="nvLire">Lire</button></div><small class="aide" id="nvEtat">Bien'ici et PAP sont lus par lien. Leboncoin et SeLoger : favori « Envoyer à la Visite » depuis la page de l'annonce, ou texte collé.</small></div>
-      <div class="champ"><label for="nvX">Texte de l'annonce</label><textarea id="nvX" rows="3" placeholder="Copier le texte de l'annonce et le coller ici."></textarea></div>
-      <div class="grille-champs alignee">
-        <div class="champ" style="grid-column:1/-1"><label for="nvT">Adresse ou titre</label><input id="nvT"></div>
-        <div class="champ"><label for="nvType">Type</label><select id="nvType">${Object.entries(M.TYPES).map(([k, t]) => `<option value="${k}">${t.n}</option>`).join('')}</select></div>
+  function nouveauBienVisite() {
+    const fond = modale('Nouveau bien', `<div class="grille-champs grille-deux">
+        <div class="champ" style="grid-column:1/-1"><label for="nvT">Adresse</label><input id="nvT" autocomplete="street-address" placeholder="12 rue …"></div>
+        <div class="champ"><label for="nvCp">Code postal</label><input id="nvCp" inputmode="numeric" maxlength="5"></div>
+        <div class="champ"><label for="nvV">Ville</label><input id="nvV"></div>
         <div class="champ"><label for="nvP">Prix affiché (€)</label><input id="nvP" type="number" inputmode="numeric"></div>
         <div class="champ"><label for="nvS">Surface (m²)</label><input id="nvS" type="number" inputmode="decimal"></div>
-        <div class="champ"><label for="nvPi">Pièces à vivre</label><input id="nvPi" type="number" inputmode="numeric"></div>
-        <div class="champ"><label for="nvCp">Code postal</label><input id="nvCp" inputmode="numeric"></div>
-        <div class="champ"><label for="nvV">Ville</label><input id="nvV"></div>
+        <div class="champ"><label for="nvType">Type</label><select id="nvType">${Object.entries(M.TYPES).map(([k, t]) => `<option value="${k}">${t.n}</option>`).join('')}</select></div>
+        <div class="champ" style="grid-column:1/-1"><label for="nvL">Lien de l'annonce (facultatif)</label><input id="nvL" type="url" inputmode="url" placeholder="pour rouvrir l'annonce plus tard"><small class="aide" id="nvEtat"></small></div>
       </div>`,
-      [{ l: 'Annuler' }, { l: 'Créer et commencer la visite', classe: 'bouton-principal', f: f => {
+      [{ l: 'Annuler' }, { l: 'Commencer la visite', classe: 'bouton-principal', f: f => {
         const g = id => $(id, f).value.trim();
-        if (!g('#nvT') && !g('#nvCp') && !g('#nvL')) { notifier('Renseigner au moins l\'adresse, le code postal ou le lien.', 'erreur'); return false; }
-        const a = D.enregistrer('annonces', { titre: g('#nvT') || 'Bien visité', type: g('#nvType'), prix: nb(g('#nvP')) || 0, surface: nb(g('#nvS')) || undefined, pieces: nb(g('#nvPi')) || undefined, cp: g('#nvCp'), ville: g('#nvV'), lien: g('#nvL'), source: sourceDuLien(g('#nvL')) || 'Visite', texte: g('#nvX').slice(0, 3000), dpe: f.dataset.dpe || '', recueLe: new Date().toISOString(), statutTri: 'vue', manuel: true });
+        if (!g('#nvT') && !g('#nvCp')) { notifier('Saisir au moins l\'adresse ou le code postal.', 'erreur'); return false; }
+        const a = D.enregistrer('annonces', { titre: g('#nvT') || 'Bien visité', type: g('#nvType'), prix: nb(g('#nvP')) || 0, surface: nb(g('#nvS')) || undefined, cp: g('#nvCp'), ville: g('#nvV'), lien: g('#nvL'), source: sourceDuLien(g('#nvL')) || 'Visite', dpe: f.dataset.dpe || '', pieces: +f.dataset.pieces || undefined, recueLe: new Date().toISOString(), statutTri: 'vue', manuel: true });
         const b = creerProjet(D.obtenir('annonces', a.id));
         setTimeout(() => ouvrirVisite(b, x => { fv.fin = x.id; vueVisiteAccueil(); }), 0);
       } }]);
-    const remplir = x => {
-      const set = (id, v) => { if (v && !$(id, fond).value) $(id, fond).value = v; };
-      set('#nvT', x.titre); set('#nvP', x.prix); set('#nvS', x.surface); set('#nvPi', x.pieces); set('#nvCp', x.cp); set('#nvV', x.ville);
-      if (x.type && M.TYPES[x.type]) $('#nvType', fond).value = x.type;
-      if (x.dpe) fond.dataset.dpe = x.dpe;
-    };
-    $('#nvX', fond).addEventListener('input', e => remplir(MA.lireTexte(e.target.value)));
-    if (recu) {
-      $('#nvL', fond).value = recu.lien || ''; $('#nvX', fond).value = (recu.texte || recu.page || '').slice(0, 3000);
-      remplir(recu); remplir(MA.lireTexte((recu.titre || '') + '\n' + (recu.page || recu.texte || '')));
-      $('#nvEtat', fond).innerHTML = '<span class="vert">Annonce reçue depuis ' + esc(sourceDuLien(recu.lien) || 'la page') + '. Vérifier puis « Créer et commencer la visite ».</span>';
-    }
-    $('#nvLire', fond).onclick = async () => {
-      const url = $('#nvL', fond).value.trim(), etat = $('#nvEtat', fond);
-      if (!/^https:\/\//.test(url)) { etat.textContent = 'Coller un lien commençant par https://'; return; }
-      if (!distant) { etat.textContent = 'Mode démonstration : coller le texte de l\'annonce ci-dessous.'; return; }
-      etat.textContent = 'Lecture en cours…';
+    /* Lien Bien'ici : rempli sans rien demander ; les autres sites ne sont pas lus */
+    $('#nvL', fond).addEventListener('change', async e => {
+      const url = e.target.value.trim(), etat = $('#nvEtat', fond);
+      if (!/bienici\.com\/annonce\//.test(url) || D.etat().mode !== 'distant') return;
+      etat.textContent = 'Lecture de l\'annonce Bien\'ici…';
       try {
-        const x = await D.action('lireAnnonce', { url });
-        if (x.bloque) { etat.innerHTML = '<span class="orange">' + esc(sourceDuLien(url) || 'Ce site') + ' refuse la lecture par lien, pour tout serveur. Ouvrir l\'annonce et toucher le favori « Envoyer à la Visite » (installation sur l\'accueil de cette page), ou coller le texte ci-dessous.</span>'; return; }
-        remplir(x); etat.innerHTML = '<span class="vert">Annonce lue. Vérifier puis « Créer et commencer la visite ».</span>';
-      } catch (err) { etat.innerHTML = '<span class="rouge">' + esc(err.message) + '</span>'; }
-    };
+        const x = await D.action('lireAnnonce', { url }); if (x.bloque) { etat.textContent = ''; return; }
+        const set = (id, v) => { if (v && !$(id, fond).value) $(id, fond).value = v; };
+        set('#nvT', x.titre); set('#nvP', x.prix); set('#nvS', x.surface); set('#nvCp', x.cp); set('#nvV', x.ville);
+        if (x.type && M.TYPES[x.type]) $('#nvType', fond).value = x.type;
+        if (x.dpe) fond.dataset.dpe = x.dpe; if (x.pieces) fond.dataset.pieces = x.pieces;
+        etat.innerHTML = '<span class="vert">Annonce Bien\'ici lue.</span>';
+      } catch (err) { etat.textContent = ''; }
+    });
   }
   function coquilleVisite() {
     document.body.innerHTML = `<div class="page-visite">

@@ -450,9 +450,7 @@ input.modifie { border-color: var(--orange); background: var(--orange-fond); }
 .pastille-groupe { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: .4rem; }
 .tableau tr.ligne-forte td { font-weight: 700; background: var(--surface-2); }
 
-details.favori { border: 1px dashed var(--laiton); border-radius: var(--rayon-petit); padding: .5rem .8rem; margin-bottom: .8rem; background: var(--surface-2); }
-details.favori summary { cursor: pointer; font-weight: 600; color: var(--accent); }
-details.favori .bouton-vert { cursor: grab; }
+
 
 /* ================= Mode Visite : plein écran, pensé pour le pouce ================= */
 .visite { position: fixed; inset: 0; z-index: 150; background: var(--fond); display: flex; flex-direction: column; }
@@ -522,3 +520,6 @@ details.favori .bouton-vert { cursor: grab; }
 .vacc-etat { font-size: .82rem; white-space: nowrap; color: var(--texte-2); }
 .page-visite .bouton-large { min-height: 56px; font-size: 1.08rem; }
 .page-visite input[type=search] { min-height: 48px; }
+
+.grille-champs.grille-deux { grid-template-columns: 1fr 1fr; }
+.grille-deux .champ { margin-bottom: .6rem; }
