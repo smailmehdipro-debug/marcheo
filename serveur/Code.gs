@@ -225,7 +225,7 @@ function hacherCourt_(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = 
 function fusionnerAnnonce_(ancienne, nouvelle) {
   if (!ancienne) return Object.assign({ statutTri: 'nouvelle', vueLe: nouvelle.recueLe, alertes: 1, historiquePrix: [{ date: nouvelle.recueLe, prix: nouvelle.prix }] }, nouvelle);
   var a = Object.assign({}, ancienne);
-  ['titre', 'texte', 'lien', 'cp', 'ville', 'surface', 'lots', 'dpe', 'prixM2Annonce'].forEach(function (k) { if (nouvelle[k]) a[k] = nouvelle[k]; });
+  ['titre', 'texte', 'lien', 'cp', 'ville', 'surface', 'lots', 'pieces', 'type', 'chargesAnnuelles', 'agence', 'dpe', 'prixM2Annonce'].forEach(function (k) { if (nouvelle[k]) a[k] = nouvelle[k]; });
   a.alertes = (a.alertes || 1) + 1; a.vueLe = nouvelle.recueLe;
   if (nouvelle.prix && nouvelle.prix !== a.prix) {
     a.historiquePrix = (a.historiquePrix || []).concat([{ date: nouvelle.recueLe, prix: nouvelle.prix }]);
@@ -248,6 +248,7 @@ function importerAlertes() {
     fil.getMessages().forEach(function (m) {
       extraireAnnonces_(m.getFrom(), m.getSubject(), m.getPlainBody(), m.getDate().toISOString()).forEach(function (a) {
         var base = lot[a.id] || existantes[a.id];
+        if (!base || !base.surface) completerBienici_(a);
         lot[a.id] = fusionnerAnnonce_(base, a);
       });
     });
@@ -262,6 +263,8 @@ function importerAlertes() {
    Les sites protégés (Leboncoin, SeLoger) refusent souvent les lectures automatiques : Marchéo propose alors de coller le texte. */
 function lireAnnonce_(url) {
   if (!/^https:\/\/[^\s]+$/.test(url)) throw erreur_('Lien invalide.', 'LIEN');
+  var bi = url.match(/bienici\.com\/annonce\/(?:[^\/?#]+\/)*?([^\/?#]+)(?:[?#]|$)/);
+  if (bi) { var x = lireBienici_(bi[1]); if (x) { x.lien = 'https://www.bienici.com/annonce/' + bi[1]; return x; } }
   var rep = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true,
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36', 'Accept-Language': 'fr-FR,fr;q=0.9' } });
   var code = rep.getResponseCode();
@@ -284,6 +287,30 @@ function extraireDePage_(html, url) {
   enrichir_(a);
   return a;
 }
+/* Bien'ici : données publiques de l'annonce (realEstateAd.json), vérifiées sur une annonce réelle */
+var TYPES_BIENICI = { flat: 'appt', house: 'maison', parking: 'box', premises: 'local', shop: 'local', office: 'local', building: 'immeuble', terrain: 'terrain', land: 'terrain' };
+function lireBienici_(id) {
+  var rep = UrlFetchApp.fetch('https://www.bienici.com/realEstateAd.json?id=' + encodeURIComponent(id), { muteHttpExceptions: true });
+  if (rep.getResponseCode() !== 200) return null;
+  var d; try { d = JSON.parse(rep.getContentText()); } catch (e) { return null; }
+  return depuisBienici_(d);
+}
+function depuisBienici_(d) {
+  if (!d || !d.price) return null;
+  var desc = decoder_(String(d.description || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' '));
+  var a = { source: "Bien'ici", titre: d.title || d.generatedTitle || '', texte: desc.slice(0, 3000), prix: +d.price || 0, surface: +d.surfaceArea || 0,
+    pieces: +d.roomsQuantity || 0, cp: String(d.postalCode || ''), ville: d.city || '', dpe: d.energyClassification || '', type: TYPES_BIENICI[d.propertyType] || '',
+    chargesAnnuelles: +d.annualCondominiumFees || 0, baissePrix: !!d.priceHasDecreased };
+  if (!a.titre) a.titre = [{ appt: 'Appartement', maison: 'Maison', box: 'Parking', local: 'Local', immeuble: 'Immeuble', terrain: 'Terrain' }[a.type] || 'Bien', a.pieces ? a.pieces + ' pièce' + (a.pieces > 1 ? 's' : '') : '', a.surface ? a.surface + ' m²' : ''].filter(Boolean).join(' ');
+  return a;
+}
+/* Complète les annonces Bien'ici reçues par alerte (surface, pièces, DPE, charges absents de l'e-mail) */
+function completerBienici_(a) {
+  if (!a.idSource || a.source !== "Bien'ici" || a.surface) return a;
+  try { var x = lireBienici_(a.idSource); if (x) ['surface', 'pieces', 'dpe', 'type', 'chargesAnnuelles', 'texte'].forEach(function (k) { if (x[k] && !a[k]) a[k] = x[k]; }); } catch (e) { /* lecture impossible : l'annonce reste à compléter */ }
+  return a;
+}
+
 /* À exécuter une fois depuis l'éditeur si « + Annonce » répond « Vous n'êtes pas autorisé à appeler UrlFetchApp.fetch » */
 function autoriserLectureAnnonces() {
   UrlFetchApp.fetch('https://www.bienici.com/', { muteHttpExceptions: true });
@@ -318,4 +345,4 @@ function definirMotDePasse(identifiant, motDePasse) {
   Logger.log('Mot de passe défini pour ' + identifiant + '.');
 }
 
-if (typeof module !== 'undefined') module.exports = { extraireDePage_: extraireDePage_, doPost: doPost, installer: installer, definirMotDePasse: definirMotDePasse, versLigne_: versLigne_, depuisLigne_: depuisLigne_, extraireAnnonces_: extraireAnnonces_, fusionnerAnnonce_: fusionnerAnnonce_ };
+if (typeof module !== 'undefined') module.exports = { depuisBienici_: depuisBienici_, extraireDePage_: extraireDePage_, doPost: doPost, installer: installer, definirMotDePasse: definirMotDePasse, versLigne_: versLigne_, depuisLigne_: depuisLigne_, extraireAnnonces_: extraireAnnonces_, fusionnerAnnonce_: fusionnerAnnonce_ };

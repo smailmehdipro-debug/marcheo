@@ -62,3 +62,10 @@ test('page d\'annonce lue par le serveur : données structurées et agence', () 
   const t = lire('bienici.txt').replace('Photo\n', "L'agence CENTURY 21 Exemple vous propose ce bien\nPhoto\n");
   assert.equal(ctx.extraireAnnonces_('no_reply@bienici.com', 'Une annonce', t, '')[0].agence, 'CENTURY 21 Exemple');
 });
+
+test('Bien\'ici : données publiques de l\'annonce (structure relevée sur une annonce réelle)', () => {
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, 'alertes', 'bienici-annonce.json'), 'utf8'));
+  const a = ctx.depuisBienici_(d);
+  assert.deepEqual([a.prix, a.surface, a.pieces, a.cp, a.ville, a.dpe, a.type, a.chargesAnnuelles], [64000, 17, 1, '78510', 'Triel-sur-Seine', 'G', 'appt', 1100]);
+  assert.match(a.texte, /SOUS LES TOITS\nExemple/, "retour à la ligne à la place de <br>");
+});

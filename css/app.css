@@ -449,3 +449,7 @@ input.modifie { border-color: var(--orange); background: var(--orange-fond); }
 .frise-legende i.cercle.rouge { border-color: var(--rouge); }
 .pastille-groupe { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: .4rem; }
 .tableau tr.ligne-forte td { font-weight: 700; background: var(--surface-2); }
+
+details.favori { border: 1px dashed var(--laiton); border-radius: var(--rayon-petit); padding: .5rem .8rem; margin-bottom: .8rem; background: var(--surface-2); }
+details.favori summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+details.favori .bouton-vert { cursor: grab; }

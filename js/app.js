@@ -858,7 +858,9 @@
   function vueAnnonces(c, r) {
     titre('Annonces', 'Alertes e-mail analysées', I.annonces);
     const ouvrir = r && r.id === 'a' ? r.o : '';
-    if (r && r.id && r.id !== 'a') fa.onglet = r.id;
+    let recue = null;
+    if (r && r.id === 'importer') { try { recue = JSON.parse(decodeURIComponent(location.hash.split('/importer/')[1] || '')); } catch (e) { notifier('Données de l\'annonce illisibles.', 'erreur'); } history.replaceState(null, '', '#/annonces/' + fa.onglet); vueCourante = 'annonces/' + fa.onglet + '/'; }
+    else if (r && r.id && r.id !== 'a') fa.onglet = r.id;
     if (ouvrir) fa.surligne = ouvrir;
     const toutes = D.liste('annonces'), E = new Map(toutes.map(a => [a.id, evalAnnonce(a)]));
     const groupes = {
@@ -913,6 +915,7 @@
     $('#anCrit').onclick = () => editerCriteres();
     zone();
     if (ouvrir) { const x = D.obtenir('annonces', ouvrir); if (x) ficheAnnonce(x); }
+    if (recue) ajouterAnnonce(recue);
   }
   function ficheAnnonce(a, message) {
     if (!a) return;
@@ -934,6 +937,7 @@
           + ligne('Marge brute', `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)} · ${eur(e.margeBruteEur)}</span>`, 'au prix affiché · minimum ' + e.criteres.margeBruteMin + ' % de la revente')
           + ligne('Bénéfice net', eur(e.r.N), 'au prix affiché, après TVA, intérêts et impôt')
           + ligne('Prix d\'achat maximum', e.achatMax ? eur(e.achatMax) : 'aucun', e.nego > 0 ? 'négociation nécessaire : ' + pc(e.nego, 0) : 'le prix affiché passe') : ''}
+        ${a.chargesAnnuelles ? ligne('Charges de copropriété', eur(a.chargesAnnuelles) + ' par an', 'annoncées par le site') : ''}
         ${e.signaux.length ? ligne('Signaux', `<span class="vert">${esc(e.signaux.join(', '))}</span>`) : ''}
       </div>
       ${a.texte ? `<details style="margin-top:.6rem"><summary class="aide">Texte de l'alerte</summary><p class="aide">${esc(a.texte)}</p></details>` : ''}`,
@@ -1014,11 +1018,22 @@
     aller('#/bien/' + b.id);
   }
   /* Ajout : coller le lien (lecture par le serveur) et, si le site bloque, le texte de la page */
-  function ajouterAnnonce() {
+  /* Bouton de favori « Envoyer à Marchéo » : lu par le navigateur de l'utilisateur sur la page qu'il consulte.
+     Données structurées quand le site en publie (Leboncoin, JSON-LD), sinon texte de la page analysé par Marchéo. */
+  function favoriMarcheo() {
+    const cible = location.origin + location.pathname + '#/annonces/importer/';
+    const code = `(()=>{const d=document,x={lien:location.href};try{const n=d.getElementById('__NEXT_DATA__');const ad=n&&JSON.parse(n.textContent).props.pageProps.ad;if(ad){const t={};(ad.attributes||[]).forEach(a=>t[a.key]=a.value);Object.assign(x,{titre:ad.subject,prix:+(ad.price||[])[0]||0,surface:+t.square||0,pieces:+t.rooms||0,dpe:t.energy_rate||'',cp:(ad.location||{}).zipcode,ville:(ad.location||{}).city,texte:String(ad.body||'').slice(0,3000)})}}catch(e){}try{d.querySelectorAll('script[type="application/ld+json"]').forEach(s=>{[].concat(JSON.parse(s.textContent)).forEach(o=>{const of=o.offers||{};if(!x.prix&&(of.price||o.price))x.prix=+(of.price||o.price);if(!x.titre&&o.name)x.titre=o.name;const fs=o.floorSize||{};if(!x.surface&&fs.value)x.surface=+fs.value;if(!x.pieces&&o.numberOfRooms)x.pieces=+o.numberOfRooms;const ad=o.address||{};if(!x.cp&&ad.postalCode)x.cp=ad.postalCode;if(!x.ville&&ad.addressLocality)x.ville=ad.addressLocality})})}catch(e){}if(!x.titre){const h=d.querySelector('h1');x.titre=(h&&h.innerText.trim())||d.title}x.page=(d.title+'\\n'+(d.body.innerText||'')).slice(0,6000);window.open('${cible}'+encodeURIComponent(JSON.stringify(x)))})()`;
+    return 'javascript:' + encodeURI(code);
+  }
+  function ajouterAnnonce(recue) {
     const distant = D.etat().mode === 'distant';
     const fond = modale('Ajouter une annonce', `
       <div class="champ"><label for="naL">Lien de l'annonce</label><div class="actions" style="flex-wrap:nowrap"><input id="naL" type="url" inputmode="url" placeholder="https://www.leboncoin.fr/ad/…"><button type="button" class="bouton bouton-principal" id="naLire">Lire</button></div>
         <small class="aide" id="naEtat">${distant ? 'Collez le lien puis « Lire ». Si le site bloque la lecture, collez aussi le texte de la page ci-dessous.' : 'Mode démonstration : la lecture du lien passe par le serveur. Collez le texte de la page ci-dessous.'}</small></div>
+      <details class="favori"><summary>Plus rapide : le bouton « Envoyer à Marchéo » dans les favoris</summary>
+        <p class="aide">Une fois installé, un clic sur ce favori depuis une annonce Leboncoin, SeLoger, Bien'ici ou autre ouvre cette fenêtre déjà remplie. C'est le navigateur qui lit la page affichée : aucun blocage.</p>
+        <p><a class="bouton bouton-vert" href="${favoriMarcheo()}" onclick="return false" draggable="true">Envoyer à Marchéo</a></p>
+        <p class="aide">Installation sur ordinateur : afficher la barre de favoris (Ctrl + Maj + B), puis glisser ce bouton vert dessus.</p></details>
       <div class="champ"><label for="naX">Texte de l'annonce</label><textarea id="naX" rows="4" placeholder="Sur la page de l'annonce : tout sélectionner, copier, coller ici."></textarea></div>
       <div class="compte-titre">Annonce lue</div>
       <div class="grille-champs alignee">
@@ -1032,17 +1047,25 @@
       </div>`,
       [{ l: 'Annuler' }, { l: 'Ajouter et analyser', classe: 'bouton-principal', f: f => {
         const g = id => $(id, f).value.trim(); if (!nb(g('#naP'))) { notifier('Prix manquant : lire le lien ou coller le texte.', 'erreur'); return false; }
-        const a = D.enregistrer('annonces', { titre: g('#naT') || 'Annonce', prix: nb(g('#naP')), surface: nb(g('#naS')) || undefined, pieces: nb(g('#naPi')) || undefined, cp: g('#naCp'), ville: g('#naV'), source: g('#naSrc'), lien: g('#naL'), texte: g('#naX').slice(0, 3000), dpe: f.dataset.dpe || '', recueLe: new Date().toISOString(), statutTri: 'vue', manuel: true });
+        const a = D.enregistrer('annonces', { titre: g('#naT') || 'Annonce', prix: nb(g('#naP')), surface: nb(g('#naS')) || undefined, pieces: nb(g('#naPi')) || undefined, cp: g('#naCp'), ville: g('#naV'), source: g('#naSrc'), lien: g('#naL'), texte: g('#naX').slice(0, 3000), dpe: f.dataset.dpe || '', type: f.dataset.type || '', chargesAnnuelles: +f.dataset.charges || 0, recueLe: new Date().toISOString(), statutTri: 'vue', manuel: true });
         setTimeout(() => aller('#/annonces/a/' + a.id), 0);
       } }]);
     const remplir = x => {
       const set = (id, v) => { if (v && !$(id, fond).value) $(id, fond).value = v; };
       set('#naT', x.titre); set('#naP', x.prix); set('#naS', x.surface); set('#naPi', x.pieces); set('#naCp', x.cp); set('#naV', x.ville);
       if (x.dpe) fond.dataset.dpe = x.dpe;
+      if (x.type) fond.dataset.type = x.type;
+      if (x.chargesAnnuelles) fond.dataset.charges = x.chargesAnnuelles;
     };
     const sourceDuLien = u => ({ leboncoin: 'Leboncoin', seloger: 'SeLoger', bienici: "Bien'ici", pap: 'PAP', 'logic-immo': 'Logic-Immo' })[((u.match(/https?:\/\/(?:www\.)?([^\/.]+)/) || [])[1] || '')] || '';
     $('#naL', fond).addEventListener('change', e => { const s = sourceDuLien(e.target.value); if (s) $('#naSrc', fond).value = s; });
     $('#naX', fond).addEventListener('input', e => remplir(MA.lireTexte(e.target.value)));
+    if (recue) {
+      $('#naL', fond).value = recue.lien || ''; const s0 = sourceDuLien(recue.lien || ''); if (s0) $('#naSrc', fond).value = s0;
+      $('#naX', fond).value = (recue.texte || recue.page || '').slice(0, 3000);
+      remplir(recue); remplir(MA.lireTexte((recue.titre || '') + '\n' + (recue.page || recue.texte || '')));
+      $('#naEtat', fond).innerHTML = '<span class="vert">Annonce reçue depuis ' + esc(s0 || 'la page') + '. Vérifier les champs puis « Ajouter et analyser ».</span>';
+    }
     $('#naLire', fond).onclick = async () => {
       const url = $('#naL', fond).value.trim(), etat = $('#naEtat', fond);
       if (!/^https:\/\//.test(url)) { etat.textContent = 'Coller un lien commençant par https://'; return; }
@@ -1052,7 +1075,8 @@
       try {
         const x = await D.action('lireAnnonce', { url });
         if (x.bloque) { etat.innerHTML = '<span class="orange">Le site refuse la lecture automatique (' + x.code + '). Copier le texte de la page et le coller ci-dessous.</span>'; return; }
-        remplir(x); etat.innerHTML = '<span class="vert">Annonce lue. Vérifier les champs puis « Ajouter et analyser ».</span>';
+        remplir(x); if (x.texte && !$('#naX', fond).value) $('#naX', fond).value = x.texte.slice(0, 3000);
+        etat.innerHTML = '<span class="vert">Annonce lue' + (x.chargesAnnuelles ? ' · charges de copropriété ' + eur(x.chargesAnnuelles) + ' par an' : '') + '. Vérifier les champs puis « Ajouter et analyser ».</span>';
       } catch (err) { etat.innerHTML = '<span class="rouge">' + esc(err.message) + ' Coller le texte de la page ci-dessous.</span>'; }
     };
   }
