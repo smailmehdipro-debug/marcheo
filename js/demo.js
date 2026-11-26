@@ -69,7 +69,7 @@
     an({ source: 'Leboncoin', titre: 'Appartement en viager occupé', texte: 'Viager occupé, 50 m², 93270 Sevran', prix: 45000, surface: 50, cp: '93270', ville: 'Sevran' }, 4);
     D.enregistrer('reglages', { id: 'reglages', criteres: { negoMax: 15, exclus: MarcheoAnnonces.CRITERES_DEF.exclus, signaux: MarcheoAnnonces.CRITERES_DEF.signaux,
       prixAfficheMax: 130000, tresoMax: 140000, margeBruteMin: 10, zone: MarcheoAnnonces.CRITERES_DEF.zone, types: ['appt', 'maison', 'local', 'box'],
-      secteurs: [{ cp: '95100', commune: 'Argenteuil', pm2: 3600 }, { cp: '93600', commune: 'Aulnay-sous-Bois', pm2: 3300 }, { cp: '92230', commune: 'Gennevilliers', pm2: 4800 }, { cp: '93390', commune: 'Clichy-sous-Bois', pm2: 2600 }, { cp: '78500', commune: 'Sartrouville', pm2: 4300 }, { cp: '93140', commune: 'Bondy', pm2: 3400 }, { cp: '93270', commune: 'Sevran', pm2: 2900 }] },
+      secteurs: [] },
       enveloppe: 250000, taux: 4, obj: 10, part: 50, pfu: 31.4, dmax: 18, tvaT: 10, seuilTravaux: 15, ref: { w: {}, x: {} } });
   }
   global.MarcheoDemo = { remplir };

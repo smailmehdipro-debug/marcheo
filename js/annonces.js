@@ -11,6 +11,7 @@
 (function (global) {
   'use strict';
   const M = global.MDB || (typeof require === 'function' ? require('./calc.js') : null);
+  const DVF = global.MarcheoDVF || (typeof require === 'function' ? require('./secteurs-dvf.js') : { secteurs: [] });
 
   const CRITERES_DEF = {
     prixAfficheMax: 130000, // au-dessus, écartée d'office sans calcul (€ ; 0 = sans limite)
@@ -67,9 +68,15 @@
       return !!(nom && v && nom === v);
     });
   }
-  function secteur(a, secteurs) {
+  /* Prix du secteur : d'abord les prix saisis dans les Réglages, ensuite la référence DVF (ventes réelles). */
+  function chercher(liste, a) {
     const cp = a.cp || '', v = norm(a.ville);
-    return (secteurs || []).find(s => s.cp && cp && String(s.cp) === String(cp)) || (secteurs || []).find(s => s.commune && v && norm(s.commune) === v) || null;
+    return (liste || []).find(s => s.cp && cp && String(s.cp) === String(cp)) || (liste || []).find(s => s.commune && v && norm(s.commune).split(' / ').includes(v)) || null;
+  }
+  function secteur(a, secteurs) {
+    const perso = chercher(secteurs, a), ref = chercher(DVF.secteurs, a);
+    if (perso) return Object.assign({ origine: 'saisi' }, ref ? { pm2Maison: ref.pm2Maison, n: ref.n, mediane: ref.mediane, nMaisons: ref.nMaisons, medianeMaison: ref.medianeMaison } : {}, perso);
+    return ref ? Object.assign({ origine: 'DVF' }, ref) : null;
   }
 
   /* R : réglages Marchéo (taux, obj, part, pfu, dmax, tvaT, tvaMode) + critères */
@@ -81,7 +88,7 @@
     const typeOk = (C.types || []).includes(type) && M.TYPES[type];
     const surface = +(k.surface || a.surface) || 0, prix = +(k.prix || a.prix) || 0;
     const sec = secteur(a, C.secteurs);
-    const pm2 = +(k.pm2 || (sec && (type === 'terrain' ? sec.pm2Terrain : type === 'box' ? sec.prixBox : sec.pm2))) || 0;
+    const pm2 = +(k.pm2 || (sec && (type === 'terrain' ? sec.pm2Terrain : type === 'box' ? sec.prixBox : type === 'maison' ? (sec.pm2Maison || sec.pm2) : sec.pm2))) || 0;
     const motifs = [], manque = [];
     if (!prix) manque.push('prix');
     if (!surface && type !== 'box') manque.push('surface');
@@ -131,6 +138,6 @@
       tresoAffiche: r.treso, tresoAuMax: qMax ? qMax.treso : null, margeBrute: brute(r), margeBruteEur: r.vente - r.C, criteres: C });
   }
 
-  const api = { CRITERES_DEF, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, evaluer, secteur };
+  const api = { DVF, CRITERES_DEF, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, evaluer, secteur };
   if (typeof module === 'object' && module.exports) module.exports = api; else global.MarcheoAnnonces = api;
 })(typeof window !== 'undefined' ? window : globalThis);

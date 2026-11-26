@@ -149,6 +149,7 @@
     majNav();
     const cle = r.m + '/' + r.id + '/' + r.o;
     const garderDefilement = cle === vueCourante;
+    if (!garderDefilement) $$('.modale-fond').forEach(m => m.remove()); // changement de page : les fenêtres ouvertes se ferment
     vueCourante = cle;
     const y = c.scrollTop, yw = window.scrollY;
     try {
@@ -773,7 +774,7 @@
     modale(a.titre || 'Annonce', `
       <div class="compte">
         ${ligne('Source', esc(a.source || '') + (a.lien ? ` · <a href="${esc(a.lien)}" target="_blank" rel="noopener">voir l'annonce</a>` : ''), 'reçue le ' + dateFr((a.recueLe || '').slice(0, 10)) + (a.alertes > 1 ? ', ' + a.alertes + ' alertes' : ''))}
-        ${ligne('Lieu', esc([a.cp, a.ville].filter(Boolean).join(' ') || '—'), e.secteur ? 'secteur : ' + eur(e.secteur.pm2 || 0) + ' /m²' : 'secteur sans prix de référence')}
+        ${ligne('Lieu', esc([a.cp, a.ville].filter(Boolean).join(' ') || '—'), e.secteur ? 'prix du secteur ' + eur(e.pm2) + ' /m² · ' + (e.secteur.origine === 'DVF' ? 'référence DVF, ' + (e.type === 'maison' ? e.secteur.nMaisons + ' ventes de maisons, médiane ' + eur(e.secteur.medianeMaison) : e.secteur.n + ' ventes d\'appartements, médiane ' + eur(e.secteur.mediane)) + ' /m²' : 'prix saisi dans les Réglages') : 'secteur sans prix de référence')}
         ${ligne('Prix affiché', eur(e.prix), (a.historiquePrix || []).length > 1 ? a.historiquePrix.map(h => dateFr(h.date.slice(0, 10)) + ' : ' + eur(h.prix)).join(' · ') : '')}
         ${e.r ? ligne('Revente estimée', eur(e.vente), eur(e.pm2) + ' /m² × ' + e.surface + ' m²') + ligne('Travaux estimés', eur(e.r.T), M.NIVEAUX[e.niveau].toLowerCase()) + ligne('Coût de revient', eur(e.r.C)) + ligne('Argent total à sortir au prix affiché', `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>`, 'plafond ' + eur(e.criteres.tresoMax) + (e.tresoAuMax ? ' · ' + eur(e.tresoAuMax) + ' au prix maximum' : '')) + ligne('Marge brute au prix affiché', `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)} · ${eur(e.margeBruteEur)}</span>`, 'minimum ' + e.criteres.margeBruteMin + ' % de la revente') + ligne('Bénéfice net au prix affiché', eur(e.r.N), 'marge nette ' + pc(e.marge) + ', après TVA, intérêts et impôt') + ligne('Prix d\'achat maximum', e.achatMax ? eur(e.achatMax) : 'aucun', e.nego > 0 ? 'négociation nécessaire : ' + pc(e.nego, 0) : 'sous le prix maximum') : ''}
         ${ligne('Analyse', voyant(STATUTS_ANALYSE[e.statut][0], STATUTS_ANALYSE[e.statut][1]) + (e.score != null ? ' · score ' + e.score : ''), esc(e.motifs.concat(e.signaux.length ? ['signaux : ' + e.signaux.join(', ')] : []).join(' · ')))}
@@ -865,7 +866,11 @@
         <table class="tableau"><thead><tr><th>Code postal</th><th>Commune</th><th class="nombre">Logement rénové €/m²</th><th class="nombre">Box €</th><th></th></tr></thead><tbody>
         ${(C.secteurs || []).map((s, i) => `<tr data-sec="${i}"><td><input data-sf="cp" value="${esc(s.cp || '')}" inputmode="numeric" style="width:80px"></td><td><input data-sf="commune" value="${esc(s.commune || '')}"></td><td><input data-sf="pm2" type="number" value="${s.pm2 || ''}" style="width:100px"></td><td><input data-sf="prixBox" type="number" value="${s.prixBox || ''}" style="width:90px"></td><td><button class="bouton-icone" data-secsuppr="${i}" aria-label="Supprimer">${I.fermer}</button></td></tr>`).join('') || '<tr><td colspan="5" class="discret">Aucun secteur : les annonces resteront « à compléter ».</td></tr>'}
         </tbody></table><button class="bouton bouton-petit" id="secAjout" style="margin-top:.6rem">+ Secteur</button>
-        <p class="aide">Source conseillée : prix de vente réels de la base DVF (data.gouv.fr), logements rénovés du secteur.</p></div>`;
+        <p class="aide">Les prix saisis ici remplacent la référence DVF du code postal.</p>
+        <details style="margin-top:.6rem"><summary class="aide">Référence DVF : ${MA.DVF.secteurs.length} codes postaux · ${esc(MA.DVF.source)}</summary>
+          <p class="aide">Prix d'un logement rénové approché par le 3e quartile du prix au m² des ventes réelles (appartements de 20 à 60 m²), maisons à part.</p>
+          <table class="tableau"><thead><tr><th>Code postal</th><th>Commune</th><th class="nombre">Ventes</th><th class="nombre">Médiane</th><th class="nombre">Rénové €/m²</th><th class="nombre">Maison €/m²</th></tr></thead><tbody>
+          ${MA.DVF.secteurs.map(x => `<tr><td>${x.cp}</td><td>${esc(x.commune)}</td><td class="nombre">${x.n}</td><td class="nombre">${x.mediane ? eur(x.mediane) : '—'}</td><td class="nombre">${x.pm2 ? eur(x.pm2) : '—'}</td><td class="nombre">${x.pm2Maison ? eur(x.pm2Maison) : '—'}</td></tr>`).join('')}</tbody></table></details></div>`;
   }
   function brancherCriteres(c) {
     const maj = f => { const R = reglages(); R.criteres = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); R.criteres.secteurs = (R.criteres.secteurs || []).map(s => Object.assign({}, s)); f(R.criteres); D.enregistrer('reglages', R); cacheAnn.clear(); };

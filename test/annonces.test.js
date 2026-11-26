@@ -60,7 +60,7 @@ test('immeubles, terrains, viager, données manquantes, corrections, baisse de p
   assert.equal(A.evaluer({ titre: 'Terrain constructible', prix: 60000, surface: 500, cp: '93200' }, R).statut, 'ecartee');
   assert.equal(A.evaluer({ titre: 'Appartement en viager occupé', prix: 60000, surface: 50, cp: '93200' }, R).statut, 'ecartee');
   assert.equal(A.evaluer({ titre: 'Appartement T2', prix: 90000, cp: '93200' }, R).statut, 'a_completer');
-  assert.equal(A.evaluer({ titre: 'Appartement T2', prix: 90000, surface: 40, cp: '75011' }, R).statut, 'a_completer');
+  assert.equal(A.evaluer({ titre: 'Appartement T2', prix: 90000, surface: 40, cp: '37000' }, R).statut, 'a_completer', 'code postal sans référence');
   assert.notEqual(A.evaluer({ titre: 'Appartement T2', prix: 90000, cp: '93200', corrections: { surface: 45 } }, R).statut, 'a_completer');
   const b = A.evaluer({ titre: 'Appartement T2', prix: 70000, prixPrecedent: 80000, surface: 40, cp: '93200' }, R);
   assert.ok(b.signaux.some(s => /baisse de prix de 13 %/.test(s)));
@@ -86,4 +86,18 @@ test('zone : 95 et 75 entiers, communes listées du 92 nord, 93 est et 78 nord',
   assert.equal(A.dansZone({ cp: '37000' }, []), true, 'zone vide : partout');
   const e = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93200', ville: 'Saint-Denis' }, Object.assign({}, R, { criteres: Object.assign({}, R.criteres, { zone: Z }) }));
   assert.equal(e.statut, 'ecartee'); assert.match(e.motifs.join(), /hors zone/);
+});
+
+test('référence DVF : prix par code postal, prix saisi prioritaire, maison à part', () => {
+  assert.ok(A.DVF.secteurs.length > 100);
+  const sansPerso = Object.assign({}, R, { criteres: { zone: [], secteurs: [] } });
+  const e = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93600', ville: 'Aulnay-sous-Bois' }, sansPerso);
+  const ref = A.DVF.secteurs.find(s => s.cp === '93600');
+  assert.equal(e.secteur.origine, 'DVF'); assert.equal(e.pm2, ref.pm2);
+  const m = A.evaluer({ titre: 'Maison 3 pièces', prix: 80000, surface: 60, cp: '93600' }, sansPerso);
+  assert.equal(m.pm2, ref.pm2Maison);
+  const perso = Object.assign({}, R, { criteres: { zone: [], secteurs: [{ cp: '93600', pm2: 3000 }] } });
+  const p = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93600' }, perso);
+  assert.equal(p.pm2, 3000); assert.equal(p.secteur.origine, 'saisi');
+  assert.equal(A.evaluer({ titre: 'Appartement T2', prix: 80000, ville: 'Poissy', surface: 40 }, sansPerso).secteur.cp, '78300', 'commune sans code postal');
 });

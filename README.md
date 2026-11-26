@@ -12,6 +12,8 @@ Micro CRM d'acquisition pour marchand de biens : pipeline de biens, simulation p
 | `js/app.js` | Navigation et écrans |
 | `js/pdf.js` | Dossier PDF d'un bien (jsPDF) |
 | `js/annonces.js` | Analyse des annonces reçues par alerte e-mail |
+| `js/secteurs-dvf.js` | Prix de référence par code postal, ventes réelles DVF 2024-2025 |
+| `data/` | Calcul des prix DVF (`dvf_secteurs.py`) et statistiques complètes |
 | `js/demo.js` | Données fictives du mode démonstration |
 | `serveur/Code.gs` | Serveur Google Apps Script (gratuit) |
 | `reference/` | Simulateur d'origine, référence des règles de calcul |
@@ -57,3 +59,11 @@ Les étapes 2 et 3 s'apprécient au prix obtenu après une négociation réalist
 
 Les autres annonces restent consultables : « À compléter », « Écartées par l'analyse », « Toutes ».
 Tous les seuils se modifient depuis la page Annonces (« Modifier les critères ») ou dans Réglages, avec les prix des secteurs.
+
+## Prix des secteurs
+
+La revente estimée d'une annonce utilise, dans l'ordre : le prix saisi dans Réglages, Prix des secteurs, puis la référence DVF du code postal (`js/secteurs-dvf.js`).
+
+Référence DVF : ventes réelles du 1er janvier 2024 au 31 décembre 2025, une seule habitation par vente. Le prix d'un logement rénové est approché par le troisième quartile du prix au m² : 75 % des ventes du secteur se font en dessous. Le calcul porte sur les appartements de 20 à 60 m² quand il y a au moins 15 ventes, et les maisons ont leur propre prix. La base DVF ne dit pas si un logement était rénové : c'est une approximation, à recouper avec les ventes comparables du bien.
+
+Mise à jour : télécharger les fichiers départementaux sur files.data.gouv.fr/geo-dvf, puis lancer `python3 marcheo/data/dvf_secteurs.py <dossier> <zone.json> marcheo/data/secteurs-dvf.json`.
