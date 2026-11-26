@@ -696,6 +696,15 @@
   }
 
   /* ---------- Comparables ---------- */
+  function blocDVF(b) {
+    const d = b.dvf; if (!d) return '';
+    const s = d.secteur || {}, S = b.sim || {};
+    return `<div class="carte" style="margin:.8rem 0"><div class="compte-titre">Prix du secteur (DVF ${esc(d.periode || '')})</div>
+      <p><strong>${s.mediane ? eur(s.mediane) + ' /m²' : '—'}</strong> médiane · fourchette ${eur(s.p25)} – ${eur(s.p75)} /m² · ${s.n || 0} ventes ${esc(d.type === 'Maison' ? 'de maisons' : 'd\'appartements')} ${s.zone === '1 km' ? 'à moins d\'1 km' : 'dans la commune'}.</p>
+      <p class="aide">${d.lieu && d.lieu.precis ? 'Autour de : ' + esc(d.lieu.libelle) : '<span class="orange">Adresse non précise : recherche autour du centre de ' + esc((d.lieu && d.lieu.commune) || 'la commune') + '. Saisir la rue dans l\'adresse du projet puis relancer.</span>'}
+        · DVF tous états confondus : un bien rénové se situe plutôt vers le haut de la fourchette. Dernière vente publiée : ${esc(d.derniere || '—')}. Recherche du ${esc(d.le || '')}.</p>
+      ${S.type !== 'box' && s.p75 && Math.round(S.pm2) !== s.p75 ? `<button class="bouton bouton-petit" id="cSecteur">Revente au m² = ${eur(s.p75)} (quart haut)</button>` : ''}</div>`;
+  }
   function ongletComparables(z, b) {
     const dessiner = () => {
       const A = analyse(b), C = A.comp, S = b.sim;
@@ -706,12 +715,15 @@
           ${indic('Revente souhaitée au m²', S.type === 'box' ? '—' : eur(C.venteM2))}
           ${indic('Écart à la moyenne', C.ecart != null ? (C.ecart >= 0 ? '+ ' : '− ') + pc(Math.abs(C.ecart)) : '—', { etat: C.ecart != null && C.ecart > .05 ? 'orange' : '' })}
         </div>
+        ${blocDVF(b)}
         <div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Adresse</th><th class="nombre">Surface (m²)</th><th class="nombre">Prix (€)</th><th>Date</th><th class="nombre">Prix au m²</th><th></th></tr></thead><tbody>
-          ${b.comps.map((x, i) => `<tr data-i="${i}"><td data-titre="Adresse"><input data-f="adresse" value="${esc(x.adresse || '')}"></td><td data-titre="Surface"><input data-f="surface" type="number" inputmode="decimal" value="${x.surface || ''}" style="width:90px"></td><td data-titre="Prix"><input data-f="prix" type="number" inputmode="numeric" value="${x.prix || ''}" style="width:120px"></td><td data-titre="Date"><input data-f="date" value="${esc(x.date || '')}" placeholder="2026-05" style="width:110px"></td><td class="nombre" data-titre="Prix au m²">${x.surface > 0 && x.prix > 0 ? eur(x.prix / x.surface) : '—'}</td><td><button class="bouton-icone" data-suppr="${i}" aria-label="Supprimer">${I.fermer}</button></td></tr>`).join('') || '<tr><td colspan="6" class="discret">Aucune vente saisie.</td></tr>'}
+          ${b.comps.map((x, i) => `<tr data-i="${i}"><td data-titre="Adresse"><input data-f="adresse" value="${esc(x.adresse || '')}">${x.source === 'DVF' ? `<small class="discret">DVF${x.pieces ? ' · ' + x.pieces + ' p.' : ''}${x.distance != null ? ' · à ' + (x.distance < 1000 ? x.distance + ' m' : (x.distance / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' km') : ''}</small>` : ''}</td><td data-titre="Surface"><input data-f="surface" type="number" inputmode="decimal" value="${x.surface || ''}" style="width:90px"></td><td data-titre="Prix"><input data-f="prix" type="number" inputmode="numeric" value="${x.prix || ''}" style="width:120px"></td><td data-titre="Date"><input data-f="date" value="${esc(x.date || '')}" placeholder="2026-05" style="width:110px"></td><td class="nombre" data-titre="Prix au m²">${x.surface > 0 && x.prix > 0 ? eur(x.prix / x.surface) : '—'}</td><td><button class="bouton-icone" data-suppr="${i}" aria-label="Supprimer">${I.fermer}</button></td></tr>`).join('') || '<tr><td colspan="6" class="discret">Aucune vente saisie.</td></tr>'}
         </tbody></table></div>
-        <div class="actions" style="margin-top:.8rem"><button class="bouton" id="cAjout">+ Vente</button><button class="bouton" id="cColler">Coller des lignes</button><label class="bouton" for="cFichier">Importer un fichier</label><input type="file" id="cFichier" accept=".csv,.txt" hidden>
+        <div class="actions" style="margin-top:.8rem"><button class="bouton bouton-vert" id="cDVF">${b.dvf ? 'Relancer la recherche DVF' : 'Chercher les 3 dernières ventes (DVF)'}</button><button class="bouton" id="cAjout">+ Vente</button><button class="bouton" id="cColler">Coller des lignes</button><label class="bouton" for="cFichier">Importer un fichier</label><input type="file" id="cFichier" accept=".csv,.txt" hidden>
           ${C.moy && S.type !== 'box' && Math.round(C.moy) !== Math.round(S.pm2) ? `<button class="bouton bouton-principal" id="cQuartier">Prix du quartier = ${eur(C.moy)} /m²</button>` : ''}</div>
-        <p class="aide">Format des lignes : adresse ; surface ; prix ; date (séparateur point-virgule ou tabulation). Source suggérée : base DVF des valeurs foncières.</p>`;
+        <p class="aide">Format des lignes : adresse ; surface ; prix ; date (séparateur point-virgule ou tabulation). La recherche DVF lit les ventes publiques (Etalab, Base Adresse Nationale) : ventes d'un seul logement du même type, surface proche, au plus près de l'adresse, les plus récentes d'abord.</p>`;
+      $('#cDVF').onclick = async e => { e.target.disabled = true; e.target.textContent = 'Recherche DVF…'; await chercherDVF(b, false); dessiner(); };
+      const pS = $('#cSecteur'); if (pS) pS.onclick = () => { b.sim.pm2 = b.dvf.secteur.p75; sauverMaintenant('biens', b); notifier('Revente au m² : ' + eur(b.dvf.secteur.p75) + ' (quart haut du secteur).', 'succes'); dessiner(); };
       $('#cAjout').onclick = () => { b.comps.push({ adresse: '', surface: 0, prix: 0, date: '' }); sauverMaintenant('biens', b); dessiner(); };
       $$('[data-suppr]', z).forEach(x => x.onclick = () => { b.comps.splice(+x.dataset.suppr, 1); sauverMaintenant('biens', b); dessiner(); });
       $$('tr[data-i] [data-f]', z).forEach(el => el.addEventListener('change', () => { const x = b.comps[+el.closest('tr').dataset.i], f = el.dataset.f; x[f] = ['surface', 'prix'].includes(f) ? nb(el.value) : el.value; sauverMaintenant('biens', b); dessiner(); }));
@@ -1229,11 +1241,48 @@
       liens.push({ contactId: ag.id, role: 'Agent' });
     }
     const b = D.enregistrer('biens', { etape: 'repere', source: a.source, lien: a.lien || '', prixAffiche: e.prix, sim: S, comps: [], pieces: {}, liens, travaux: { lignes: [], utiliserReel: false }, creeLe: aujourdhui(), annonceId: a.id,
+      cp: a.cp || '', ville: a.ville || '', nbPieces: a.pieces || undefined,
       prochaine: { action: 'Prendre rendez-vous de visite', date: aujourdhui() } });
     D.enregistrer('relances', { date: aujourdhui(), objet: 'Prendre rendez-vous de visite', bienId: b.id, contactId: liens[0] ? liens[0].contactId : '', fait: false });
     D.enregistrer('journal', { bienId: b.id, date: (a.recueLe || aujourdhui()).slice(0, 10), type: 'note', texte: 'Annonce ' + (a.source || '') + (a.agence ? ' (' + a.agence + ')' : '') + ' reçue par alerte. Analyse : ' + (e.score != null ? 'score ' + e.score + ', ' : '') + (e.motifs.join(', ') || 'à examiner') + '.', auto: true });
     a.statutTri = 'retenue'; a.bienId = b.id; D.enregistrer('annonces', a);
+    chercherDVF(b, true);
     return b;
+  }
+
+  /* ---------- Ventes DVF (données publiques Etalab) : 3 dernières ventes similaires + prix du secteur ----------
+     Le serveur géocode l'adresse (Base Adresse Nationale) et lit les fichiers DVF de la commune. Aucun service payant. */
+  function lieuBien(b) {
+    const a = b.annonceId ? D.obtenir('annonces', b.annonceId) : null, adr = (b.sim && b.sim.adresse) || '';
+    const cp = b.cp || (a && a.cp) || (adr.match(/\b\d{5}\b/) || [''])[0];
+    const ville = b.ville || (a && a.ville) || (adr.includes(',') ? adr.split(',').pop().trim() : '');
+    let rue = adr.includes(',') ? adr.split(',').slice(0, -1).join(',') : adr;
+    if (!/\d/.test(rue) || !/\b(rue|av|avenue|bd|boulevard|place|all[ée]e|chemin|route|impasse|quai|cours|square|sentier|villa|cit[ée]|r[ée]sidence)\b/i.test(rue)) rue = '';
+    return { rue, cp, ville };
+  }
+  const enCoursDVF = new Set();
+  async function chercherDVF(b, silencieux) {
+    const S = b.sim || {}, L = lieuBien(b);
+    if (S.type === 'box') { if (!silencieux) notifier('DVF ne donne pas de surface pour les boxes : comparables à saisir.', 'erreur'); return null; }
+    if (D.etat().mode !== 'distant') { if (!silencieux) notifier('La recherche DVF passe par le serveur : se connecter d\'abord.', 'erreur'); return null; }
+    if (!L.cp && !L.ville) { if (!silencieux) notifier('Code postal ou ville manquant : compléter l\'adresse.', 'erreur'); return null; }
+    if (enCoursDVF.has(b.id)) return null; enCoursDVF.add(b.id);
+    try {
+      /* un local se revend en logement : on compare aux ventes d'appartements */
+      const x = await D.action('ventesDVF', { adresse: L.rue, cp: L.cp, ville: L.ville, type: S.type === 'maison' ? 'maison' : 'appt', surface: S.surf || 0, pieces: b.nbPieces || (S.type === 'local' ? 0 : S.pieces) || 0 });
+      const cur = D.obtenir('biens', b.id) || b;
+      cur.comps = (cur.comps || []).filter(c => c.source !== 'DVF').concat(x.ventes.map(v => ({ adresse: v.adresse, surface: v.surface, prix: v.prix, date: v.date, pieces: v.pieces, distance: v.distance, source: 'DVF' })));
+      cur.dvf = { secteur: x.secteur, lieu: x.lieu, periode: x.periode, derniere: x.derniere, rayon: x.rayon, tolerance: x.tolerance, type: x.type, le: aujourdhui() };
+      sauverMaintenant('biens', cur); Object.assign(b, cur);
+      D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'note', auto: true, texte: 'DVF : ' + x.ventes.length + ' vente(s) comparable(s) ' + (x.lieu.precis ? 'autour de l\'adresse' : 'dans la commune (adresse non précise)') + ', médiane du secteur ' + eur(x.secteur.mediane) + ' /m² sur ' + x.secteur.n + ' ventes (' + x.periode + ').' });
+      if (!silencieux) notifier(x.ventes.length + ' vente(s) DVF trouvée(s).', x.ventes.length ? 'succes' : 'erreur');
+      const r = route();
+      if (!MODE_VISITE && r.m === 'bien' && r.id === b.id && !document.querySelector('.modale-fond')) afficher();
+      return x;
+    } catch (err) {
+      if (!silencieux) notifier(/inconnue/i.test(err.message) ? 'Serveur à mettre à jour (Code.gs) pour la recherche DVF.' : 'DVF : ' + err.message, 'erreur');
+      return null;
+    } finally { enCoursDVF.delete(b.id); }
   }
   /* Ajout : coller le lien (lecture par le serveur) et, si le site bloque, le texte de la page */
   function ajouterAnnonce(recue) {

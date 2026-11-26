@@ -45,6 +45,7 @@ function traiter_(action, d, jeton) {
   if (action === 'lireAnnonce') return lireAnnonce_(String(d.url || ''));
   if (action === 'deposerPhoto') return deposerPhoto_(String(d.bienId || 'divers'), String(d.nom || 'photo.jpg'), String(d.base64 || ''));
   if (action === 'lirePhoto') return lirePhoto_(String(d.id || ''));
+  if (action === 'ventesDVF') return ventesDVF_(d);
   throw erreur_('Action inconnue.', 'ACTION');
 }
 
@@ -329,6 +330,122 @@ function lirePhoto_(id) {
 }
 
 /* À exécuter une fois depuis l'éditeur après une mise à jour : demande les autorisations (pages web, Drive pour les photos) */
+/* ---------- Ventes comparables DVF (données publiques Etalab, sans clé ni coût) ----------
+   1. Géocodage de l'adresse par la Base Adresse Nationale (api-adresse.data.gouv.fr).
+   2. Fichiers DVF géolocalisés de la commune (files.data.gouv.fr/geo-dvf), des années les plus récentes.
+   3. Ventes d'un seul logement du même type, surface proche, triées par distance puis par date. */
+var DVF_TYPES = { appt: 'Appartement', maison: 'Maison', local: 'Local industriel. commercial ou assimilé' };
+
+function geocoder_(adresse, cp, ville) {
+  function chercher(q, extra) {
+    var url = 'https://api-adresse.data.gouv.fr/search/?limit=1&q=' + encodeURIComponent(q) + (cp ? '&postcode=' + encodeURIComponent(cp) : '') + (extra || '');
+    for (var i = 0; i < 2; i++) {
+      try {
+        var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+        if (r.getResponseCode() === 200) { var f = (JSON.parse(r.getContentText()).features || [])[0]; return f || null; }
+      } catch (e) {}
+      url = url.replace('https://api-adresse.data.gouv.fr/search/', 'https://data.geopf.fr/geocodage/search');
+    }
+    return null;
+  }
+  var f = adresse ? chercher([adresse, ville].filter(String).join(' ')) : null;
+  var precis = !!(f && f.properties.score >= 0.6 && /housenumber|street/.test(f.properties.type));
+  if (!precis) f = chercher(ville || cp, '&type=municipality') || f;
+  if (!f) return null;
+  return { lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], insee: f.properties.citycode, commune: f.properties.city, cp: f.properties.postcode, libelle: f.properties.label, precis: precis };
+}
+
+function lignesCsv_(texte) {
+  var lignes = String(texte || '').split(/\r?\n/), entete = null, out = [];
+  for (var i = 0; i < lignes.length; i++) {
+    var l = lignes[i]; if (!l) continue;
+    var v = l.indexOf('"') < 0 ? l.split(',') : (function () { var c = [], cur = '', q = false; for (var j = 0; j < l.length; j++) { var ch = l[j]; if (q) { if (ch === '"' && l[j + 1] === '"') { cur += '"'; j++; } else if (ch === '"') q = false; else cur += ch; } else if (ch === '"') q = true; else if (ch === ',') { c.push(cur); cur = ''; } else cur += ch; } c.push(cur); return c; })();
+    if (!entete) { entete = v; continue; }
+    var o = {}; for (var k = 0; k < entete.length; k++) o[entete[k]] = v[k] || ''; out.push(o);
+  }
+  return out;
+}
+
+/* Une mutation = une vente ; on ne garde que les ventes d'un seul logement (ou local), dépendances admises. */
+function ventesUniques_(lignes, typeLocal) {
+  var parMut = {}, ordre = [];
+  lignes.forEach(function (r) {
+    if (r.nature_mutation !== 'Vente') return;
+    var m = parMut[r.id_mutation]; if (!m) { m = parMut[r.id_mutation] = { r: r, biens: {}, autres: 0 }; ordre.push(r.id_mutation); }
+    if (r.type_local === 'Appartement' || r.type_local === 'Maison' || r.type_local === DVF_TYPES.local) {
+      m.biens[[r.type_local, r.surface_reelle_bati, r.nombre_pieces_principales, r.lot1_numero].join('|')] = r;
+    }
+  });
+  var out = [];
+  ordre.forEach(function (id) {
+    var m = parMut[id], cles = Object.keys(m.biens); if (cles.length !== 1) return;
+    var b = m.biens[cles[0]]; if (b.type_local !== typeLocal) return;
+    var prix = parseFloat(b.valeur_fonciere), surf = parseFloat(b.surface_reelle_bati);
+    if (!(prix > 0 && surf > 0)) return;
+    var m2 = prix / surf; if (m2 < 300 || m2 > 30000) return;
+    out.push({ date: b.date_mutation, prix: Math.round(prix), surface: surf, pieces: parseInt(b.nombre_pieces_principales, 10) || 0, m2: Math.round(m2),
+      adresse: [b.adresse_numero, b.adresse_suffixe, b.adresse_nom_voie].filter(String).join(' ').replace(/\s+/g, ' ').trim() + ', ' + b.nom_commune,
+      lat: parseFloat(b.latitude), lon: parseFloat(b.longitude) });
+  });
+  return out;
+}
+
+function distanceM_(a, b) {
+  if (!isFinite(a.lat) || !isFinite(b.lat)) return Infinity;
+  var R = 6371000, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+  var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+}
+function quantile_(l, q) { if (!l.length) return 0; var s = l.slice().sort(function (a, b) { return a - b; }), p = (s.length - 1) * q, i = Math.floor(p); return Math.round(s[i] + (s[Math.min(i + 1, s.length - 1)] - s[i]) * (p - i)); }
+
+/* Choix des comparables à partir des ventes déjà lues (fonction pure, testée). */
+function choisirComparables_(ventes, cible, nombre) {
+  nombre = nombre || 3;
+  ventes.forEach(function (v) { v.distance = distanceM_(cible, v); });
+  var surf = +cible.surface || 0, choix = [], rayon = null, tolerance = null;
+  var tolerances = surf ? [0.25, 0.4, 0.6] : [null], rayons = [300, 600, 1000, 2000, Infinity];
+  for (var t = 0; t < tolerances.length && choix.length < nombre; t++) {
+    for (var k = 0; k < rayons.length; k++) {
+      var l = ventes.filter(function (v) { return v.distance <= rayons[k] && (tolerances[t] == null || Math.abs(v.surface - surf) <= surf * tolerances[t]); });
+      if (l.length >= nombre || (t === tolerances.length - 1 && k === rayons.length - 1)) {
+        if (cible.pieces) { var memes = l.filter(function (v) { return v.pieces === +cible.pieces; }); if (memes.length >= nombre) l = memes; }
+        l.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : a.distance - b.distance; });
+        choix = l.slice(0, nombre); rayon = rayons[k]; tolerance = tolerances[t]; break;
+      }
+    }
+  }
+  /* Prix du secteur : ventes du même type à moins d'1 km (toute la commune s'il y en a moins de 10) */
+  var proches = ventes.filter(function (v) { return v.distance <= 1000; }), zone = '1 km';
+  if (proches.length < 10) { proches = ventes; zone = 'commune'; }
+  var m2 = proches.map(function (v) { return v.m2; });
+  return {
+    ventes: choix.map(function (v) { return { adresse: v.adresse, date: v.date, prix: v.prix, surface: v.surface, pieces: v.pieces, m2: v.m2, distance: isFinite(v.distance) ? v.distance : null }; }),
+    rayon: isFinite(rayon) ? rayon : null, tolerance: tolerance,
+    secteur: { mediane: quantile_(m2, 0.5), p25: quantile_(m2, 0.25), p75: quantile_(m2, 0.75), n: m2.length, zone: zone }
+  };
+}
+
+function ventesDVF_(d) {
+  var typeLocal = DVF_TYPES[d.type];
+  if (!typeLocal) throw erreur_('Type non couvert par DVF (box : ventes de dépendances sans surface).', 'DVF');
+  var g = (d.lat && d.insee) ? { lat: +d.lat, lon: +d.lon, insee: String(d.insee), commune: d.ville, precis: true } : geocoder_(String(d.adresse || ''), String(d.cp || ''), String(d.ville || ''));
+  if (!g || !g.insee) throw erreur_('Adresse introuvable dans la Base Adresse Nationale.', 'DVF');
+  var dep = /^97/.test(g.insee) ? g.insee.slice(0, 3) : g.insee.slice(0, 2), an = new Date().getFullYear(), annees = [];
+  for (var y = an; y >= an - 4; y--) annees.push(y);
+  var reponses = UrlFetchApp.fetchAll(annees.map(function (y) { return { url: 'https://files.data.gouv.fr/geo-dvf/latest/csv/' + y + '/communes/' + dep + '/' + g.insee + '.csv', muteHttpExceptions: true, followRedirects: true }; }));
+  var ventes = [], lues = [];
+  reponses.forEach(function (r, i) { if (r.getResponseCode() !== 200) return; lues.push(annees[i]); ventes = ventes.concat(ventesUniques_(lignesCsv_(r.getContentText()), typeLocal)); });
+  if (!lues.length) throw erreur_('Fichiers DVF indisponibles pour cette commune.', 'DVF');
+  /* Les trois années disponibles les plus récentes : assez de ventes, prix encore actuels */
+  var garder = lues.slice(0, 3).map(String);
+  ventes = ventes.filter(function (v) { return garder.indexOf(v.date.slice(0, 4)) >= 0; });
+  var res = choisirComparables_(ventes, { lat: g.lat, lon: g.lon, surface: d.surface, pieces: d.pieces }, 3);
+  res.lieu = { libelle: g.libelle || '', commune: g.commune || '', insee: g.insee, precis: g.precis, lat: g.lat, lon: g.lon };
+  res.periode = garder[garder.length - 1] + '–' + garder[0]; res.derniere = ventes.reduce(function (m, v) { return v.date > m ? v.date : m; }, '');
+  res.type = typeLocal;
+  return res;
+}
+
 function autoriserLectureAnnonces() {
   UrlFetchApp.fetch('https://www.bienici.com/', { muteHttpExceptions: true });
   dossier_(DriveApp.getRootFolder(), 'Marchéo — photos');

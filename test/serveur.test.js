@@ -96,3 +96,25 @@ test('photos de visite : dépôt dans Drive et relecture', () => {
   assert.equal(l.resultat.base64, image, 'photo relue à l\'identique');
   assert.equal(G.appel('deposerPhoto', { bienId: 'b1', base64: image }, '').code, 'SESSION', 'dépôt refusé sans connexion');
 });
+
+test('ventes DVF : 3 dernières ventes similaires et prix du secteur', () => {
+  const G = environnement(); G.installer(); G.definirMotDePasse('direction', 'motdepasse-test');
+  const j = G.appel('connexion', { identifiant: 'direction', motDePasse: 'motdepasse-test' }).resultat.jeton;
+  const csv = fs.readFileSync(path.join(__dirname, 'alertes/dvf-78362-extrait.csv'), 'utf8');
+  const appels = [];
+  G.UrlFetchApp.fetch = url => { appels.push(url); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ features: [{ geometry: { coordinates: [1.7108, 48.9747] }, properties: { score: 0.9, type: 'housenumber', citycode: '78362', city: 'Mantes-la-Ville', postcode: '78711', label: '1 rue Test 78711 Mantes-la-Ville' } }] }) }; };
+  G.UrlFetchApp.fetchAll = reqs => reqs.map(r => { appels.push(r.url); const ok = /\/2025\//.test(r.url); return { getResponseCode: () => ok ? 200 : 404, getContentText: () => ok ? csv : '' }; });
+  const r = G.appel('ventesDVF', { adresse: '1 rue Test', cp: '78711', ville: 'Mantes-la-Ville', type: 'appt', surface: 45 }, j);
+  assert.ok(r.ok, r.message);
+  const x = r.resultat;
+  assert.ok(appels.some(u => u.includes('/communes/78/78362.csv')), 'fichier DVF de la commune');
+  assert.equal(x.ventes.length, 3);
+  x.ventes.forEach(v => { assert.ok(v.surface >= 45 * 0.4 && v.surface <= 45 * 1.6, 'surface proche ' + v.surface); assert.ok(v.prix > 0 && v.m2 > 0 && v.adresse.includes('Mantes')); });
+  assert.ok(x.ventes[0].date >= x.ventes[1].date && x.ventes[1].date >= x.ventes[2].date, 'plus récentes d\'abord');
+  assert.ok(x.secteur.mediane > 1000 && x.secteur.mediane < 6000 && x.secteur.n >= 3, 'médiane plausible ' + x.secteur.mediane);
+  assert.equal(x.lieu.insee, '78362');
+  assert.equal(G.appel('ventesDVF', { type: 'box', ville: 'X' }, j).code, 'DVF', 'box non couvert');
+  // une vente de 2 logements (immeuble) n'est pas un comparable
+  const deux = G.ventesUniques_(G.lignesCsv_('id_mutation,nature_mutation,valeur_fonciere,type_local,surface_reelle_bati,nombre_pieces_principales,lot1_numero,date_mutation\n1,Vente,300000,Appartement,40,2,1,2025-01-01\n1,Vente,300000,Appartement,50,2,2,2025-01-01\n2,Vente,150000,Appartement,40,2,3,2025-02-01\n2,Vente,150000,Dépendance,,,4,2025-02-01'), 'Appartement');
+  assert.equal(JSON.stringify(deux.map(v => v.prix)), '[150000]');
+});
