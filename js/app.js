@@ -107,6 +107,7 @@
   const MODULES = [
     { g: 'Pilotage', id: 'tableau', l: 'Tableau de bord', d: 'Pipeline, capital, alertes', i: I.tableau },
     { g: 'Acquisition', id: 'annonces', l: 'Annonces', d: 'Alertes e-mail analysées', i: I.annonces },
+    { g: 'Acquisition', id: 'visite', l: 'Visite', d: 'Page mobile de visite', i: I.biens, href: 'visite.html' },
     { g: 'Acquisition', id: 'biens', l: 'Projets en cours', d: 'Du repérage à la vente', i: I.biens },
     { g: 'Acquisition', id: 'comparateur', l: 'Comparateur', d: 'Deux à quatre biens', i: I.comparateur },
     { g: 'Suivi', id: 'relances', l: 'Relances', d: 'Aujourd\'hui et en retard', i: I.relances },
@@ -122,6 +123,7 @@
     return { annonces: D.liste('annonces').filter(a => a.statutTri !== 'vue' && aExaminer(a)).length, relances: rel.length, retard: rel.some(r => r.date < t), biens: D.liste('biens').filter(b => b.etape !== 'ecarte' && b.etape !== 'vendu').length };
   }
   function majNav() {
+    if (!$('#listeModules')) return; // page Visite : pas de menu latéral
     const r = route(), q = ($('#rechercheModule') || {}).value || '', C = compteurs();
     const mods = MODULES.filter(m => !q || (m.l + ' ' + m.d).toLowerCase().includes(q.toLowerCase()));
     let g = '', h = '';
@@ -129,7 +131,7 @@
       if (m.g !== g) { g = m.g; h += `<div class="nav-groupe">${esc(g)}</div>`; }
       const n = m.id === 'relances' ? C.relances : m.id === 'biens' ? C.biens : m.id === 'annonces' ? C.annonces : 0;
       const actif = r.m === m.id || (r.m === 'bien' && m.id === 'biens');
-      h += `<a class="nav-lien${actif ? ' actif' : ''}" href="#/${m.id}"><span class="pastille-module">${m.i}</span><span class="nav-texte"><span class="nav-libelle">${esc(m.l)}</span><span class="nav-desc">${esc(m.d)}</span></span>${n ? `<span class="nav-compteur${m.id === 'relances' && C.retard ? ' alerte' : ''}">${n}</span>` : ''}</a>`;
+      h += `<a class="nav-lien${actif ? ' actif' : ''}" href="${m.href || '#/' + m.id}"><span class="pastille-module">${m.i}</span><span class="nav-texte"><span class="nav-libelle">${esc(m.l)}</span><span class="nav-desc">${esc(m.d)}</span></span>${n ? `<span class="nav-compteur${m.id === 'relances' && C.retard ? ' alerte' : ''}">${n}</span>` : ''}</a>`;
     });
     $('#listeModules').innerHTML = h || '<div class="nav-vide">Aucun module</div>';
   }
@@ -145,6 +147,7 @@
   /* ================= Rendu principal ================= */
   let vueCourante = '';
   function afficher() {
+    if (MODE_VISITE) { vueVisiteAccueil(); return; }
     const r = route(), c = $('#contenu');
     $('.app').classList.remove('menu-ouvert');
     majNav();
@@ -176,7 +179,7 @@
     const annonces = D.liste('annonces').filter(aExaminer).sort((x, y) => (evalAnnonce(y).score || 0) - (evalAnnonce(x).score || 0));
     c.innerHTML = `
       <div class="en-tete-page"><div><h1>Tableau de bord</h1><p>Au ${dateFr(t)}</p></div>
-        <div class="actions"><button class="bouton bouton-principal" id="nouveauBien">+ Nouveau projet</button></div></div>
+        <div class="actions"><a class="bouton bouton-vert" href="visite.html">Visite</a><button class="bouton bouton-principal" id="nouveauBien">+ Nouveau projet</button></div></div>
       <div class="section-titre"><h2>Prospection</h2></div>
       <div class="indicateurs">
         ${indic('Annonces à examiner', annonces.length, { etat: annonces.length ? 'vert' : '', detail: annonces.length ? 'passent les trois étapes du tri' : 'aucune pour l\'instant', lien: '#/annonces/examiner' })}
@@ -726,6 +729,7 @@
   const ETAT4 = ['Neufs', 'Bon état', 'Passables', 'À refaire'];
   const VISITE = [
     { id: 'arrivee', t: 'Arrivée et immeuble', aide: 'Photo de la façade et de l\'entrée en arrivant.', q: [
+      { id: 'typologie', l: 'Typologie', o: ['Studio', 'F2', 'F3 ou plus'] },
       { id: 'communs', l: 'Parties communes', o: ['Bon état', 'Passables', 'Dégradées'] },
       { id: 'facade', l: 'Façade et toiture vues de dehors', o: ['Bon état', 'Passables', 'Dégradées'] },
       { id: 'etage', l: 'Étage', o: ['RDC', '1er', '2e', '3e', '4e et +'] },
@@ -735,7 +739,7 @@
       { id: 'murs', l: 'Murs et plafonds', o: ['Bon état', 'À rafraîchir', 'À reprendre (enduits, fissures)'] },
       { id: 'fenetres', l: 'Fenêtres', o: ['Double vitrage récent', 'Double vitrage ancien', 'Simple vitrage'] },
       { id: 'lumiere', l: 'Luminosité', o: ['Lumineux', 'Moyen', 'Sombre'] }] },
-    { id: 'chambre', t: 'Chambre', saut: 'Pas de chambre (studio)', q: [
+    { id: 'chambre', t: 'Chambre', q: [
       { id: 'sols', l: 'Sols', o: ETAT4 },
       { id: 'murs', l: 'Murs et plafonds', o: ['Bon état', 'À rafraîchir', 'À reprendre (enduits, fissures)'] },
       { id: 'fenetres', l: 'Fenêtres', o: ['Double vitrage récent', 'Double vitrage ancien', 'Simple vitrage'] }] },
@@ -779,7 +783,7 @@
     const v = (e, q) => (R[e] || {})[q] || '', postes = new Set(['nett', 'peint', 'deco']), alertes = [], lourds = new Set();
     const ajoute = (p, lourd) => { postes.add(p); if (lourd) lourds.add(p); };
     ['sejour', 'chambre'].forEach(e => {
-      if (R[e] && R[e]._saute) return;
+      if (e === 'chambre' && estStudio(R)) return;
       if (['Passables', 'À refaire'].includes(v(e, 'sols'))) ajoute('sols');
       if (v(e, 'murs').startsWith('À reprendre')) { ajoute('enduit', true); ajoute('peint'); }
       if (v(e, 'fenetres') === 'Simple vitrage') ajoute('fen', true);
@@ -803,7 +807,7 @@
     const niveau = lourds.size >= 5 || (lourds.has('elec') && lourds.has('plomb') && lourds.has('macon')) ? 'l' : lourds.size >= 2 ? 'c' : 'r';
     /* Budgets : au m² selon les critères, et poste par poste selon les repères */
     const S = M.normalize(clone(b.sim)), C = Object.assign({}, MA.CRITERES_DEF, reglages().criteres || {}), BT = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}), bt = BT[niveau];
-    const pieces = R.chambre && R.chambre._saute ? 1 : Math.max(+S.pieces || 1, R.chambre && Object.keys(R.chambre).length ? 2 : 1);
+    const typo = (R.arrivee || {}).typologie, pieces = estStudio(R) ? 1 : typo === 'F2' ? 2 : typo === 'F3 ou plus' ? Math.max(3, +S.pieces || 3) : Math.max(+S.pieces || 1, R.chambre && Object.keys(R.chambre).length ? 2 : 1);
     const budgetM2 = Math.round(Math.max(+bt.min || 0, (+bt.m2 || 0) * S.surf + (+bt.piece || 0) * pieces) * (1 + S.aleas / 100));
     M.W.forEach(i => { if (S.w[i.id]) { S.w[i.id].on = M.vis(i, S.type) && postes.has(i.id); S.w[i.id].val = null; } });
     S.niveau = niveau; S.trvForfait = null; S.trvReel = null;
@@ -812,53 +816,74 @@
   }
   function compteRendu(R) {
     return VISITE.filter(e => e.id !== 'bilan').map(e => {
-      const x = R[e.id] || {}; if (x._saute) return e.t + ' : sans objet.';
+      const x = R[e.id] || {}; if (e.id === 'chambre' && estStudio(R)) return '';
       const l = e.q.map(q => x[q.id] || x[q.id + '_saisie'] ? q.l + ' : ' + [x[q.id], x[q.id + '_saisie'] ? x[q.id + '_saisie'] + (q.saisie && q.saisie.startsWith('€') ? ' €' : '') : ''].filter(Boolean).join(', ') : '').filter(Boolean);
-      return l.length ? e.t + ' — ' + l.join(' ; ') + (x._note ? ' ; note : ' + x._note : '') + '.' : '';
+      const notes = e.q.map(q => x[q.id + '_note'] ? q.l + ' : ' + x[q.id + '_note'] : '').filter(Boolean);
+      return l.length ? e.t + ' — ' + l.join(' ; ') + (notes.length ? ' ; notes : ' + notes.join(' ; ') : '') + '.' : '';
     }).filter(Boolean).join('\n');
   }
-  function ouvrirVisite(b) {
-    b.visiteBrouillon = b.visiteBrouillon || { debut: new Date().toISOString(), etape: 0, reponses: {}, photos: [], budget: 'm2' };
-    const V = b.visiteBrouillon, ecran = document.createElement('div');
-    ecran.className = 'visite'; document.body.appendChild(ecran);
-    const etapes = () => VISITE;
+  /* Un écran par point : question, réponses en grands boutons, photos du point. Toucher une réponse passe au point suivant. */
+  const estStudio = R => (R.arrivee || {}).typologie === 'Studio' || !!(R.chambre || {})._saute;
+  function pointsVisite(R) {
+    const l = [];
+    VISITE.forEach(e => { if (e.id === 'chambre' && estStudio(R)) return; e.q.forEach((q, i) => l.push({ e, q, rang: i + 1, total: e.q.length })); });
+    return l;
+  }
+  function ouvrirVisite(b, apresFin) {
+    b.visiteBrouillon = b.visiteBrouillon || { debut: new Date().toISOString(), point: 0, reponses: {}, photos: [], budget: 'm2' };
+    const V = b.visiteBrouillon; if (V.point == null) V.point = 0;
+    const ecran = document.createElement('div'); ecran.className = 'visite'; document.body.appendChild(ecran);
     const sauver = () => sauverPlusTard('biens', b, 300);
+    let sommaire = false, minuteurAvance = null;
     const dessiner = () => {
-      const E = etapes()[V.etape], R = V.reponses[E.id] = V.reponses[E.id] || {}, A = E.id === 'bilan' ? analyseVisite(V.reponses, b) : null;
-      const photos = V.photos.filter(p => p.etape === E.id);
-      const nbRep = e => Object.keys(V.reponses[e.id] || {}).filter(k => !k.startsWith('_')).length;
+      const P = pointsVisite(V.reponses); V.point = Math.min(V.point, P.length - 1);
+      const { e: E, q: Q, rang, total } = P[V.point], R = V.reponses[E.id] = V.reponses[E.id] || {};
+      const bilan = E.id === 'bilan', A = bilan ? analyseVisite(V.reponses, b) : null;
+      const photos = V.photos.filter(p => p.etape === E.id && (p.point || '') === Q.id);
+      const repondu = Q.o.length ? !!R[Q.id] : !!R[Q.id + '_saisie'];
+      const faits = P.filter(x => (V.reponses[x.e.id] || {})[x.q.id] || (V.reponses[x.e.id] || {})[x.q.id + '_saisie']).length;
       ecran.innerHTML = `
-        <header class="visite-tete"><button class="bouton-icone" data-v="fermer" aria-label="Fermer">${I.fermer}</button><div><strong>Visite</strong><small>${esc(titreBien(b))}</small></div><span class="visite-chrono">${Math.max(0, Math.round((Date.now() - new Date(V.debut)) / 60000))} min</span></header>
-        <nav class="visite-etapes">${etapes().map((e, i) => `<button data-aller="${i}" class="${i === V.etape ? 'actif' : (V.reponses[e.id] && (nbRep(e) || V.reponses[e.id]._saute)) ? 'fait' : ''}" aria-label="${esc(e.t)}"></button>`).join('')}</nav>
+        <header class="visite-tete"><button class="bouton-icone" data-v="fermer" aria-label="Fermer">${I.fermer}</button><div><strong>Visite</strong><small>${esc(titreBien(b))}</small></div><button class="bouton bouton-petit visite-sommaire-bouton" data-v="sommaire">Sommaire</button><span class="visite-chrono">${Math.max(0, Math.round((Date.now() - new Date(V.debut)) / 60000))} min</span></header>
+        <div class="visite-progression"><span style="width:${Math.round((V.point + 1) / P.length * 100)}%"></span></div>
+        ${sommaire ? `<main class="visite-corps"><h2>Sommaire</h2><div class="compte">${VISITE.filter(e => !(e.id === 'chambre' && estStudio(V.reponses))).map(e => { const i = P.findIndex(x => x.e.id === e.id), n = e.q.filter(q => (V.reponses[e.id] || {})[q.id] || (V.reponses[e.id] || {})[q.id + '_saisie']).length; return `<button class="visite-sommaire${P[V.point].e.id === e.id ? ' actif' : ''}" data-saut-point="${i}"><span>${esc(e.t)}</span><b class="${n === e.q.length ? 'vert' : ''}">${n} / ${e.q.length}</b></button>`; }).join('')}</div><p class="aide">${faits} point(s) renseigné(s) sur ${P.length}.</p></main>` : `
         <main class="visite-corps">
-          <h2>${esc(E.t)}</h2>${E.aide ? `<p class="aide">${esc(E.aide)}</p>` : ''}
-          ${E.saut ? `<button class="puce${R._saute ? ' choisie' : ''}" data-saut>${esc(E.saut)}</button>` : ''}
-          ${R._saute ? '' : E.q.map(q => `<div class="visite-q"><div class="visite-l">${esc(q.l)}</div><div class="puces">${q.o.map(o => `<button class="puce${R[q.id] === o ? ' choisie' : ''}" data-q="${q.id}" data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div>${q.saisie ? `<input class="visite-saisie" data-saisie="${q.id}" inputmode="numeric" placeholder="${esc(q.saisie)}" value="${esc(R[q.id + '_saisie'] || '')}">` : ''}</div>`).join('')}
+          <div class="visite-section">${esc(E.t)} · ${rang} / ${total}</div>
+          <h2>${esc(Q.l)}</h2>${rang === 1 && E.aide ? `<p class="aide">${esc(E.aide)}</p>` : ''}
+          ${Q.o.length ? `<div class="puces puces-point">${Q.o.map(o => `<button class="puce${R[Q.id] === o ? ' choisie' : ''}" data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : ''}
+          ${Q.saisie ? `<input class="visite-saisie" data-saisie inputmode="numeric" placeholder="${esc(Q.saisie)}" value="${esc(R[Q.id + '_saisie'] || '')}">` : ''}
           ${A ? `<div class="visite-bilan">
               <div class="compte">${ligneCompte('Niveau de travaux', M.NIVEAUX[A.niveau])}${ligneCompte('Budget au m² (tes critères)', eur(A.budgetM2), { s: A.pieces + ' pièce(s), aléas compris' })}${ligneCompte('Budget poste par poste (repères)', eur(A.budgetPostes))}</div>
               <div class="visite-l" style="margin-top:.8rem">Postes à prévoir</div><div class="etiquettes">${A.postes.map(p => `<span class="etiquette">${esc((M.W.find(i => i.id === p) || { l: p }).l.split(',')[0])}</span>`).join('')}</div>
               <div class="segments" style="margin:.6rem 0"><button data-budget="m2" aria-pressed="${V.budget !== 'postes'}">Retenir le budget au m²</button><button data-budget="postes" aria-pressed="${V.budget === 'postes'}">Retenir le détail</button></div>
               ${A.alertes.map(x => `<div class="alerte-bandeau">${esc(x)}</div>`).join('')}
-              ${etapes().filter(e => !['bilan'].includes(e.id) && !nbRep(e) && !(V.reponses[e.id] || {})._saute).length ? `<p class="aide orange">Étapes sans réponse : ${etapes().filter(e => e.id !== 'bilan' && !nbRep(e) && !(V.reponses[e.id] || {})._saute).map(e => e.t).join(', ')}.</p>` : ''}
+              ${faits < P.length - 1 ? `<p class="aide orange">${P.length - 1 - faits} point(s) sans réponse : « Sommaire » pour y revenir.</p>` : ''}
             </div>` : ''}
-          ${E.photo === false ? '' : `<div class="visite-photos">${photos.map(p => `<img data-photo="${p.id}" alt="Photo ${esc(E.t)}">`).join('')}<label class="bouton visite-photo">Photo<input type="file" accept="image/*" capture="environment" multiple hidden data-prise></label></div>`}
-          <textarea class="visite-note" data-note rows="2" placeholder="Note (facultatif)">${esc(R._note || '')}</textarea>
-        </main>
-        <footer class="visite-pied"><button class="bouton" data-v="prec"${V.etape === 0 ? ' disabled' : ''}>‹ Précédent</button>${E.id === 'bilan' ? '<button class="bouton bouton-principal" data-v="fin">Enregistrer la visite</button>' : '<button class="bouton bouton-principal" data-v="suiv">Suivant ›</button>'}</footer>`;
+          ${bilan ? '' : `<div class="visite-photos">${photos.map(p => `<img data-photo="${p.id}" alt="">`).join('')}<label class="bouton visite-photo">${photos.length ? 'Autre photo' : 'Photo'}<input type="file" accept="image/*" capture="environment" multiple hidden data-prise></label></div>`}
+          <details class="visite-note-bloc"${R[Q.id + '_note'] ? ' open' : ''}><summary>Note</summary><textarea class="visite-note" data-note rows="2">${esc(R[Q.id + '_note'] || '')}</textarea></details>
+        </main>`}
+        <footer class="visite-pied"><button class="bouton" data-v="prec"${V.point === 0 && !sommaire ? ' disabled' : ''}>‹ Précédent</button>${sommaire ? '<button class="bouton bouton-principal" data-v="retour">Reprendre</button>' : bilan ? '<button class="bouton bouton-principal" data-v="fin">Enregistrer la visite</button>' : `<button class="bouton ${repondu ? 'bouton-principal' : ''}" data-v="suiv">${repondu ? 'Suivant ›' : 'Passer ›'}</button>`}</footer>`;
+      const aller_ = i => { clearTimeout(minuteurAvance); sommaire = false; V.point = Math.max(0, Math.min(P.length - 1, i)); sauver(); dessiner(); };
       $$('img[data-photo]', ecran).forEach(img => { const m = V.photos.find(p => p.id === img.dataset.photo); MarcheoPhotos.url(m).then(u => { if (u) img.src = u; }).catch(() => {}); });
-      $$('[data-q]', ecran).forEach(x => x.onclick = () => { R[x.dataset.q] = R[x.dataset.q] === x.dataset.o ? '' : x.dataset.o; sauver(); dessiner(); });
-      $$('[data-saisie]', ecran).forEach(x => x.oninput = () => { R[x.dataset.saisie + '_saisie'] = x.value.replace(/[^\d]/g, ''); sauver(); });
-      const s = $('[data-saut]', ecran); if (s) s.onclick = () => { R._saute = !R._saute; sauver(); dessiner(); };
-      $('[data-note]', ecran).oninput = e => { R._note = e.target.value; sauver(); };
+      $$('[data-o]', ecran).forEach(x => x.onclick = () => {
+        const nouveau = R[Q.id] !== x.dataset.o; R[Q.id] = nouveau ? x.dataset.o : '';
+        if (E.id === 'arrivee' && Q.id === 'typologie') { V.reponses.chambre = V.reponses.chambre || {}; V.reponses.chambre._saute = R[Q.id] === 'Studio'; }
+        sauver(); dessiner();
+        /* réponse donnée : point suivant, sauf si une saisie complète la réponse ou si c'est le bilan */
+        if (nouveau && !Q.saisie && !bilan) minuteurAvance = setTimeout(() => aller_(V.point + 1), 280);
+      });
+      const sa = $('[data-saisie]', ecran); if (sa) sa.oninput = () => { R[Q.id + '_saisie'] = sa.value.replace(/[^\d]/g, ''); sauver(); const s = $('[data-v="suiv"]', ecran); if (s) { s.textContent = 'Suivant ›'; s.classList.add('bouton-principal'); } };
+      const no = $('[data-note]', ecran); if (no) no.oninput = () => { R[Q.id + '_note'] = no.value; sauver(); };
       $$('[data-budget]', ecran).forEach(x => x.onclick = () => { V.budget = x.dataset.budget; sauver(); dessiner(); });
       const prise = $('[data-prise]', ecran);
-      if (prise) prise.onchange = async () => { for (const f of prise.files) { try { V.photos.push(await MarcheoPhotos.ajouter(b.id, E.id, f)); } catch (e) { notifier(e.message, 'erreur'); } } sauverMaintenant('biens', b); dessiner(); };
-      $$('[data-aller]', ecran).forEach(x => x.onclick = () => { V.etape = +x.dataset.aller; sauver(); dessiner(); });
-      $('[data-v="fermer"]', ecran).onclick = () => { sauverMaintenant('biens', b); ecran.remove(); notifier('Visite gardée en brouillon : « Reprendre la visite » dans l\'onglet Visite.'); afficher(); };
-      $('[data-v="prec"]', ecran).onclick = () => { V.etape = Math.max(0, V.etape - 1); sauver(); dessiner(); };
-      const suiv = $('[data-v="suiv"]', ecran); if (suiv) suiv.onclick = () => { V.etape = Math.min(etapes().length - 1, V.etape + 1); sauver(); dessiner(); };
-      const fin = $('[data-v="fin"]', ecran); if (fin) fin.onclick = () => { enregistrerVisite(b, analyseVisite(V.reponses, b)); ecran.remove(); aller('#/bien/' + b.id + '/visite'); afficher(); };
-      $('.visite-corps', ecran).scrollTop = 0;
+      if (prise) prise.onchange = async () => { clearTimeout(minuteurAvance); for (const f of prise.files) { try { const m = await MarcheoPhotos.ajouter(b.id, E.id, f); m.point = Q.id; V.photos.push(m); } catch (err) { notifier(err.message, 'erreur'); } } sauverMaintenant('biens', b); dessiner(); };
+      $$('[data-saut-point]', ecran).forEach(x => x.onclick = () => aller_(+x.dataset.sautPoint));
+      $('[data-v="sommaire"]', ecran).onclick = () => { clearTimeout(minuteurAvance); sommaire = !sommaire; dessiner(); };
+      $('[data-v="fermer"]', ecran).onclick = () => { clearTimeout(minuteurAvance); sauverMaintenant('biens', b); ecran.remove(); notifier('Visite gardée en brouillon : « Reprendre la visite » ' + (MODE_VISITE ? 'dans la liste.' : 'sur la fiche du projet.')); afficher(); };
+      $('[data-v="prec"]', ecran).onclick = () => sommaire ? (sommaire = false, dessiner()) : aller_(V.point - 1);
+      const ret = $('[data-v="retour"]', ecran); if (ret) ret.onclick = () => { sommaire = false; dessiner(); };
+      const suiv = $('[data-v="suiv"]', ecran); if (suiv) suiv.onclick = () => aller_(V.point + 1);
+      const fin = $('[data-v="fin"]', ecran); if (fin) fin.onclick = () => { enregistrerVisite(b, analyseVisite(V.reponses, b)); ecran.remove(); if (apresFin) apresFin(b); else { aller('#/bien/' + b.id + '/visite'); afficher(); } };
+      const corps = $('.visite-corps', ecran); if (corps) corps.scrollTop = 0;
     };
     dessiner();
   }
@@ -901,7 +926,7 @@
         ${indic('Photos', X.photos.length)}
       </div>
       ${A.alertes.map(x => `<div class="alerte-bandeau">${esc(x)}</div>`).join('')}
-      ${VISITE.filter(e => e.id !== 'bilan').map(e => { const R = X.reponses[e.id] || {}, ph = X.photos.filter(p => p.etape === e.id); if (!Object.keys(R).length && !ph.length) return ''; return `<div class="carte"><h2>${esc(e.t)}</h2>${R._saute ? '<p class="discret">Sans objet.</p>' : `<div class="compte">${e.q.filter(q => R[q.id] || R[q.id + '_saisie']).map(q => ligneCompte(esc(q.l), esc([R[q.id], R[q.id + '_saisie'] ? Number(R[q.id + '_saisie']).toLocaleString('fr-FR') + ' €' : ''].filter(Boolean).join(' · ')))).join('')}</div>`}${R._note ? `<p class="aide">Note : ${esc(R._note)}</p>` : ''}${ph.length ? `<div class="visite-photos">${ph.map(p => `<img data-photo="${p.id}" alt="">`).join('')}</div>` : ''}</div>`; }).join('')}`;
+      ${VISITE.filter(e => e.id !== 'bilan').map(e => { const R = X.reponses[e.id] || {}, ph = X.photos.filter(p => p.etape === e.id); if (!Object.keys(R).length && !ph.length) return ''; return `<div class="carte"><h2>${esc(e.t)}</h2>${e.id === 'chambre' && estStudio(X.reponses) ? '<p class="discret">Studio : sans objet.</p>' : `<div class="compte">${e.q.filter(q => R[q.id] || R[q.id + '_saisie'] || ph.some(p => p.point === q.id)).map(q => { const pq = ph.filter(p => p.point === q.id); return ligneCompte(esc(q.l) + (R[q.id + '_note'] ? `<small class="discret">${esc(R[q.id + '_note'])}</small>` : '') + (pq.length ? `<span class="visite-photos petites">${pq.map(p => `<img data-photo="${p.id}" alt="">`).join('')}</span>` : ''), esc([R[q.id], R[q.id + '_saisie'] ? Number(R[q.id + '_saisie']).toLocaleString('fr-FR') + ' €' : ''].filter(Boolean).join(' · ')) || '—'); }).join('')}</div>`}${R._note ? `<p class="aide">Note : ${esc(R._note)}</p>` : ''}${ph.filter(p => !p.point).length ? `<div class="visite-photos">${ph.filter(p => !p.point).map(p => `<img data-photo="${p.id}" alt="">`).join('')}</div>` : ''}</div>`; }).join('')}`;
     $$('img[data-photo]', z).forEach(img => { const m = X.photos.find(p => p.id === img.dataset.photo); MarcheoPhotos.url(m).then(u => { if (u) { img.src = u; img.onclick = () => window.open(u, '_blank'); } }).catch(() => { img.alt = 'Photo non disponible sur cet appareil'; }); });
     const rp = $('#viReprendre'); if (rp) rp.onclick = () => ouvrirVisite(b);
     const rf = $('#viRefaire'); if (rf) rf.onclick = () => confirmer('Commencer une nouvelle visite ? Les réponses de la précédente restent dans le journal.', () => { b.visiteBrouillon = null; ouvrirVisite(b); });
@@ -1187,6 +1212,11 @@
   }
   /* Retenir : crée le projet, relie le contact de l'agence, relance de prise de rendez-vous */
   function retenirAnnonce(a) {
+    creerProjet(a);
+    notifier('Projet créé, relance « Prendre rendez-vous » pour aujourd\'hui.', 'succes');
+    aller('#/bien/' + a.bienId);
+  }
+  function creerProjet(a) {
     const e = evalAnnonce(a), R = reglages();
     let S = e.S ? clone(e.S) : M.fresh(e.type);
     if (!e.S) { ['taux', 'obj', 'part', 'pfu', 'dmax', 'tvaT', 'tvaMode'].forEach(k => { if (R[k] != null) S[k] = R[k]; }); if (e.surface) S.surf = e.surface; if (e.prix) S.achat = e.prix; M.applyLevel(S); }
@@ -1202,8 +1232,7 @@
     D.enregistrer('relances', { date: aujourdhui(), objet: 'Prendre rendez-vous de visite', bienId: b.id, contactId: liens[0] ? liens[0].contactId : '', fait: false });
     D.enregistrer('journal', { bienId: b.id, date: (a.recueLe || aujourdhui()).slice(0, 10), type: 'note', texte: 'Annonce ' + (a.source || '') + (a.agence ? ' (' + a.agence + ')' : '') + ' reçue par alerte. Analyse : ' + (e.score != null ? 'score ' + e.score + ', ' : '') + (e.motifs.join(', ') || 'à examiner') + '.', auto: true });
     a.statutTri = 'retenue'; a.bienId = b.id; D.enregistrer('annonces', a);
-    notifier('Projet créé, relance « Prendre rendez-vous » pour aujourd\'hui.', 'succes');
-    aller('#/bien/' + b.id);
+    return b;
   }
   /* Ajout : coller le lien (lecture par le serveur) et, si le site bloque, le texte de la page */
   /* Bouton de favori « Envoyer à Marchéo » : lu par le navigateur de l'utilisateur sur la page qu'il consulte.
@@ -1518,6 +1547,90 @@
     $('#cDemo').onclick = () => { D.oublierServeur(); location.reload(); };
   }
 
+  /* ================= Page Visite (visite.html) : accueil mobile ================= */
+  const MODE_VISITE = document.documentElement.dataset.mode === 'visite';
+  const fv = { q: '', fin: null };
+  function vueVisiteAccueil() {
+    const c = $('#contenu'); if (!c) return;
+    if (fv.fin) return resumeVisite(c, D.obtenir('biens', fv.fin));
+    const q = fv.q.trim().toLowerCase();
+    const l = D.liste('biens').filter(b => !['ecarte', 'vendu'].includes(b.etape) && (!q || (titreBien(b) + ' ' + (b.source || '')).toLowerCase().includes(q)))
+      .sort((a, z) => (!!z.visiteBrouillon - !!a.visiteBrouillon) || (z._maj || '').localeCompare(a._maj || ''));
+    c.innerHTML = `
+      <button class="bouton bouton-vert bouton-large" id="vNouveau">+ Nouveau bien</button>
+      <div class="vacc-titre">Biens en cours</div>
+      <input type="search" id="vQ" placeholder="Rechercher : adresse, ville…" value="${esc(fv.q)}" aria-label="Rechercher">
+      <div class="vacc-liste">${l.map(b => { const B = b.visiteBrouillon, V = b.visite; return `<button class="vacc-bien" data-id="${b.id}"><span><strong>${esc(titreBien(b))}</strong><small>${esc([typeBien(b), surfaceBien(b), b.prixAffiche ? eur(b.prixAffiche) : ''].filter(Boolean).join(' · '))}</small></span><span class="vacc-etat">${B ? '<b class="orange">Visite en cours</b>' : V ? '<b class="vert">Visité le ' + dateFr(V.fin.slice(0, 10)) + '</b>' : esc(ETAPE[b.etape || 'repere'])}</span></button>`; }).join('') || '<div class="vide">Aucun bien en cours. « + Nouveau bien » pour commencer.</div>'}</div>`;
+    $('#vNouveau').onclick = nouveauBienVisite;
+    $('#vQ').oninput = e => { fv.q = e.target.value; const pos = e.target.selectionStart; vueVisiteAccueil(); const x = $('#vQ'); x.focus(); x.setSelectionRange(pos, pos); };
+    $$('[data-id]', c).forEach(x => x.onclick = () => ouvrirVisite(D.obtenir('biens', x.dataset.id), b => { fv.fin = b.id; vueVisiteAccueil(); }));
+  }
+  function resumeVisite(c, b) {
+    if (!b || !b.visite) { fv.fin = null; return vueVisiteAccueil(); }
+    const V = b.visite, A = V.analyse, r = analyse(b).r;
+    c.innerHTML = `
+      <div class="vacc-titre">Visite enregistrée</div><h1 class="vacc-bien-titre">${esc(titreBien(b))}</h1>
+      <div class="indicateurs">
+        ${indic('Travaux', eur(r.T), { detail: M.NIVEAUX[A.niveau].toLowerCase() })}
+        ${indic('Marge brute', pc(r.vente ? (r.vente - r.C) / r.vente : 0), { detail: eur(r.vente - r.C) })}
+        ${indic('Bénéfice net', eur(r.N), { detail: 'marge nette ' + pc(r.m) })}
+        ${indic('Photos', V.photos.length)}
+      </div>
+      ${A.alertes.map(x => `<div class="alerte-bandeau">${esc(x)}</div>`).join('')}
+      <a class="bouton bouton-principal bouton-large" href="index.html#/bien/${b.id}/visite">Ouvrir le projet dans Marchéo</a>
+      <button class="bouton bouton-large" id="vAutre">Nouvelle visite</button>`;
+    $('#vAutre').onclick = () => { fv.fin = null; vueVisiteAccueil(); };
+  }
+  /* Nouveau bien depuis la page Visite : lien (Bien'ici lu par le serveur), texte collé ou saisie */
+  function nouveauBienVisite() {
+    const distant = D.etat().mode === 'distant';
+    const fond = modale('Nouveau bien', `
+      <div class="champ"><label for="nvL">Lien de l'annonce</label><div class="actions" style="flex-wrap:nowrap"><input id="nvL" type="url" inputmode="url" placeholder="https://…"><button type="button" class="bouton bouton-principal" id="nvLire">Lire</button></div><small class="aide" id="nvEtat">Bien'ici est lu directement. Pour les autres sites, coller aussi le texte de l'annonce.</small></div>
+      <div class="champ"><label for="nvX">Texte de l'annonce</label><textarea id="nvX" rows="3" placeholder="Copier le texte de l'annonce et le coller ici."></textarea></div>
+      <div class="grille-champs alignee">
+        <div class="champ" style="grid-column:1/-1"><label for="nvT">Adresse ou titre</label><input id="nvT"></div>
+        <div class="champ"><label for="nvType">Type</label><select id="nvType">${Object.entries(M.TYPES).map(([k, t]) => `<option value="${k}">${t.n}</option>`).join('')}</select></div>
+        <div class="champ"><label for="nvP">Prix affiché (€)</label><input id="nvP" type="number" inputmode="numeric"></div>
+        <div class="champ"><label for="nvS">Surface (m²)</label><input id="nvS" type="number" inputmode="decimal"></div>
+        <div class="champ"><label for="nvPi">Pièces à vivre</label><input id="nvPi" type="number" inputmode="numeric"></div>
+        <div class="champ"><label for="nvCp">Code postal</label><input id="nvCp" inputmode="numeric"></div>
+        <div class="champ"><label for="nvV">Ville</label><input id="nvV"></div>
+      </div>`,
+      [{ l: 'Annuler' }, { l: 'Créer et commencer la visite', classe: 'bouton-principal', f: f => {
+        const g = id => $(id, f).value.trim();
+        if (!g('#nvT') && !g('#nvCp') && !g('#nvL')) { notifier('Renseigner au moins l\'adresse, le code postal ou le lien.', 'erreur'); return false; }
+        const a = D.enregistrer('annonces', { titre: g('#nvT') || 'Bien visité', type: g('#nvType'), prix: nb(g('#nvP')) || 0, surface: nb(g('#nvS')) || undefined, pieces: nb(g('#nvPi')) || undefined, cp: g('#nvCp'), ville: g('#nvV'), lien: g('#nvL'), source: sourceDuLien(g('#nvL')) || 'Visite', texte: g('#nvX').slice(0, 3000), dpe: f.dataset.dpe || '', recueLe: new Date().toISOString(), statutTri: 'vue', manuel: true });
+        const b = creerProjet(D.obtenir('annonces', a.id));
+        setTimeout(() => ouvrirVisite(b, x => { fv.fin = x.id; vueVisiteAccueil(); }), 0);
+      } }]);
+    const remplir = x => {
+      const set = (id, v) => { if (v && !$(id, fond).value) $(id, fond).value = v; };
+      set('#nvT', x.titre); set('#nvP', x.prix); set('#nvS', x.surface); set('#nvPi', x.pieces); set('#nvCp', x.cp); set('#nvV', x.ville);
+      if (x.type && M.TYPES[x.type]) $('#nvType', fond).value = x.type;
+      if (x.dpe) fond.dataset.dpe = x.dpe;
+    };
+    $('#nvX', fond).addEventListener('input', e => remplir(MA.lireTexte(e.target.value)));
+    $('#nvLire', fond).onclick = async () => {
+      const url = $('#nvL', fond).value.trim(), etat = $('#nvEtat', fond);
+      if (!/^https:\/\//.test(url)) { etat.textContent = 'Coller un lien commençant par https://'; return; }
+      if (!distant) { etat.textContent = 'Mode démonstration : coller le texte de l\'annonce ci-dessous.'; return; }
+      etat.textContent = 'Lecture en cours…';
+      try {
+        const x = await D.action('lireAnnonce', { url });
+        if (x.bloque) { etat.innerHTML = '<span class="orange">Ce site refuse la lecture automatique : coller le texte de l\'annonce ci-dessous.</span>'; return; }
+        remplir(x); etat.innerHTML = '<span class="vert">Annonce lue. Vérifier puis « Créer et commencer la visite ».</span>';
+      } catch (err) { etat.innerHTML = '<span class="rouge">' + esc(err.message) + '</span>'; }
+    };
+  }
+  function coquilleVisite() {
+    document.body.innerHTML = `<div class="page-visite">
+      <header class="vacc-tete"><img class="logo" src="icone-visite.svg" alt=""><div><strong>Marchéo</strong><small>Visite</small></div><span class="etat-synchro" id="etatSynchro"></span><a class="bouton bouton-petit vacc-crm" href="index.html">CRM</a></header>
+      ${D.etat().mode === 'demo' ? '<div class="bandeau-demo">Mode démonstration : données fictives stockées dans ce navigateur.</div>' : ''}
+      <main class="vacc-contenu" id="contenu"></main></div><div id="notifications"></div>`;
+  }
+
+  const sourceDuLien = u => ({ leboncoin: 'Leboncoin', seloger: 'SeLoger', bienici: "Bien'ici", pap: 'PAP', 'logic-immo': 'Logic-Immo' })[((String(u || '').match(/https?:\/\/(?:www\.)?([^\/.]+)/) || [])[1] || '')] || '';
+
   /* ================= Démarrage ================= */
   function coquille() {
     document.body.innerHTML = `<div class="app">
@@ -1537,13 +1650,13 @@
   function demarrer() {
     const E = D.demarrer();
     if (E.mode === 'distant' && !E.session) { ecranConnexion(false); return; }
-    appliquerTheme(); coquille(); appliquerReperes();
+    appliquerTheme(); if (MODE_VISITE) coquilleVisite(); else coquille(); appliquerReperes();
     D.abonner(e => { majSynchro(e); if (e.mode === 'distant' && e.session === false) ecranConnexion(false); });
     majSynchro(E);
     /* Données reçues d'un autre appareil : on redessine hors saisie en cours. */
     let dernier = '';
     D.abonner(() => { const k = D.liste('biens').map(b => b._maj).join() + D.liste('relances').length + D.liste('contacts').length + D.liste('journal').length + D.liste('annonces').map(x => x._maj).join(); if (k !== dernier) { dernier = k; const a = document.activeElement; if (!a || !/INPUT|TEXTAREA|SELECT/.test(a.tagName)) { cacheAnalyse.clear(); afficher(); } else majNav(); } });
-    window.addEventListener('hashchange', afficher);
+    if (!MODE_VISITE) window.addEventListener('hashchange', afficher);
     afficher();
   }
   window.Marcheo = { ETAPES, PIECES, analyse, partsRepartition, COULEURS };

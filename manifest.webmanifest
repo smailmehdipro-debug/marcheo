@@ -1,1 +1,1 @@
-{"name":"Marchéo","short_name":"Marchéo","start_url":"./","display":"standalone","background_color":"#f1ece1","theme_color":"#0e2a1d","icons":[{"src":"icone.svg","sizes":"any","type":"image/svg+xml"}]}
+{"name":"Marchéo","short_name":"Marchéo","start_url":"./","scope":"./","display":"standalone","background_color":"#f1ece1","theme_color":"#0e2a1d","icons":[{"src":"icone-192.png","sizes":"192x192","type":"image/png"},{"src":"icone-512.png","sizes":"512x512","type":"image/png"},{"src":"icone.svg","sizes":"any","type":"image/svg+xml"}]}
