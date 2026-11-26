@@ -848,11 +848,13 @@
         <div class="champ"><label for="crMb">3. Marge brute minimum (% de la revente)</label><input id="crMb" data-cr="margeBruteMin" type="number" inputmode="decimal" value="${C.margeBruteMin}"><small class="aide">revente moins coût de revient</small></div>
         <div class="champ"><label for="crNego">Négociation maximum (%)</label><input id="crNego" data-cr="negoMax" type="number" inputmode="numeric" value="${C.negoMax}"><small class="aide">les étapes 2 et 3 s'apprécient au prix négocié</small></div>
         <div class="champ" style="grid-column:1/-1"><label>Types analysés</label><div class="actions">${Object.entries(M.TYPES).map(([k, t]) => `<label class="case"><input type="checkbox" data-crtype="${k}"${C.types.includes(k) ? ' checked' : ''}> ${t.n}</label>`).join('')}</div><small class="aide">Immeubles et types non cochés : importés, écartés d'office. 0 dans un plafond le désactive.</small></div>
+        <div class="champ" style="grid-column:1/-1"><label for="crZone">Zone</label><textarea id="crZone" data-crz rows="4">${esc((C.zone || []).join(', '))}</textarea><small class="aide">départements (95), codes postaux ou communes, séparés par des virgules ; vide = partout. Hors zone : importée, écartée d'office.</small></div>
         <div class="champ" style="grid-column:1/-1"><label for="crExclus">Mots exclus</label><input id="crExclus" data-crl="exclus" value="${esc(C.exclus.join(', '))}"></div>
         <div class="champ" style="grid-column:1/-1"><label for="crSignaux">Signaux favorables</label><input id="crSignaux" data-crl="signaux" value="${esc(C.signaux.join(', '))}"></div>
       </div>`;
   }
-  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Prix affiché ≤ ' + eur(C.prixAfficheMax) + ' · argent à sortir ≤ ' + eur(C.tresoMax) + ' · marge brute ≥ ' + C.margeBruteMin + ' % de la revente · négociation ≤ ' + C.negoMax + ' % · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
+  const zoneCourte = z => { const d = {}; z.forEach(x => { const m = String(x).match(/^(\d{2})/); const k = m ? m[1] : x; d[k] = (d[k] || 0) + 1; }); return Object.entries(d).map(([k, n]) => n > 1 ? k + ' (' + n + ' communes)' : k).join(', '); };
+  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Prix affiché ≤ ' + eur(C.prixAfficheMax) + ' · argent à sortir ≤ ' + eur(C.tresoMax) + ' · marge brute ≥ ' + C.margeBruteMin + ' % de la revente · négociation ≤ ' + C.negoMax + ' % · zone : ' + (C.zone && C.zone.length ? zoneCourte(C.zone) : 'partout') + ' · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
   function editerCriteres() {
     modale('Critères d\'analyse', champsCriteres(reglages()), [{ l: 'Fermer', classe: 'bouton-principal', f: () => afficher() }], f => brancherCriteres(f));
   }
@@ -868,6 +870,7 @@
   function brancherCriteres(c) {
     const maj = f => { const R = reglages(); R.criteres = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); R.criteres.secteurs = (R.criteres.secteurs || []).map(s => Object.assign({}, s)); f(R.criteres); D.enregistrer('reglages', R); cacheAnn.clear(); };
     $$('[data-cr]', c).forEach(el => el.onchange = () => { maj(C => C[el.dataset.cr] = nb(el.value)); notifier('Critère enregistré.', 'succes'); });
+    $$('[data-crz]', c).forEach(el => el.onchange = () => { maj(C => C.zone = el.value.split(',').map(x => x.trim()).filter(Boolean)); notifier('Zone enregistrée.', 'succes'); });
     $$('[data-crtype]', c).forEach(el => el.onchange = () => { maj(C => C.types = $$('[data-crtype]', c).filter(x => x.checked).map(x => x.dataset.crtype)); notifier('Critère enregistré.', 'succes'); });
     $$('[data-crl]', c).forEach(el => el.onchange = () => { maj(C => C[el.dataset.crl] = el.value.split(',').map(x => x.trim()).filter(Boolean)); notifier('Critère enregistré.', 'succes'); });
     $$('tr[data-sec] [data-sf]', c).forEach(el => el.onchange = () => maj(C => { const s = C.secteurs[+el.closest('tr').dataset.sec]; s[el.dataset.sf] = ['cp', 'commune'].includes(el.dataset.sf) ? el.value.trim() : nb(el.value); }));

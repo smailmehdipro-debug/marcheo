@@ -58,17 +58,18 @@
     j({ bienId: b3.id, date: jour(-58), type: 'contre', montant: 98000, texte: 'Contre-proposition acceptée.' });
 
     const an = (o, n) => D.enregistrer('annonces', Object.assign({ statutTri: 'nouvelle', alertes: 1, lien: '', recueLe: new Date(Date.now() - n * 86400000).toISOString() }, o));
-    an({ source: 'SeLoger', titre: 'Appartement 2 pièces à rénover, succession', texte: 'Succession. 2 pièces 42 m² à rénover, 93200 Saint-Denis', prix: 79000, surface: 42, cp: '93200', ville: 'Saint-Denis' }, 0);
-    an({ source: "Bien'ici", titre: 'Studio à rénover', texte: 'Studio 28 m², DPE G, 93300 Aubervilliers', prix: 62000, prixPrecedent: 69000, surface: 28, cp: '93300', ville: 'Aubervilliers', dpe: 'G' }, 1);
-    an({ source: 'Leboncoin', titre: 'Appartement 3 pièces', texte: '3 pièces 58 m² bon état, 93200 Saint-Denis', prix: 149000, surface: 58, cp: '93200', ville: 'Saint-Denis' }, 1);
+    an({ source: 'SeLoger', titre: 'Appartement 2 pièces à rénover, succession', texte: 'Succession. 2 pièces 42 m² à rénover, 95100 Argenteuil', prix: 79000, surface: 42, cp: '95100', ville: 'Argenteuil' }, 0);
+    an({ source: "Bien'ici", titre: 'Studio à rénover', texte: 'Studio 28 m², DPE G, 93600 Aulnay-sous-Bois', prix: 62000, prixPrecedent: 69000, surface: 28, cp: '93600', ville: 'Aulnay-sous-Bois', dpe: 'G' }, 1);
+    an({ source: 'Leboncoin', titre: 'Appartement 3 pièces', texte: '3 pièces 58 m² bon état, 92230 Gennevilliers', prix: 149000, surface: 58, cp: '92230', ville: 'Gennevilliers' }, 1);
     an({ source: 'SeLoger', titre: 'Maison 3 pièces à rénover', texte: 'Maison 65 m² à rénover, jardin, 93390 Clichy-sous-Bois', prix: 128000, surface: 65, cp: '93390', ville: 'Clichy-sous-Bois' }, 2);
-    an({ source: 'Leboncoin', titre: 'Appartement 2 pièces refait à neuf', texte: '2 pièces 45 m² refait à neuf, 93200 Saint-Denis', prix: 128000, surface: 45, cp: '93200', ville: 'Saint-Denis' }, 0);
+    an({ source: 'Leboncoin', titre: 'Appartement 2 pièces refait à neuf', texte: '2 pièces 45 m² refait à neuf, 78500 Sartrouville', prix: 128000, surface: 45, cp: '78500', ville: 'Sartrouville' }, 0);
     an({ source: "Bien'ici", titre: 'Appartement 2 pièces', texte: '93140 Bondy', prix: 95000, cp: '93140', ville: 'Bondy' }, 2);
     an({ source: "Bien'ici", titre: 'Bâtiment/immeuble', texte: 'Bâtiment/immeuble · 93500 Pantin · 742 000 €', prix: 742000, cp: '93500', ville: 'Pantin' }, 3);
-    an({ source: 'Leboncoin', titre: 'Appartement en viager occupé', texte: 'Viager occupé, 50 m², 93200 Saint-Denis', prix: 45000, surface: 50, cp: '93200', ville: 'Saint-Denis' }, 4);
+    an({ source: 'SeLoger', titre: 'Studio à rafraîchir', texte: 'Studio 22 m² à rafraîchir, 92100 Boulogne-Billancourt', prix: 125000, surface: 22, cp: '92100', ville: 'Boulogne-Billancourt' }, 3);
+    an({ source: 'Leboncoin', titre: 'Appartement en viager occupé', texte: 'Viager occupé, 50 m², 93270 Sevran', prix: 45000, surface: 50, cp: '93270', ville: 'Sevran' }, 4);
     D.enregistrer('reglages', { id: 'reglages', criteres: { negoMax: 15, exclus: MarcheoAnnonces.CRITERES_DEF.exclus, signaux: MarcheoAnnonces.CRITERES_DEF.signaux,
-      prixAfficheMax: 130000, tresoMax: 140000, margeBruteMin: 10, types: ['appt', 'maison', 'local', 'box'],
-      secteurs: [{ cp: '93200', commune: 'Saint-Denis', pm2: 3500 }, { cp: '93300', commune: 'Aubervilliers', pm2: 3300 }, { cp: '93390', commune: 'Clichy-sous-Bois', pm2: 2600 }, { cp: '93140', commune: 'Bondy', pm2: 3400 }] },
+      prixAfficheMax: 130000, tresoMax: 140000, margeBruteMin: 10, zone: MarcheoAnnonces.CRITERES_DEF.zone, types: ['appt', 'maison', 'local', 'box'],
+      secteurs: [{ cp: '95100', commune: 'Argenteuil', pm2: 3600 }, { cp: '93600', commune: 'Aulnay-sous-Bois', pm2: 3300 }, { cp: '92230', commune: 'Gennevilliers', pm2: 4800 }, { cp: '93390', commune: 'Clichy-sous-Bois', pm2: 2600 }, { cp: '78500', commune: 'Sartrouville', pm2: 4300 }, { cp: '93140', commune: 'Bondy', pm2: 3400 }, { cp: '93270', commune: 'Sevran', pm2: 2900 }] },
       enveloppe: 250000, taux: 4, obj: 10, part: 50, pfu: 31.4, dmax: 18, tvaT: 10, seuilTravaux: 15, ref: { w: {}, x: {} } });
   }
   global.MarcheoDemo = { remplir };

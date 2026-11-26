@@ -7,7 +7,7 @@ const M = require('../js/calc.js');
 const A = require('../js/annonces.js');
 
 const R = { taux: 4, obj: 10, part: 50, pfu: 31.4, dmax: 18, tvaT: 10, tvaMode: 'marge',
-  criteres: { secteurs: [{ cp: '93200', commune: 'Saint-Denis', pm2: 3500 }, { cp: '93400', commune: 'Saint-Ouen', pm2: 3400 }] } };
+  criteres: { zone: [], secteurs: [{ cp: '93200', commune: 'Saint-Denis', pm2: 3500 }, { cp: '93400', commune: 'Saint-Ouen', pm2: 3400 }] } };
 const avec = c => Object.assign({}, R, { criteres: Object.assign({}, R.criteres, c) });
 
 test('critères par défaut', () => {
@@ -71,4 +71,19 @@ test('type et niveau de travaux déduits du texte', () => {
   assert.equal(A.typeDepuisTexte('Lot de 6 boxes fermés'), 'box');
   assert.equal(A.niveauDepuisTexte('Appartement à rafraîchir'), 'r');
   assert.equal(A.niveauDepuisTexte('T2 bon état', 'G'), 'c', 'DPE G : rénovation complète');
+});
+
+test('zone : 95 et 75 entiers, communes listées du 92 nord, 93 est et 78 nord', () => {
+  const Z = A.CRITERES_DEF.zone;
+  assert.equal(A.dansZone({ cp: '95100' }, Z), true, 'Argenteuil, 95');
+  assert.equal(A.dansZone({ cp: '75018' }, Z), true, 'Paris 18e');
+  assert.equal(A.dansZone({ cp: '93100', ville: 'Montreuil' }, Z), true, '93 est');
+  assert.equal(A.dansZone({ cp: '93200', ville: 'Saint-Denis' }, Z), false, '93 ouest : hors zone');
+  assert.equal(A.dansZone({ cp: '92600' }, Z), true, '92 nord');
+  assert.equal(A.dansZone({ cp: '92100', ville: 'Boulogne-Billancourt' }, Z), false, '92 sud : hors zone');
+  assert.equal(A.dansZone({ ville: 'Poissy' }, Z), true, 'commune sans code postal');
+  assert.equal(A.dansZone({}, Z), null, 'ni code postal ni commune : à compléter');
+  assert.equal(A.dansZone({ cp: '37000' }, []), true, 'zone vide : partout');
+  const e = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93200', ville: 'Saint-Denis' }, Object.assign({}, R, { criteres: Object.assign({}, R.criteres, { zone: Z }) }));
+  assert.equal(e.statut, 'ecartee'); assert.match(e.motifs.join(), /hors zone/);
 });

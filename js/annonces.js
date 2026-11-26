@@ -18,6 +18,19 @@
     margeBruteMin: 10,      // marge brute minimum, en % du prix de revente
     negoMax: 15,            // négociation maximum jugée réaliste sur le prix affiché (%)
     types: ['appt', 'maison', 'local', 'box'], // types analysés ; les autres sont écartés d'office
+    /* Zone : départements entiers (2 chiffres), codes postaux (5 chiffres) ou noms de communes. Vide = partout.
+       92 nord, 93 est et 78 nord : communes listées une à une, liste à ajuster. */
+    zone: ['75', '95',
+      '92600 Asnières-sur-Seine', '92270 Bois-Colombes', '92110 Clichy', '92700 Colombes', '92400 Courbevoie', '92230 Gennevilliers',
+      '92250 La Garenne-Colombes', '92300 Levallois-Perret', '92000 Nanterre', '92390 Villeneuve-la-Garenne',
+      '93100 Montreuil', '93110 Rosny-sous-Bois', '93250 Villemomble', '93130 Noisy-le-Sec', '93140 Bondy', '93320 Les Pavillons-sous-Bois',
+      '93190 Livry-Gargan', '93390 Clichy-sous-Bois', '93370 Montfermeil', '93270 Sevran', '93420 Villepinte', '93290 Tremblay-en-France',
+      '93600 Aulnay-sous-Bois', '93220 Gagny', '93340 Le Raincy', '93330 Neuilly-sur-Marne', '93360 Neuilly-Plaisance', '93160 Noisy-le-Grand',
+      '93470 Coubron', '93410 Vaujours', '93460 Gournay-sur-Marne',
+      '78300 Poissy', '78700 Conflans-Sainte-Honorine', '78260 Achères', '78955 Carrières-sous-Poissy', '78130 Les Mureaux', '78200 Mantes-la-Jolie',
+      '78711 Mantes-la-Ville', '78520 Limay', '78500 Sartrouville', '78800 Houilles', '78400 Chatou', '78230 Le Pecq', '78100 Saint-Germain-en-Laye',
+      '78600 Maisons-Laffitte', '78480 Verneuil-sur-Seine', '78510 Triel-sur-Seine', '78570 Andrésy', '78410 Aubergenville', '78250 Meulan-en-Yvelines',
+      '78360 Montesson', '78110 Le Vésinet', '78420 Carrières-sur-Seine'],
     exclus: ['viager', 'nue-propriété', 'nue propriété', 'usufruit', 'fonds de commerce', 'droit au bail', 'résidence services', 'ehpad', 'multipropriété'],
     signaux: ['succession', 'urgent', 'mutation', 'divorce', 'à rénover', 'travaux', 'rénovation', 'plateau', 'baisse de prix', 'investisseur', 'marchand de biens', 'à saisir', 'libre'],
     secteurs: []            // [{cp, commune, pm2, pm2Terrain, prixBox}]
@@ -43,6 +56,17 @@
     return 'c';
   }
   const trouve = (t, liste) => (liste || []).filter(m => norm(t).includes(norm(m)));
+  /* Zone : un élément « 95 » couvre le département, « 92600 Asnières-sur-Seine » le code postal ou la commune. */
+  function dansZone(a, zone) {
+    if (!zone || !zone.length) return true;
+    const cp = String(a.cp || ''), v = norm(a.ville).replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!cp && !v) return null;
+    return zone.some(z => {
+      const m = String(z).trim().match(/^(\d{2,5})?\s*(.*)$/), code = m[1] || '', nom = norm(m[2]).replace(/[^a-z0-9]+/g, ' ').trim();
+      if (code && cp) return code.length === 5 ? cp === code : cp.startsWith(code);
+      return !!(nom && v && nom === v);
+    });
+  }
   function secteur(a, secteurs) {
     const cp = a.cp || '', v = norm(a.ville);
     return (secteurs || []).find(s => s.cp && cp && String(s.cp) === String(cp)) || (secteurs || []).find(s => s.commune && v && norm(s.commune) === v) || null;
@@ -67,6 +91,9 @@
     if (/[FG]/.test(a.dpe || '')) signaux.push('DPE ' + a.dpe);
     const base = { type, surface, prix, pm2, secteur: sec, signaux, exclus };
     if (exclus.length) motifs.push('exclu : ' + exclus.join(', '));
+    const zoneOk = dansZone(a, C.zone);
+    if (zoneOk === false) motifs.push('hors zone : ' + ([a.cp, a.ville].filter(Boolean).join(' ')));
+    if (zoneOk === null) manque.push('code postal');
     if (!typeOk) motifs.push('type hors critères : ' + ((M.TYPES[type] || {}).n || TYPES_HORS[type] || type).toLowerCase());
     if (prix && +C.prixAfficheMax && prix > +C.prixAfficheMax) motifs.push('prix affiché au-dessus de ' + (+C.prixAfficheMax).toLocaleString('fr-FR') + ' €');
     if (motifs.length && !manque.length) return Object.assign(base, { statut: 'ecartee', motifs, manque, score: null });
@@ -104,6 +131,6 @@
       tresoAffiche: r.treso, tresoAuMax: qMax ? qMax.treso : null, margeBrute: brute(r), margeBruteEur: r.vente - r.C, criteres: C });
   }
 
-  const api = { CRITERES_DEF, TYPES_HORS, typeDepuisTexte, niveauDepuisTexte, evaluer, secteur };
+  const api = { CRITERES_DEF, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, evaluer, secteur };
   if (typeof module === 'object' && module.exports) module.exports = api; else global.MarcheoAnnonces = api;
 })(typeof window !== 'undefined' ? window : globalThis);
