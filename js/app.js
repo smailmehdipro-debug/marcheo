@@ -503,7 +503,7 @@
     $('#razSim').onclick = () => confirmer('Remettre les postes de travaux et de frais annexes aux valeurs par défaut du type ?', () => { M.initLines(S); maj(); });
     maj(false);
   }
-  const COULEURS = { 'Achat': '#5f7396', 'Notaire et agence': '#8fa1c0', 'Travaux': '#0a66c2', 'Annexes': '#7fb0e6', 'Prestations': '#2a9d8f', 'TVA': '#c2410c', 'Intérêts': '#7c3aed', 'IS': '#b45309', 'Bénéfice net': '#166534' };
+  const COULEURS = { 'Achat': '#0e2a1d', 'Notaire et agence': '#4f6b5a', 'Travaux': '#1f5c3e', 'Annexes': '#8aa592', 'Prestations': '#6d7f74', 'TVA': '#8e1f24', 'Intérêts': '#5b3a52', 'IS': '#a8864f', 'Bénéfice net': '#c9ab74' };
   function partsRepartition(r) { return [['Achat', r.achat], ['Notaire et agence', r.acq], ['Travaux', r.T], ['Annexes', r.anx + r.agV], ['Prestations', r.mis], ['TVA', r.tva], ['Intérêts', r.int], ['IS', r.is], ['Bénéfice net', Math.max(0, r.N)]]; }
   function panneauResultats(A, S) {
     const r = A.r, P = A.partage, L = A.lim, parts = partsRepartition(r), tot = parts.reduce((s, p) => s + p[1], 0) || 1;

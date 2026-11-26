@@ -6,8 +6,8 @@
   function creer(o) {
     const M = global.MDB, b = o.b, A = o.A, S = o.S, r = A.r, P = A.partage, J = global.jspdf.jsPDF, doc = new J({ unit: 'mm', format: 'a4' });
     const W = 210, H = 297, MG = 12, CW = W - 2 * MG; let y = 0;
-    const FOND = [247, 244, 239], ENCRE = [17, 27, 33], TX = [17, 27, 33], MU = [84, 101, 111], LN = [221, 213, 201], PAN = [238, 232, 223], AC = [10, 102, 194], BLANC = [251, 249, 246], CLAIR = [200, 214, 230];
-    const VC = { ok: [22, 101, 52], juste: [154, 75, 6], ko: [185, 28, 28], '': MU };
+    const FOND = [248, 244, 236], ENCRE = [14, 42, 29], TX = [21, 33, 27], MU = [90, 103, 95], LN = [217, 207, 187], PAN = [236, 229, 215], AC = [15, 74, 48], BLANC = [250, 246, 238], CLAIR = [201, 171, 116], LAITON = [168, 134, 79];
+    const VC = { ok: [46, 107, 52], juste: [154, 90, 12], ko: [142, 31, 36], '': MU };
     const eur = n => (isFinite(n) ? Math.round(n) : 0).toLocaleString('fr-FR') + ' €';
     const pc = (n, d = 1) => (isFinite(n) ? n * 100 : 0).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' %';
     /* Polices standard en WinAnsi : espaces fines et signes absents remplacés */
@@ -19,7 +19,7 @@
     const wrap = (t, w, size, bold) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); return doc.splitTextToSize(c(t), w); };
     const page = () => { fill(FOND); doc.rect(0, 0, W, H, 'F'); };
     const need = h => { if (y + h > 282) { doc.addPage(); page(); y = 16; } };
-    const titre = t => { need(18); y += 3; T(t.toUpperCase(), MG, y, { bold: true, size: 9, color: AC }); y += 4.5; };
+    const titre = t => { need(18); y += 3; T(t.toUpperCase(), MG, y, { bold: true, size: 9, color: AC }); draw(LAITON); doc.setLineWidth(0.3); doc.line(MG, y + 1.6, MG + 18, y + 1.6); y += 4.5; };
     const ligne = (lab, sub, val, op = {}) => { need(7.6); T(fit(lab, CW * .55, 9.6, op.bold), MG + 2, y + 5, { size: 9.6, bold: op.bold, color: op.color || TX }); if (sub) { const sx = MG + 2 + Math.min(tw(lab, 9.6, op.bold), CW * .55) + 3; T(fit(sub, W - MG - 2 - tw(val, 9.6, true) - 5 - sx, 7.8, false), sx, y + 5, { size: 7.8, color: MU }); } T(val, W - MG - 2, y + 5, { size: 9.6, bold: true, color: op.vcolor || op.color || TX, align: 'right' }); draw(LN); doc.setLineWidth(0.2); doc.line(MG, y + 7.2, W - MG, y + 7.2); y += 7.2; };
     const bande = (lab, val, sub, fond, txt) => { need(11); y += 1.2; fill(fond || ENCRE); doc.roundedRect(MG, y, CW, 9.2, 1.2, 1.2, 'F'); T(lab, MG + 4, y + 6.1, { bold: true, size: 10, color: txt || BLANC }); if (sub) T(sub, MG + 4 + tw(lab, 10, true) + 4, y + 6.1, { size: 8.2, color: txt ? MU : CLAIR }); T(val, W - MG - 4, y + 6.2, { bold: true, size: 11.5, color: txt || BLANC, align: 'right' }); y += 10.6; };
     const dateTxt = new Date().toLocaleDateString('fr-FR');
@@ -30,22 +30,22 @@
     const isTxt = r.R <= 0 ? 'pas de bénéfice, pas d\'impôt' : r.R <= 42500 ? '15 % du résultat' : '15 % jusqu\'à 42 500 €, 25 % au-delà';
 
     /* ---------- Page 1 : synthèse et décompte ---------- */
-    page(); fill(ENCRE); doc.rect(0, 0, W, 43, 'F');
-    const tag = 'MARCHÉO · DOSSIER D\'OPÉRATION'; fill(AC); doc.roundedRect(MG, 7, tw(tag, 7, true) + 5, 6, 1, 1, 'F'); T(tag, MG + 2.5, 11.1, { bold: true, size: 7, color: [255, 255, 255] });
+    page(); fill(ENCRE); doc.rect(0, 0, W, 43, 'F'); fill(LAITON); doc.rect(0, 43, W, 0.8, 'F');
+    const tag = 'MARCHÉO · DOSSIER D\'OPÉRATION'; draw(LAITON); doc.setLineWidth(0.4); doc.roundedRect(MG, 7, tw(tag, 7, true) + 5, 6, 1, 1, 'S'); T(tag, MG + 2.5, 11.1, { bold: true, size: 7, color: CLAIR });
     T('Établi le ' + dateTxt + ' · étape : ' + o.etape, W - MG, 11.1, { size: 8.5, color: CLAIR, align: 'right' });
-    const al = wrap((S.adresse || '').trim() || 'Adresse à compléter', CW, 16, true).slice(0, 2); al.forEach((l, i) => T(l, MG, 23 + i * 6.6, { bold: true, size: 16, color: BLANC }));
+    const al = wrap((S.adresse || '').trim() || 'Adresse à compléter', CW, 16, true).slice(0, 2); al.forEach((l, i) => { doc.setFont('times', 'bold'); doc.setFontSize(19); doc.setTextColor(BLANC[0], BLANC[1], BLANC[2]); doc.text(c(l), MG, 23.5 + i * 7.2); });
     T(TY.n + ' · ' + unite + ' · ' + S.duree + ' mois' + (b.source ? ' · source : ' + b.source : ''), MG, al.length > 1 ? 38 : 31.5, { size: 10, color: CLAIR });
     y = 48;
     const vc = VC[A.etat]; fill(BLANC); draw(vc); doc.setLineWidth(0.9); doc.roundedRect(MG, y, CW, 15, 1.4, 1.4, 'FD');
     T(etatLib.toUpperCase(), MG + 5, y + 9.8, { bold: true, size: 15, color: vc });
     T('Marge nette ' + pc(r.m) + ' du coût de revient · objectif ' + S.obj + ' % · contrôles ' + A.controles.score + '/4', W - MG - 5, y + 9.4, { size: 9.5, color: vc, align: 'right' }); y += 19;
     const k4 = [['BÉNÉFICE NET', eur(r.N)], ['NET DE L\'ASSOCIÉ OPÉRATEUR', eur(P.operateur.net)], ['COÛT DE REVIENT', eur(r.C)], ['TRÉSORERIE MAXIMALE', eur(r.treso)]], kw = (CW - 9) / 4;
-    k4.forEach((k, i) => { const x = MG + i * (kw + 3); fill(PAN); doc.roundedRect(x, y, kw, 16, 1.2, 1.2, 'F'); T(k[0], x + 3, y + 5.4, { bold: true, size: 6.2, color: MU }); T(k[1], x + 3, y + 12.4, { bold: true, size: 13, color: TX }); }); y += 21;
+    k4.forEach((k, i) => { const x = MG + i * (kw + 3); fill(PAN); doc.roundedRect(x, y, kw, 16, 1.2, 1.2, 'F'); fill(LAITON); doc.rect(x, y, 0.9, 16, 'F'); T(k[0], x + 3, y + 5.4, { bold: true, size: 6.2, color: MU }); doc.setFont('times', 'bold'); doc.setFontSize(15); doc.setTextColor(TX[0], TX[1], TX[2]); doc.text(c(k[1]), x + 3, y + 12.6); }); y += 21;
 
     T('Répartition du prix de revente', MG, y, { bold: true, size: 10.5 }); y += 2.5;
     const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
     const parts = global.Marcheo.partsRepartition(r).filter(p => p[1] > 0), tot = parts.reduce((s, p) => s + p[1], 0) || 1; let x = MG;
-    parts.forEach(p => { const w = p[1] / tot * CW; fill(hex(global.Marcheo.COULEURS[p[0]])); doc.rect(x, y, w, 7, 'F'); if (w > 11) T(Math.round(p[1] / tot * 100) + ' %', x + w / 2, y + 4.8, { bold: true, size: 7.5, color: [255, 255, 255], align: 'center' }); x += w; });
+    parts.forEach(p => { const w = p[1] / tot * CW; fill(hex(global.Marcheo.COULEURS[p[0]])); doc.rect(x, y, w, 7, 'F'); if (w > 11) T(Math.round(p[1] / tot * 100) + ' %', x + w / 2, y + 4.8, { bold: true, size: 7.5, color: p[0] === 'Bénéfice net' || p[0] === 'IS' || p[0] === 'Annexes' ? ENCRE : BLANC, align: 'center' }); x += w; });
     y += 10.5; parts.forEach((p, i) => { const lx = MG + (i % 3) * (CW / 3), ly = y + Math.floor(i / 3) * 4.8; fill(hex(global.Marcheo.COULEURS[p[0]])); doc.rect(lx, ly - 2.5, 2.8, 2.8, 'F'); T(p[0] + ' : ' + eur(p[1]), lx + 4.2, ly, { size: 8 }); });
     y += Math.ceil(parts.length / 3) * 4.8 + 4;
 
@@ -70,7 +70,7 @@
 
     /* ---------- Page 2 : analyse et décision ---------- */
     doc.addPage(); page(); y = 16;
-    T('Analyse et décision', MG, y, { bold: true, size: 15 }); y += 8;
+    doc.setFont('times', 'bold'); doc.setFontSize(18); doc.setTextColor(ENCRE[0], ENCRE[1], ENCRE[2]); doc.text(c('Analyse et décision'), MG, y); y += 8;
     titre('Revenus de l\'associé investisseur');
     ligne('Capital avancé, remboursé à la revente', 'trésorerie maximale sortie', eur(P.investisseur.capital));
     ligne('Intérêts reçus', String(S.taux).replace('.', ',') + ' % par an sur ' + r.duree + ' mois', eur(P.investisseur.interets));
@@ -126,7 +126,7 @@
     const lignes = (b.travaux && b.travaux.lignes) || [];
     if (lignes.length && ['chantier', 'vente', 'vendu'].includes(b.etape)) {
       doc.addPage(); page(); y = 16;
-      T('Avancement des travaux', MG, y, { bold: true, size: 15 }); y += 8;
+      doc.setFont('times', 'bold'); doc.setFontSize(18); doc.setTextColor(ENCRE[0], ENCRE[1], ENCRE[2]); doc.text(c('Avancement des travaux'), MG, y); y += 8;
       const TC = A.chantier || M.totauxChantier(lignes, S.aleas, 15);
       const k = [['BUDGET', eur(TC.budget)], ['ENGAGÉ', eur(TC.engage)], ['PAYÉ', eur(TC.paye)], ['AVANCEMENT', pc(TC.avancement, 0)]];
       k.forEach((q, i) => { const xx = MG + i * (kw + 3); fill(PAN); doc.roundedRect(xx, y, kw, 16, 1.2, 1.2, 'F'); T(q[0], xx + 3, y + 5.4, { bold: true, size: 6.2, color: MU }); T(q[1], xx + 3, y + 12.4, { bold: true, size: 13, color: i === 1 && TC.alerte ? VC.ko : TX }); }); y += 21;
@@ -143,7 +143,7 @@
 
     /* ---------- Annexe : détail des postes ---------- */
     doc.addPage(); page(); y = 16;
-    T('Annexe : détail des postes', MG, y, { bold: true, size: 15 }); y += 8;
+    doc.setFont('times', 'bold'); doc.setFontSize(18); doc.setTextColor(ENCRE[0], ENCRE[1], ENCRE[2]); doc.text(c('Annexe : détail des postes'), MG, y); y += 8;
     const table = (rows, foot) => {
       const c1 = MG + 2, c2 = W - MG - 62, c3 = W - MG - 32, c4 = W - MG - 2; need(8);
       T('Poste', c1, y, { size: 7.6, color: MU }); T('Repère', c2, y, { size: 7.6, color: MU, align: 'right' }); T('Retenu', c3, y, { size: 7.6, color: MU, align: 'right' }); T('Écart', c4, y, { size: 7.6, color: MU, align: 'right' });

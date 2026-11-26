@@ -1,41 +1,52 @@
-/* Marchéo · charte reprise d'Hébéo : interface dense en deux colonnes (modules | contenu), fond beige, accent bleu.
-   Une seule couleur d'accent ; vert, orange, rouge réservés aux états. Aucun fond blanc pur dans les encarts. */
+/* Marchéo · structure reprise d'Hébéo (modules | contenu, composants, densité),
+   ambiance vert anglais : vert profond, ivoire, filets laiton, cuir bordeaux pour les alertes.
+   Une seule couleur d'accent (le vert) ; le laiton ne sert qu'aux filets et repères. Aucun fond blanc pur. */
 :root, [data-theme="clair"] {
-  --fond: #efeae2;
-  --surface: #fbf9f6;
-  --surface-2: #f4f0ea;
-  --surface-3: #e9e2d8;
-  --bordure: #ddd5c9;
-  --texte: #111b21;
-  --texte-2: #54656f;
-  --accent: #0a66c2;
-  --accent-fort: #084f96;
-  --accent-texte: #ffffff;
-  --accent-doux: rgba(10, 102, 194, 0.10);
-  --vert: #166534;
-  --orange: #9a4b06;
-  --rouge: #b91c1c;
-  --vert-fond: #dcf5e4;
-  --orange-fond: #fdf0d8;
-  --rouge-fond: #fde2e2;
-  --ombre: 0 6px 20px rgba(17, 27, 33, 0.12);
-  --rayon: 10px;
-  --rayon-petit: 8px;
+  --fond: #f1ece1;
+  --surface: #faf6ee;
+  --surface-2: #f3ede1;
+  --surface-3: #e6dece;
+  --bordure: #d9cfbb;
+  --texte: #15211b;
+  --texte-2: #5a675f;
+  --accent: #0f4a30;
+  --accent-fort: #093822;
+  --accent-texte: #f6f0e2;
+  --accent-doux: rgba(15, 74, 48, 0.08);
+  --laiton: #a8864f;
+  --laiton-clair: #c9ab74;
+  --nav-fond: #0e2a1d;
+  --nav-fond-2: #133524;
+  --nav-texte: #efe7d4;
+  --nav-texte-2: #a9b8a8;
+  --nav-bordure: rgba(201, 171, 116, 0.18);
+  --vert: #2e6b34;
+  --orange: #9a5a0c;
+  --rouge: #8e1f24;
+  --vert-fond: #e1eedd;
+  --orange-fond: #f6ead2;
+  --rouge-fond: #f4dfdc;
+  --ombre: 0 8px 24px rgba(14, 42, 29, 0.14);
+  --rayon: 8px;
+  --rayon-petit: 6px;
+  --serif: "Cormorant Garamond", "Iowan Old Style", Georgia, "Times New Roman", serif;
   color-scheme: light;
 }
 [data-theme="sombre"] {
-  --fond: #0b141a; --surface: #111b21; --surface-2: #202c33; --surface-3: #2a3942; --bordure: #2a363e;
-  --texte: #e9edef; --texte-2: #9aa8b1; --accent: #53a6ff; --accent-fort: #7dbbff; --accent-texte: #06111c;
-  --accent-doux: rgba(83, 166, 255, 0.15); --vert: #5ee08f; --orange: #fbbf24; --rouge: #ff8a8a;
-  --vert-fond: rgba(94, 224, 143, 0.13); --orange-fond: rgba(251, 191, 36, 0.13); --rouge-fond: rgba(255, 138, 138, 0.13);
-  --ombre: 0 6px 22px rgba(0, 0, 0, 0.4); color-scheme: dark;
+  --fond: #0a140f; --surface: #10201a; --surface-2: #152a21; --surface-3: #1d3729; --bordure: #27412f;
+  --texte: #ede5d2; --texte-2: #a3b09f; --accent: #c9ab74; --accent-fort: #dcc192; --accent-texte: #0a140f;
+  --accent-doux: rgba(201, 171, 116, 0.12); --laiton: #c9ab74; --laiton-clair: #dcc192;
+  --nav-fond: #07100b; --nav-fond-2: #0d1b14; --nav-texte: #ede5d2; --nav-texte-2: #8f9e8e; --nav-bordure: rgba(201, 171, 116, 0.16);
+  --vert: #8cc78a; --orange: #e0b25c; --rouge: #e08a85;
+  --vert-fond: rgba(140, 199, 138, 0.12); --orange-fond: rgba(224, 178, 92, 0.12); --rouge-fond: rgba(224, 138, 133, 0.12);
+  --ombre: 0 8px 26px rgba(0, 0, 0, 0.45); color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
   background: var(--fond); color: var(--texte);
-  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
   font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; min-height: 100vh;
 }
 h1, h2, h3 { line-height: 1.25; margin: 0 0 .6em; font-weight: 600; letter-spacing: -0.005em; }
@@ -316,3 +327,80 @@ a.indicateur:hover, button.indicateur:hover { border-color: var(--accent); backg
   .app { display: block; height: auto; overflow: visible; }
   .contenu { overflow: visible; }
 }
+
+/* ================= Habillage vert anglais ================= */
+h1, h2.serif, .marque-titre, .fiche-tete h1, .en-tete-page h1 { font-family: var(--serif); font-weight: 600; letter-spacing: .005em; }
+h1 { font-size: 1.85rem; line-height: 1.1; }
+.indicateur-valeur, .score b { font-family: var(--serif); font-weight: 700; font-size: 1.65rem; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; }
+
+/* Barre latérale : panneau vert profond, filets laiton */
+.nav-laterale { background: linear-gradient(180deg, var(--nav-fond-2), var(--nav-fond)); border-right: 1px solid var(--laiton); color: var(--nav-texte); }
+.panneau-tete { background: transparent; border-bottom: 1px solid var(--nav-bordure); height: 68px; }
+.marque { color: var(--nav-texte); }
+.marque .logo { width: 38px; height: 38px; background: none; box-shadow: 0 0 0 1px var(--laiton-clair); }
+.marque-titre { font-size: 1.6rem; color: var(--nav-texte); }
+.recherche-modules input { background: rgba(255, 255, 255, 0.06); color: var(--nav-texte); border: 1px solid var(--nav-bordure); }
+.recherche-modules input::placeholder, .recherche-modules .loupe { color: var(--nav-texte-2); }
+.nav-groupe { color: var(--laiton-clair); letter-spacing: .14em; font-size: .68rem; padding-top: 1.1rem; }
+.nav-lien { color: var(--nav-texte); position: relative; }
+.nav-lien:hover { background: rgba(255, 255, 255, 0.04); }
+.nav-lien.actif { background: rgba(201, 171, 116, 0.10); }
+.nav-lien.actif::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; background: var(--laiton-clair); border-radius: 0 2px 2px 0; }
+.nav-texte { border-bottom-color: var(--nav-bordure); }
+.nav-desc { color: var(--nav-texte-2); }
+.nav-compteur { color: var(--laiton-clair); }
+.nav-compteur.alerte { color: #f0a29c; }
+.pastille-module { background: rgba(255, 255, 255, 0.06); color: var(--laiton-clair); box-shadow: inset 0 0 0 1px var(--nav-bordure); }
+.nav-lien.actif .pastille-module { background: var(--laiton-clair); color: var(--nav-fond); box-shadow: none; }
+.panneau-pied { background: rgba(0, 0, 0, 0.18); border-top: 1px solid var(--nav-bordure); color: var(--nav-texte); }
+.panneau-pied .avatar { background: transparent; color: var(--laiton-clair); box-shadow: inset 0 0 0 1px var(--laiton-clair); font-family: var(--serif); font-size: .95rem; }
+.panneau-pied small { color: var(--nav-texte-2); }
+
+/* Barre du haut : ivoire, filet laiton */
+.barre-haut { background: var(--surface); border-bottom: 1px solid var(--bordure); box-shadow: inset 0 -1px 0 rgba(168, 134, 79, 0.35); height: 68px; }
+.barre-haut .pastille-module { background: var(--accent); color: var(--laiton-clair); }
+.titre-texte strong { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; }
+.bandeau-demo { background: var(--surface-2); color: var(--texte-2); border-bottom: 1px solid var(--bordure); font-style: italic; }
+
+/* Cartes et titres de section : filet laiton sous les intitulés */
+.carte { box-shadow: 0 1px 0 rgba(14, 42, 29, 0.04); }
+.carte > h2, .carte > h3, .compte-titre, .tableau th { color: var(--accent); letter-spacing: .1em; }
+[data-theme="sombre"] .carte > h2, [data-theme="sombre"] .carte > h3, [data-theme="sombre"] .compte-titre, [data-theme="sombre"] .tableau th { color: var(--laiton-clair); }
+.carte > h2, .carte > h3 { padding-bottom: .5rem; border-bottom: 1px solid var(--bordure); box-shadow: 0 1px 0 rgba(168, 134, 79, 0.25); }
+.poste-groupe, .nav-groupe { font-weight: 700; }
+.poste-groupe { color: var(--laiton); letter-spacing: .12em; }
+.compte-ligne.total { border-top-color: var(--laiton); border-bottom-color: var(--laiton); background: var(--surface-2); }
+
+/* Indicateurs : filet laiton à gauche par défaut, états conservés */
+.indicateur { box-shadow: inset 3px 0 0 var(--laiton); }
+.indicateur-titre { font-weight: 600; }
+.indicateur-vert { box-shadow: inset 3px 0 0 var(--vert); }
+
+/* Boutons */
+.bouton-principal { background: var(--accent); border-color: var(--accent-fort); color: var(--accent-texte); box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(168, 134, 79, 0.0); letter-spacing: .02em; }
+.bouton-principal:hover { background: var(--accent-fort); border-color: var(--laiton); }
+.bouton:hover { border-color: var(--laiton); }
+.segments button[aria-pressed="true"] { background: var(--accent); color: var(--accent-texte); }
+
+/* Étapes et onglets */
+.etapes button { background: var(--surface-3); letter-spacing: .02em; }
+.etapes button.passee { background: var(--accent-doux); color: var(--accent); }
+.etapes button.courante { background: var(--accent); color: var(--accent-texte); box-shadow: inset 0 -2px 0 var(--laiton-clair); }
+.onglets button.actif { border-bottom-color: var(--laiton); }
+.fiche-mini { box-shadow: inset 3px 0 0 var(--laiton); }
+.colonne-tete { color: var(--accent); letter-spacing: .1em; }
+.etiquette { background: var(--accent-doux); color: var(--accent); border: 1px solid rgba(15, 74, 48, 0.18); }
+.info-bandeau { background: var(--surface-2); border-left: 3px solid var(--laiton); }
+.notification { border-left-color: var(--laiton); }
+
+/* Connexion */
+.page-connexion { background: radial-gradient(ellipse at top, var(--nav-fond-2), var(--nav-fond)); }
+.page-connexion .boite-connexion { border-color: var(--laiton); box-shadow: var(--ombre); }
+.page-connexion .marque, .page-connexion .marque-titre { color: var(--texte); }
+
+@media (max-width: 960px) { .barre-haut { height: auto; } }
+@media (max-width: 640px) { h1 { font-size: 1.55rem; } .indicateur-valeur { font-size: 1.45rem; } }
+a { text-decoration: none; }
+a:hover { text-decoration: underline; text-decoration-color: var(--laiton); text-underline-offset: 3px; }
+.compte-ligne a, .tableau a, .sous-ligne a { color: var(--accent); font-weight: 500; }
+h1, h2, h3, .marque-titre, .titre-texte strong { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
