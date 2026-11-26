@@ -18,6 +18,7 @@
     tresoMax: 140000,       // argent total à sortir, trésorerie maximale (€ ; 0 = sans limite)
     margeBruteMin: 10,      // marge brute minimum, en % du prix de revente
     negoMax: 15,            // négociation maximum jugée réaliste sur le prix affiché (%)
+    reventeCoef: 80,        // revente estimée = ce % du haut de fourchette DVF (3e quartile des ventes)
     types: ['appt', 'maison', 'local', 'box'], // types analysés ; les autres sont écartés d'office
     /* Budget travaux de l'analyse des annonces, hors aléas : prix au m² et minimum par bien, selon le niveau.
        Remplace le chiffrage poste par poste, inconnu à ce stade. Aléas de chantier de la simulation en plus. */
@@ -113,8 +114,14 @@
     const type = k.type || a.type || typeDepuisTexte(texte) || 'appt';
     const typeOk = (C.types || []).includes(type) && M.TYPES[type];
     const surface = +(k.surface || a.surface) || 0, prix = +(k.prix || a.prix) || 0;
-    const sec = secteur(a, C.secteurs);
-    const pm2 = +(k.pm2 || (sec && (type === 'terrain' ? sec.pm2Terrain : type === 'box' ? sec.prixBox : type === 'maison' ? (sec.pm2Maison || sec.pm2) : sec.pm2))) || 0;
+    let sec = secteur(a, C.secteurs);
+    /* Ventes de la commune autour du bien (recherche DVF faite sur l'annonce) : plus précises que la moyenne du code postal */
+    const dc = a.dvf && a.dvf.secteur;
+    if (dc && dc.p75 && !(sec && sec.origine === 'saisi')) sec = { origine: 'DVF', zone: dc.zone === '1 km' ? 'à moins d\'1 km' : 'commune', pm2: dc.p75, pm2Maison: dc.p75, n: dc.n, nMaisons: dc.n, mediane: dc.mediane, medianeMaison: dc.mediane };
+    /* Le haut de fourchette DVF est minoré (reventeCoef) ; un prix saisi ou corrigé à la main est pris tel quel */
+    const coef = sec && sec.origine === 'DVF' && !k.pm2 && ['appt', 'maison', 'local'].includes(type) ? (+C.reventeCoef || 100) / 100 : 1;
+    const haut = +(k.pm2 || (sec && (type === 'terrain' ? sec.pm2Terrain : type === 'box' ? sec.prixBox : type === 'maison' ? (sec.pm2Maison || sec.pm2) : sec.pm2))) || 0;
+    const pm2 = coef < 1 ? Math.round(haut * coef / 10) * 10 : haut;
     const motifs = [], manque = [];
     if (!prix) manque.push('prix');
     if (!surface && type !== 'box') manque.push('surface');
@@ -122,7 +129,7 @@
     const exclus = trouve(texte, C.exclus), signaux = trouve(texte, C.signaux);
     if (a.prixPrecedent && a.prixPrecedent > prix) signaux.push('baisse de prix de ' + Math.round((1 - prix / a.prixPrecedent) * 100) + ' %');
     if (/[FG]/.test(a.dpe || '')) signaux.push('DPE ' + a.dpe);
-    const base = { type, surface, prix, pm2, secteur: sec, signaux, exclus };
+    const base = { type, surface, prix, pm2, pm2Haut: haut, coefRevente: coef, secteur: sec, signaux, exclus };
     if (exclus.length) motifs.push('exclu : ' + exclus.join(', '));
     const zoneOk = dansZone(a, C.zone);
     if (zoneOk === false) motifs.push('hors zone : ' + ([a.cp, a.ville].filter(Boolean).join(' ')));

@@ -96,9 +96,15 @@ test('référence DVF : prix par code postal, prix saisi prioritaire, maison à 
   const sansPerso = Object.assign({}, R, { criteres: { zone: [], secteurs: [] } });
   const e = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93600', ville: 'Aulnay-sous-Bois' }, sansPerso);
   const ref = A.DVF.secteurs.find(s => s.cp === '93600');
-  assert.equal(e.secteur.origine, 'DVF'); assert.equal(e.pm2, ref.pm2);
+  const r80 = v => Math.round(v * 0.8 / 10) * 10;
+  assert.equal(e.secteur.origine, 'DVF'); assert.equal(e.pm2Haut, ref.pm2); assert.equal(e.pm2, r80(ref.pm2), 'revente à 80 % du haut de fourchette');
   const m = A.evaluer({ titre: 'Maison 3 pièces', prix: 80000, surface: 60, cp: '93600' }, sansPerso);
-  assert.equal(m.pm2, ref.pm2Maison);
+  assert.equal(m.pm2, r80(ref.pm2Maison));
+  const c100 = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93600' }, Object.assign({}, R, { criteres: { zone: [], secteurs: [], reventeCoef: 100 } }));
+  assert.equal(c100.pm2, ref.pm2, 'coefficient modifiable');
+  const commune = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '78711', ville: 'Mantes-la-Ville', dvf: { secteur: { mediane: 2397, p25: 1636, p75: 2934, n: 48, zone: '1 km' } } }, sansPerso);
+  assert.equal(commune.pm2Haut, 2934, 'ventes de la commune prioritaires sur le code postal'); assert.equal(commune.pm2, 2350);
+  assert.equal(A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93600', corrections: { pm2: 3100 } }, sansPerso).pm2, 3100, 'prix corrigé à la main : tel quel');
   const perso = Object.assign({}, R, { criteres: { zone: [], secteurs: [{ cp: '93600', pm2: 3000 }] } });
   const p = A.evaluer({ titre: 'Appartement T2', prix: 80000, surface: 40, cp: '93600' }, perso);
   assert.equal(p.pm2, 3000); assert.equal(p.secteur.origine, 'saisi');
