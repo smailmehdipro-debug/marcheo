@@ -45,11 +45,13 @@ Deux versions d'une même fiche : la plus récente gagne. Les horloges du télé
 
 Le serveur lit toutes les heures les alertes des sites listés dans `EXPEDITEURS_ALERTES` (`serveur/Code.gs`) : SeLoger, Bien'ici, Leboncoin, PAP, Logic-Immo, Immonot et d'autres. Chaque annonce entre dans Marchéo, aucune n'est perdue. Le fil Gmail reçoit le libellé « Marchéo-traité ».
 
-L'analyse se fait dans Marchéo, au moment de l'affichage, avec le moteur de calcul. Une annonce est signalée si, après une négociation réaliste :
+L'analyse se fait dans Marchéo, au moment de l'affichage, avec toutes les lignes du simulateur. Tri en trois étapes :
 
-- la trésorerie maximale reste sous le plafond (150 000 € par défaut) ;
-- la revente estimée dépasse cette trésorerie d'au moins 10 % ;
-- la marge nette atteint l'objectif.
+1. prix affiché ≤ 130 000 €, sinon écartée d'office, sans calcul ;
+2. argent total à sortir ≤ 140 000 € : achat, frais d'agence, notaire, travaux et aléas, frais annexes, TVA des travaux avancée ;
+3. marge brute ≥ 10 % du prix de revente (revente moins coût de revient).
+
+Les étapes 2 et 3 s'apprécient au prix obtenu après une négociation réaliste (15 % au plus). Un seuil à 0 le désactive.
 
 Les autres annonces restent consultables : « À compléter », « Écartées par l'analyse », « Toutes ».
 Tous les seuils se modifient depuis la page Annonces (« Modifier les critères ») ou dans Réglages, avec les prix des secteurs.
