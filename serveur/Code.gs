@@ -165,6 +165,8 @@ function extraireAnnonces_(expediteur, sujet, texte, date) {
   var estUrl = function (l) { return /^\[?https?:\/\//.test(l); };
   var url = function (l) { return l.replace(/^\[|\]$/g, ''); };
   var out = [], de = String(expediteur || '').toLowerCase();
+  /* E-mails de service (alerte créée, modifiée, désactivée, confirmation de compte) : aucune annonce, même si un prix y figure */
+  if (/alerte.*(cr[ée]{2}e|enregistr|activ|modifi|supprim|d[ée]sactiv)|recherche.*(enregistr|sauvegard)|confirm|bienvenue|mot de passe|v[ée]rifi/i.test(String(sujet || ''))) return [];
 
   if (de.indexOf('bienici') >= 0) {
     /* Bien'ici : chaque ligne de texte est suivie du lien de son annonce (…/annonce/<identifiant>?…) */
@@ -192,7 +194,7 @@ function extraireAnnonces_(expediteur, sujet, texte, date) {
       if (/^Voir l.annonce/i.test(l)) { bloc.lien = dernierLien; out.push(bloc); bloc = null; return; }
       bloc.lignes.push(l);
     });
-    out = out.filter(function (b) { return b.lignes; }).map(function (b) {
+    out = out.filter(function (b) { return b.lignes && b.lien; }).map(function (b) { // une annonce SeLoger se termine toujours par « Voir l'annonce »
       var L = b.lignes.slice(1), titre = L[0] || '', lieu = L.slice(1).join(' ').replace(/\s*,\s*/g, ', ');
       return enrichir_({ source: 'SeLoger', titre: titre, texte: b.lignes.join(' ') + ' ' + lieu, prix: b.prix, lien: b.lien || '', ville: ((lieu.match(/([A-ZÀ-Ü][\wÀ-ÿ' -]+)\s*\(\d{5}\)/) || [])[1] || '').trim() });
     });

@@ -47,3 +47,10 @@ test('autre site : repli générique', () => {
   assert.equal(l.length, 1);
   assert.equal(l[0].prix, 420000); assert.equal(l[0].surface, 85); assert.equal(l[0].cp, '93100'); assert.equal(l[0].lien, 'https://www.pap.fr/annonces/maison-r123');
 });
+
+test('e-mails de service ignorés : alerte créée, critères avec un prix', () => {
+  const t = 'Votre alerte a bien été créée !\nAcheter à Paris, dans le Val-d’Oise…\nPrix maximum : 130 000 €\nhttps://www.bienici.com/mes-alertes';
+  assert.equal(ctx.extraireAnnonces_('no_reply@bienici.com', 'Votre alerte "Acheter à Paris…" a bien été créée !', t, '').length, 0);
+  assert.equal(ctx.extraireAnnonces_('no-reply@leboncoin.fr', 'Votre recherche a bien été enregistrée', 'Jusqu\'à 130 000 €', '').length, 0);
+  assert.equal(ctx.extraireAnnonces_('annonces@alertes.seloger.com', 'Vos critères', 'Budget\n100 000 €\n130 000 €\nModifier', '').length, 0, 'SeLoger : un prix sans « Voir l\'annonce » n\'est pas une annonce');
+});
