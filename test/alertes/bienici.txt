@@ -1,0 +1,34 @@
+Bien’ici [https://mail-sender.bienici.com/static/emails/logo-bienici.png]
+[https://www.bienici.com/?at_canal=CRM]
+Bonne nouvelle, 2 nouvelles annonces
+correspondent à votre alerte !
+[https://mail-sender.bienici.com/static/emails/bell.png]Acheter un
+bâtiment/immeuble à Saint-Denis… - 550k à 900k €
+[https://www.bienici.com/mon-alerte/abc/acheter-un-batiment]
+Photo
+[https://file.bienici.com/photo/exemple-1.jpg?width=200]
+[https://www.bienici.com/annonce/agence-exemple-1111?fromSavedSearchId=abc&at_link=Voir_Annonce]
+Bâtiment/immeuble
+[https://www.bienici.com/annonce/agence-exemple-1111?fromSavedSearchId=abc&at_link=Voir_Annonce]
+93500 Pantin
+[https://www.bienici.com/annonce/agence-exemple-1111?fromSavedSearchId=abc&at_link=Voir_Annonce]
+742 000 €
+[https://www.bienici.com/annonce/agence-exemple-1111?fromSavedSearchId=abc&at_link=Voir_Annonce]
+[https://www.bienici.com/annonce/agence-exemple-1111?fromSavedSearchId=abc&at_link=Voir_Annonce]
+Voir l’annonce
+[https://www.bienici.com/annonce/agence-exemple-1111?fromSavedSearchId=abc&at_link=Voir_Annonce]
+RÉFÉRENCE : 163
+[https://www.bienici.com/annonce/agence-exemple-1111?fromSavedSearchId=abc&at_link=Voir_Annonce]
+Photo
+[https://file.bienici.com/photo/exemple-2.jpg?width=200]
+[https://www.bienici.com/annonce/agence-exemple-2222?fromSavedSearchId=abc]
+Immeuble 5 appartements 210 m²
+[https://www.bienici.com/annonce/agence-exemple-2222?fromSavedSearchId=abc]
+93200 Saint-Denis
+[https://www.bienici.com/annonce/agence-exemple-2222?fromSavedSearchId=abc]
+615 000 €
+[https://www.bienici.com/annonce/agence-exemple-2222?fromSavedSearchId=abc]
+Voir toutes les annonces de cette recherche
+[https://www.bienici.com/mon-alerte/abc/acheter-un-batiment]
+À bientôt.
+L’équipe Bien’ici

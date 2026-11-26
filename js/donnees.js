@@ -6,7 +6,7 @@
    - Mode démonstration : aucune adresse de serveur, tout reste dans le navigateur. */
 (function (global) {
   'use strict';
-  const COLLS = ['biens', 'contacts', 'relances', 'journal', 'reglages'];
+  const COLLS = ['biens', 'contacts', 'relances', 'journal', 'reglages', 'annonces'];
   const CLE_CACHE = 'marcheo-cache-v1', CLE_FILE = 'marcheo-file-v1', CLE_CONF = 'marcheo-serveur', CLE_JETON = 'marcheo-jeton';
   const lire = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
   const ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* stockage plein ou bloqué */ } };

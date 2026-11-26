@@ -6,6 +6,9 @@
    3. Déployer > Nouveau déploiement > Application Web : exécuter en tant que « Moi », accès « Tout le monde ».
    4. Copier l'adresse de l'application Web dans l'écran de connexion de Marchéo.
    Mot de passe perdu : exécuter definirMotDePasse('identifiant', 'nouveau mot de passe').
+   Alertes d'annonces : installer() programme importerAlertes() toutes les heures. Les e-mails d'alerte des sites
+   listés dans EXPEDITEURS_ALERTES sont lus, chaque annonce devient une fiche « annonces », le fil Gmail reçoit
+   le libellé « Marchéo-traité ». L'analyse et le tri se font dans Marchéo, selon les critères des Réglages.
 
    Format : onglet « donnees », une ligne par fiche : coll | id | majLe | supprime | recuLe | json | json_2…
    majLe : date de modification sur l'appareil (départage deux versions d'une même fiche) ;
@@ -13,7 +16,7 @@
    donc datée d'avant, est quand même transmise aux autres appareils).
    (JSON découpé en morceaux de 45 000 caractères, préfixe « ~ » pour que Sheets ne l'interprète jamais). */
 
-var COLLS = ['biens', 'contacts', 'relances', 'journal', 'reglages'];
+var COLLS = ['biens', 'contacts', 'relances', 'journal', 'reglages', 'annonces'];
 var MORCEAU = 45000;
 var DUREE_JETON_JOURS = 60;
 
@@ -129,6 +132,128 @@ function ecrire_(lot, utilisateur) {
   } finally { verrou.releaseLock(); }
 }
 
+/* ---------- Alertes d'annonces (Gmail) ---------- */
+var EXPEDITEURS_ALERTES = ['alertes.seloger.com', 'no_reply@bienici.com', 'leboncoin.fr', 'pap.fr', 'logic-immo.com', 'immonot.com', 'ouestfrance-immo.com', 'figaroimmo.fr', 'bellesdemeures.com', 'paruvendu.fr'];
+var LIBELLE_TRAITE = 'Marchéo-traité';
+
+function nombre_(t) { var x = parseFloat(String(t).replace(/[\s\u00a0\u202f.]/g, '').replace(',', '.')); return isFinite(x) ? x : 0; }
+var RE_PRIX = /(\d{1,3}(?:[ \u00a0\u202f.]\d{3})+|\d{4,})\s?€(?!\s?\/)/;
+var RE_PRIX_M2 = /(\d{1,3}(?:[ \u00a0\u202f.]\d{3})*|\d+)\s?€\s?\/\s?m²/;
+var RE_SURF = /(\d+(?:[.,]\d+)?)\s?m²(?!\s*\))/;
+function normaliser_(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
+
+/* Complète une annonce à partir de son texte : surface, prix au m², code postal, ville, lots, DPE */
+function enrichir_(a) {
+  var t = [a.titre, a.texte].join(' ');
+  var pm2 = t.match(RE_PRIX_M2);
+  if (pm2) a.prixM2Annonce = nombre_(pm2[1]);
+  var s = t.replace(RE_PRIX_M2, ' ').match(RE_SURF);
+  if (s) a.surface = nombre_(s[1]);
+  if (!a.surface && a.prix && a.prixM2Annonce) a.surface = Math.round(a.prix / a.prixM2Annonce);
+  var cp = t.match(/\((\d{5})\)/) || t.match(/\b(\d{5})\s+([A-ZÀ-Ü][\wÀ-ÿ' -]{1,40})/);
+  if (cp) { a.cp = cp[1]; if (cp[2]) a.ville = cp[2].trim(); }
+  var lots = t.match(/(\d+)\s+(?:appartements|lots|logements|studios)/i);
+  if (lots) a.lots = parseInt(lots[1], 10);
+  var dpe = t.match(/DPE\s*:?\s*([A-G])\b/);
+  if (dpe) a.dpe = dpe[1];
+  return a;
+}
+
+/* Lit un e-mail d'alerte et rend la liste des annonces qu'il contient. Fonction pure, testée hors Google. */
+function extraireAnnonces_(expediteur, sujet, texte, date) {
+  var lignes = String(texte || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+  var estUrl = function (l) { return /^\[?https?:\/\//.test(l); };
+  var url = function (l) { return l.replace(/^\[|\]$/g, ''); };
+  var out = [], de = String(expediteur || '').toLowerCase();
+
+  if (de.indexOf('bienici') >= 0) {
+    /* Bien'ici : chaque ligne de texte est suivie du lien de son annonce (…/annonce/<identifiant>?…) */
+    var parId = {}, ordre = [];
+    for (var i = 1; i < lignes.length; i++) {
+      var m = estUrl(lignes[i]) && url(lignes[i]).match(/bienici\.com\/annonce\/([^?\/\]]+)/);
+      if (!m || estUrl(lignes[i - 1])) continue;
+      if (!parId[m[1]]) { parId[m[1]] = { lignes: [], lien: 'https://www.bienici.com/annonce/' + m[1] }; ordre.push(m[1]); }
+      parId[m[1]].lignes.push(lignes[i - 1]);
+    }
+    ordre.forEach(function (id) {
+      var L = parId[id].lignes.filter(function (l) { return !/^(Voir l|Photo$|RÉFÉRENCE)/i.test(l); });
+      var prix = 0, titre = '', ville = '';
+      L.forEach(function (l) { var p = l.match(RE_PRIX); if (p && !prix) prix = nombre_(p[1]); else if (/^\d{5}\s/.test(l)) ville = l; else if (!titre) titre = l; });
+      out.push(enrichir_({ source: "Bien'ici", idSource: id, titre: titre, texte: L.join(' · ') + (ville ? ' ' + ville : ''), prix: prix, lien: parId[id].lien }));
+    });
+  } else if (de.indexOf('seloger') >= 0) {
+    /* SeLoger : prix (et prix au m²), titre, lieu, puis « Voir l'annonce » précédé de son lien */
+    var bloc = null, dernierLien = '';
+    lignes.forEach(function (l) {
+      if (estUrl(l)) { dernierLien = url(l); return; }
+      var p = l.match(RE_PRIX);
+      if (p) { if (bloc) out.push(bloc); bloc = { source: 'SeLoger', prix: nombre_(p[1]), lignes: [l] }; return; }
+      if (!bloc) return;
+      if (/^Voir l.annonce/i.test(l)) { bloc.lien = dernierLien; out.push(bloc); bloc = null; return; }
+      bloc.lignes.push(l);
+    });
+    out = out.filter(function (b) { return b.lignes; }).map(function (b) {
+      var L = b.lignes.slice(1), titre = L[0] || '', lieu = L.slice(1).join(' ').replace(/\s*,\s*/g, ', ');
+      return enrichir_({ source: 'SeLoger', titre: titre, texte: b.lignes.join(' ') + ' ' + lieu, prix: b.prix, lien: b.lien || '', ville: ((lieu.match(/([A-ZÀ-Ü][\wÀ-ÿ' -]+)\s*\(\d{5}\)/) || [])[1] || '').trim() });
+    });
+  } else {
+    /* Autres sites : une annonce par prix trouvé, avec le lien le plus proche */
+    var lien = '';
+    lignes.forEach(function (l, i) {
+      if (estUrl(l)) { lien = url(l); return; }
+      var p = l.match(RE_PRIX);
+      if (!p) return;
+      var contexte = lignes.slice(Math.max(0, i - 3), i + 4).filter(function (x) { return !estUrl(x); }).join(' · ');
+      var suivant = lignes.slice(i + 1, i + 4).filter(estUrl)[0];
+      out.push(enrichir_({ source: (de.match(/@?([a-z-]+)\.(?:fr|com)/) || [])[1] || 'Alerte', titre: sujet, texte: contexte, prix: nombre_(p[1]), lien: suivant ? url(suivant) : lien }));
+    });
+  }
+  return out.filter(function (a) { return a.prix > 1000; }).map(function (a) {
+    a.recueLe = date || new Date().toISOString();
+    a.cle = normaliser_(a.idSource || [a.source, a.cp || a.ville, a.titre, a.surface].join(' '));
+    a.id = 'an' + hacherCourt_(a.cle);
+    return a;
+  });
+}
+function hacherCourt_(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+
+/* Fusion avec l'existant : le tri fait dans Marchéo est conservé ; une baisse de prix est notée. */
+function fusionnerAnnonce_(ancienne, nouvelle) {
+  if (!ancienne) return Object.assign({ statutTri: 'nouvelle', vueLe: nouvelle.recueLe, alertes: 1, historiquePrix: [{ date: nouvelle.recueLe, prix: nouvelle.prix }] }, nouvelle);
+  var a = Object.assign({}, ancienne);
+  ['titre', 'texte', 'lien', 'cp', 'ville', 'surface', 'lots', 'dpe', 'prixM2Annonce'].forEach(function (k) { if (nouvelle[k]) a[k] = nouvelle[k]; });
+  a.alertes = (a.alertes || 1) + 1; a.vueLe = nouvelle.recueLe;
+  if (nouvelle.prix && nouvelle.prix !== a.prix) {
+    a.historiquePrix = (a.historiquePrix || []).concat([{ date: nouvelle.recueLe, prix: nouvelle.prix }]);
+    if (nouvelle.prix < a.prix) a.prixPrecedent = a.prix;
+    a.prix = nouvelle.prix;
+    if (a.statutTri === 'ecartee' && a.prixPrecedent) a.statutTri = 'nouvelle'; // une baisse de prix remet l'annonce dans le tri
+  }
+  return a;
+}
+
+function importerAlertes() {
+  var requete = 'from:(' + EXPEDITEURS_ALERTES.join(' OR ') + ') -label:' + LIBELLE_TRAITE.replace(/ /g, '-') + ' newer_than:120d';
+  var libelle = GmailApp.getUserLabelByName(LIBELLE_TRAITE) || GmailApp.createLabel(LIBELLE_TRAITE);
+  var fils = GmailApp.search(requete, 0, 60);
+  if (!fils.length) return 0;
+  var f = feuilleDonnees_(), v = f.getDataRange().getValues(), existantes = {};
+  for (var i = 1; i < v.length; i++) if (v[i][0] === 'annonces') { var e = depuisLigne_(v[i]); existantes[e.id] = e.data; }
+  var lot = {}, maintenant = new Date().toISOString();
+  fils.forEach(function (fil) {
+    fil.getMessages().forEach(function (m) {
+      extraireAnnonces_(m.getFrom(), m.getSubject(), m.getPlainBody(), m.getDate().toISOString()).forEach(function (a) {
+        var base = lot[a.id] || existantes[a.id];
+        lot[a.id] = fusionnerAnnonce_(base, a);
+      });
+    });
+  });
+  var enr = Object.keys(lot).map(function (id) { var d = lot[id]; d.id = id; return { coll: 'annonces', id: id, majLe: maintenant, data: d }; });
+  if (enr.length) ecrire_(enr, 'alertes');
+  fils.forEach(function (fil) { fil.addLabel(libelle); });
+  return enr.length;
+}
+
 /* ---------- Installation et secours ---------- */
 function installer() {
   var p = PropertiesService.getScriptProperties();
@@ -137,6 +262,8 @@ function installer() {
   feuilleDonnees_(); onglet_('comptes', ['identifiant', 'sel', 'empreinte', 'actif']);
   var defaut = c.getSheetByName('Feuille 1') || c.getSheetByName('Sheet1');
   if (defaut && c.getSheets().length > 1) c.deleteSheet(defaut);
+  if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'importerAlertes'; }))
+    ScriptApp.newTrigger('importerAlertes').timeBased().everyHours(1).create();
   if (!comptes_().length) {
     var mdp = Utilities.getUuid().slice(0, 12);
     definirMotDePasse('direction', mdp);
@@ -153,4 +280,4 @@ function definirMotDePasse(identifiant, motDePasse) {
   Logger.log('Mot de passe défini pour ' + identifiant + '.');
 }
 
-if (typeof module !== 'undefined') module.exports = { doPost: doPost, installer: installer, definirMotDePasse: definirMotDePasse, versLigne_: versLigne_, depuisLigne_: depuisLigne_ };
+if (typeof module !== 'undefined') module.exports = { doPost: doPost, installer: installer, definirMotDePasse: definirMotDePasse, versLigne_: versLigne_, depuisLigne_: depuisLigne_, extraireAnnonces_: extraireAnnonces_, fusionnerAnnonce_: fusionnerAnnonce_ };

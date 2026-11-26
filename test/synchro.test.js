@@ -15,6 +15,7 @@ function serveur() {
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] ?? null, setProperty: (k, v) => { props[k] = v; }, deleteProperty: k => { delete props[k]; } }) },
     SpreadsheetApp: { create: () => cl, openById: () => cl },
     Utilities: { DigestAlgorithm: {}, Charset: {}, sleep() {}, getUuid: () => crypto.randomUUID(), computeDigest: (a, s) => Array.from(crypto.createHash('sha256').update(s, 'utf8').digest()) },
+    ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create() {} }) }) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ContentService: { MimeType: {}, createTextOutput: t => ({ setMimeType: () => t }) }, Logger: { log: m => ctx.journal.push(m) } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../serveur/Code.gs'), 'utf8'), ctx);

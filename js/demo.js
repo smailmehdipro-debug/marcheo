@@ -57,7 +57,18 @@
     j({ bienId: b3.id, date: jour(-60), type: 'offre', montant: 96000, texte: 'Offre initiale.' });
     j({ bienId: b3.id, date: jour(-58), type: 'contre', montant: 98000, texte: 'Contre-proposition acceptée.' });
 
-    D.enregistrer('reglages', { id: 'reglages', enveloppe: 250000, taux: 4, obj: 10, part: 50, pfu: 31.4, dmax: 18, tvaT: 10, seuilTravaux: 15, ref: { w: {}, x: {} } });
+    const an = (o, n) => D.enregistrer('annonces', Object.assign({ statutTri: 'nouvelle', alertes: 1, lien: '', recueLe: new Date(Date.now() - n * 86400000).toISOString() }, o));
+    an({ source: 'SeLoger', titre: 'Appartement 2 pièces à rénover, succession', texte: 'Succession. 2 pièces 42 m² à rénover, 93200 Saint-Denis', prix: 79000, surface: 42, cp: '93200', ville: 'Saint-Denis' }, 0);
+    an({ source: "Bien'ici", titre: 'Studio à rénover', texte: 'Studio 28 m², DPE G, 93300 Aubervilliers', prix: 62000, prixPrecedent: 69000, surface: 28, cp: '93300', ville: 'Aubervilliers', dpe: 'G' }, 1);
+    an({ source: 'Leboncoin', titre: 'Appartement 3 pièces', texte: '3 pièces 58 m² bon état, 93200 Saint-Denis', prix: 149000, surface: 58, cp: '93200', ville: 'Saint-Denis' }, 1);
+    an({ source: 'SeLoger', titre: 'Maison 3 pièces à rénover', texte: 'Maison 65 m² à rénover, jardin, 93390 Clichy-sous-Bois', prix: 128000, surface: 65, cp: '93390', ville: 'Clichy-sous-Bois' }, 2);
+    an({ source: "Bien'ici", titre: 'Appartement 2 pièces', texte: '93140 Bondy', prix: 95000, cp: '93140', ville: 'Bondy' }, 2);
+    an({ source: "Bien'ici", titre: 'Bâtiment/immeuble', texte: 'Bâtiment/immeuble · 93500 Pantin · 742 000 €', prix: 742000, cp: '93500', ville: 'Pantin' }, 3);
+    an({ source: 'Leboncoin', titre: 'Appartement en viager occupé', texte: 'Viager occupé, 50 m², 93200 Saint-Denis', prix: 45000, surface: 50, cp: '93200', ville: 'Saint-Denis' }, 4);
+    D.enregistrer('reglages', { id: 'reglages', criteres: { negoMax: 15, exclus: MarcheoAnnonces.CRITERES_DEF.exclus, signaux: MarcheoAnnonces.CRITERES_DEF.signaux,
+      tresoMax: 150000, ecartRevente: 10, obj: null, types: ['appt', 'maison', 'local', 'box'],
+      secteurs: [{ cp: '93200', commune: 'Saint-Denis', pm2: 3500 }, { cp: '93300', commune: 'Aubervilliers', pm2: 3300 }, { cp: '93390', commune: 'Clichy-sous-Bois', pm2: 2600 }, { cp: '93140', commune: 'Bondy', pm2: 3400 }] },
+      enveloppe: 250000, taux: 4, obj: 10, part: 50, pfu: 31.4, dmax: 18, tvaT: 10, seuilTravaux: 15, ref: { w: {}, x: {} } });
   }
   global.MarcheoDemo = { remplir };
 })(typeof window !== 'undefined' ? window : globalThis);

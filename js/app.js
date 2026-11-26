@@ -20,7 +20,7 @@
   const TYPES_JOURNAL = [['visite', 'Visite'], ['appel', 'Appel'], ['offre', 'Offre'], ['contre', 'Contre-proposition'], ['note', 'Note']];
   const TYPE_JOURNAL = Object.fromEntries(TYPES_JOURNAL);
   const ETATS = { ok: ['vert', 'Objectif atteint'], juste: ['orange', 'Marge juste'], ko: ['rouge', 'Marge insuffisante'] };
-  const REGLAGES_DEF = { id: 'reglages', enveloppe: 130000, taux: 4, obj: 10, part: 50, pfu: 31.4, dmax: 18, tvaT: 10, tvaMode: 'marge', seuilTravaux: 15, ref: { w: {}, x: {} }, theme: 'clair' };
+  const REGLAGES_DEF = { id: 'reglages', enveloppe: 130000, taux: 4, obj: 10, part: 50, pfu: 31.4, dmax: 18, tvaT: 10, tvaMode: 'marge', seuilTravaux: 15, ref: { w: {}, x: {} }, theme: 'clair', criteres: null };
 
   /* ================= Outils ================= */
   const $ = (s, r = document) => r.querySelector(s);
@@ -34,6 +34,7 @@
   const clone = o => JSON.parse(JSON.stringify(o));
   const ico = p => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
   const I = {
+    annonces: ico('<path d="M4 4h16v13H7l-3 3z"/><path d="M8 9h8M8 13h5"/>'),
     tableau: ico('<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>'),
     biens: ico('<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>'),
     comparateur: ico('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
@@ -104,6 +105,7 @@
   /* ================= Navigation ================= */
   const MODULES = [
     { g: 'Pilotage', id: 'tableau', l: 'Tableau de bord', d: 'Pipeline, capital, alertes', i: I.tableau },
+    { g: 'Acquisition', id: 'annonces', l: 'Annonces', d: 'Alertes e-mail analysées', i: I.annonces },
     { g: 'Acquisition', id: 'biens', l: 'Biens', d: 'Pipeline et fiches', i: I.biens },
     { g: 'Acquisition', id: 'comparateur', l: 'Comparateur', d: 'Deux à quatre biens', i: I.comparateur },
     { g: 'Suivi', id: 'relances', l: 'Relances', d: 'Aujourd\'hui et en retard', i: I.relances },
@@ -116,7 +118,7 @@
 
   function compteurs() {
     const t = aujourdhui(), rel = D.liste('relances').filter(r => !r.fait && r.date && r.date <= t);
-    return { relances: rel.length, retard: rel.some(r => r.date < t), biens: D.liste('biens').filter(b => b.etape !== 'ecarte' && b.etape !== 'vendu').length };
+    return { annonces: D.liste('annonces').filter(a => a.statutTri !== 'vue' && aExaminer(a)).length, relances: rel.length, retard: rel.some(r => r.date < t), biens: D.liste('biens').filter(b => b.etape !== 'ecarte' && b.etape !== 'vendu').length };
   }
   function majNav() {
     const r = route(), q = ($('#rechercheModule') || {}).value || '', C = compteurs();
@@ -124,7 +126,7 @@
     let g = '', h = '';
     mods.forEach(m => {
       if (m.g !== g) { g = m.g; h += `<div class="nav-groupe">${esc(g)}</div>`; }
-      const n = m.id === 'relances' ? C.relances : m.id === 'biens' ? C.biens : 0;
+      const n = m.id === 'relances' ? C.relances : m.id === 'biens' ? C.biens : m.id === 'annonces' ? C.annonces : 0;
       const actif = r.m === m.id || (r.m === 'bien' && m.id === 'biens');
       h += `<a class="nav-lien${actif ? ' actif' : ''}" href="#/${m.id}"><span class="pastille-module">${m.i}</span><span class="nav-texte"><span class="nav-libelle">${esc(m.l)}</span><span class="nav-desc">${esc(m.d)}</span></span>${n ? `<span class="nav-compteur${m.id === 'relances' && C.retard ? ' alerte' : ''}">${n}</span>` : ''}</a>`;
     });
@@ -150,7 +152,7 @@
     vueCourante = cle;
     const y = c.scrollTop, yw = window.scrollY;
     try {
-      ({ tableau: vueTableau, biens: vueBiens, bien: vueBien, comparateur: vueComparateur, relances: vueRelances, contacts: vueContacts, reperes: vueReperes, reglages: vueReglages }[r.m] || vueTableau)(c, r);
+      ({ tableau: vueTableau, annonces: vueAnnonces, biens: vueBiens, bien: vueBien, comparateur: vueComparateur, relances: vueRelances, contacts: vueContacts, reperes: vueReperes, reglages: vueReglages }[r.m] || vueTableau)(c, r);
     } catch (e) { console.error(e); c.innerHTML = `<div class="alerte-bandeau">Erreur d'affichage : ${esc(e.message)}</div>`; }
     if (garderDefilement) { c.scrollTop = y; window.scrollTo(0, yw); } else { c.scrollTop = 0; window.scrollTo(0, 0); }
   }
@@ -178,6 +180,7 @@
         ${indic('Capital disponible', eur(dispo), { detail: pc(R.enveloppe ? dispo / R.enveloppe : 0, 0) + ' de l\'enveloppe', etat: dispo < 0 ? 'rouge' : dispo < R.enveloppe * .2 ? 'orange' : 'vert', c: dispo < 0 ? 'rouge' : '' })}
         ${indic('Relances du jour', duJour.length, { detail: retard.length ? retard.length + ' en retard' : 'aucune en retard', etat: retard.length ? 'rouge' : '', lien: '#/relances' })}
         ${indic('Chantiers en dépassement', depass.length, { detail: depass.length ? depass.map(b => esc(titreBien(b))).join(', ') : 'aucun', etat: depass.length ? 'rouge' : '' })}
+        ${(() => { const n = D.liste('annonces').filter(aExaminer).length; return indic('Annonces à examiner', n, { etat: n ? 'vert' : '', detail: n ? 'signalées par l\'analyse' : 'aucune pour l\'instant', lien: '#/annonces' }); })()}
         ${indic('Marge nette moyenne', pc(margeMoy), { detail: 'dossiers actifs, objectif ' + R.obj + ' %', etat: margeMoy >= R.obj / 100 ? 'vert' : 'orange' })}
       </div>
       <div class="deux-colonnes">
@@ -696,6 +699,181 @@
     dessiner();
   }
 
+  /* ================= Annonces (alertes e-mail) ================= */
+  const MA = window.MarcheoAnnonces;
+  const cacheAnn = new Map();
+  function evalAnnonce(a) {
+    appliquerReperes();
+    const R = reglages(), Rr = D.obtenir('reglages', 'reglages'), k = a.id + '|' + a._maj + '|' + (Rr ? Rr._maj : '');
+    if (!cacheAnn.has(k)) cacheAnn.set(k, MA.evaluer(a, R));
+    return cacheAnn.get(k);
+  }
+  const STATUTS_ANALYSE = { signalee: ['vert', 'Signalée'], ecartee: ['gris', 'Écartée par l\'analyse'], a_completer: ['orange', 'À compléter'] };
+  const aExaminer = a => !['retenue', 'ecartee'].includes(a.statutTri) && evalAnnonce(a).statut === 'signalee';
+  const fa = { onglet: 'examiner', q: '', source: '', type: '' };
+  function vueAnnonces(c) {
+    titre('Annonces', 'Alertes e-mail analysées', I.annonces);
+    const toutes = D.liste('annonces'), E = new Map(toutes.map(a => [a.id, evalAnnonce(a)]));
+    const groupes = {
+      examiner: toutes.filter(aExaminer),
+      completer: toutes.filter(a => !['retenue', 'ecartee'].includes(a.statutTri) && E.get(a.id).statut === 'a_completer'),
+      toutes,
+      ecartees: toutes.filter(a => !['retenue', 'ecartee'].includes(a.statutTri) && E.get(a.id).statut === 'ecartee'),
+      traitees: toutes.filter(a => ['retenue', 'ecartee'].includes(a.statutTri))
+    };
+    const ONG = [['examiner', 'À examiner'], ['completer', 'À compléter'], ['ecartees', 'Écartées par l\'analyse'], ['traitees', 'Traitées'], ['toutes', 'Toutes']];
+    const sources = [...new Set(toutes.map(a => a.source).filter(Boolean))].sort();
+    const derniere = toutes.reduce((m, a) => (a.vueLe || a.recueLe || '') > m ? (a.vueLe || a.recueLe) : m, '');
+    c.innerHTML = `
+      <div class="en-tete-page"><div><h1>Annonces</h1><p>${toutes.length} reçue(s)${derniere ? ' · dernière alerte le ' + dateFr(derniere.slice(0, 10)) : ''} · tri automatique selon les critères des Réglages</p></div>
+        <div class="actions"><button class="bouton" id="anAjout">+ Annonce</button><button class="bouton" id="anCrit">Modifier les critères</button></div></div>
+      <div class="info-bandeau">${esc(resumeCriteres(reglages()))}</div>
+      <div class="indicateurs">
+        ${indic('À examiner', groupes.examiner.length, { etat: groupes.examiner.length ? 'vert' : '', detail: 'négociation réaliste pour l\'objectif de marge' })}
+        ${indic('À compléter', groupes.completer.length, { etat: groupes.completer.length ? 'orange' : '', detail: 'surface ou prix du secteur manquant' })}
+        ${indic('Écartées par l\'analyse', groupes.ecartees.length, { detail: 'consultables à tout moment' })}
+      </div>
+      <nav class="onglets">${ONG.map(o => `<button class="${fa.onglet === o[0] ? 'actif' : ''}" data-ong="${o[0]}">${o[1]} <small class="discret">${groupes[o[0]].length}</small></button>`).join('')}</nav>
+      <div class="barre-outils"><input type="search" id="anQ" placeholder="Rechercher : ville, titre…" value="${esc(fa.q)}" aria-label="Rechercher">
+        <select id="anSrc" aria-label="Source"><option value="">Toutes les sources</option>${sources.map(s => `<option${fa.source === s ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>
+        <select id="anType" aria-label="Type"><option value="">Tous les types</option>${Object.entries(M.TYPES).map(([k, t]) => `<option value="${k}"${fa.type === k ? ' selected' : ''}>${t.n}</option>`).join('')}</select></div>
+      <div id="anZone"></div>`;
+    const zone = () => {
+      const q = fa.q.trim().toLowerCase();
+      const l = groupes[fa.onglet].filter(a => (!fa.source || a.source === fa.source) && (!fa.type || E.get(a.id).type === fa.type) && (!q || [a.titre, a.ville, a.cp, a.texte].join(' ').toLowerCase().includes(q)))
+        .sort((x, y) => (E.get(y.id).score ?? -1) - (E.get(x.id).score ?? -1) || (y.recueLe || '').localeCompare(x.recueLe || ''));
+      const vis = l.slice(0, 200);
+      $('#anZone').innerHTML = !l.length ? `<div class="vide">${fa.onglet === 'examiner' ? 'Aucune annonce ne mérite l\'attention pour l\'instant.' : 'Aucune annonce.'}</div>` :
+        `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente estimée</th><th class="nombre">Trésorerie</th><th class="nombre">Prix maximum</th><th class="nombre">Négociation</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
+          const e = E.get(a.id), st = a.statutTri === 'retenue' ? ['vert', 'Retenue'] : a.statutTri === 'ecartee' ? ['gris', 'Écartée'] : STATUTS_ANALYSE[e.statut];
+          return `<tr class="cliquable" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.lots && e.type === 'immeuble' ? e.lots + ' lots' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span></td>
+            <td class="nombre" data-titre="Prix affiché">${eur(e.prix)}${e.surface ? `<span class="sous-ligne">${eur(e.prix / e.surface)} /m²</span>` : ''}${a.prixPrecedent ? `<span class="sous-ligne vert">avant ${eur(a.prixPrecedent)}</span>` : ''}</td>
+            <td class="nombre" data-titre="Revente estimée">${e.vente ? eur(e.vente) : '—'}</td>
+            <td class="nombre" data-titre="Trésorerie">${e.tresoAffiche ? `<span class="${e.criteres && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span><span class="sous-ligne">au prix affiché</span>` : '—'}</td>
+            <td class="nombre" data-titre="Prix maximum">${e.achatMax ? eur(Math.floor(e.achatMax / 1000) * 1000) : '—'}</td>
+            <td class="nombre" data-titre="Négociation">${e.nego != null ? `<span class="${e.nego <= 0 ? 'vert' : e.statut === 'signalee' ? 'orange' : 'rouge'}">${e.nego <= 0 ? 'aucune' : '− ' + pc(e.nego, 0)}</span>` : '—'}</td>
+            <td data-titre="Analyse">${voyant(st[0], st[1])}${e.score != null ? ` <b class="montant">${e.score}</b>` : ''}<span class="sous-ligne">${esc(e.motifs.join(' · '))}</span></td></tr>`;
+        }).join('')}</tbody></table></div>${l.length > 200 ? `<p class="aide">200 premières sur ${l.length}. Affiner la recherche.</p>` : ''}`;
+      $$('tr[data-id]', $('#anZone')).forEach(tr => tr.onclick = () => ficheAnnonce(D.obtenir('annonces', tr.dataset.id)));
+    };
+    $$('[data-ong]', c).forEach(b => b.onclick = () => { fa.onglet = b.dataset.ong; vueAnnonces(c); });
+    $('#anQ').oninput = e => { fa.q = e.target.value; zone(); };
+    $('#anSrc').onchange = e => { fa.source = e.target.value; zone(); };
+    $('#anType').onchange = e => { fa.type = e.target.value; zone(); };
+    $('#anAjout').onclick = () => ajouterAnnonce();
+    $('#anCrit').onclick = () => editerCriteres();
+    zone();
+  }
+  function ficheAnnonce(a) {
+    if (!a) return;
+    if (a.statutTri === 'nouvelle') { a.statutTri = 'vue'; D.enregistrer('annonces', a); majNav(); }
+    const e = evalAnnonce(a), k = a.corrections || {}, R = reglages();
+    const ligne = (l, v, s) => ligneCompte(l, v, { s });
+    modale(a.titre || 'Annonce', `
+      <div class="compte">
+        ${ligne('Source', esc(a.source || '') + (a.lien ? ` · <a href="${esc(a.lien)}" target="_blank" rel="noopener">voir l'annonce</a>` : ''), 'reçue le ' + dateFr((a.recueLe || '').slice(0, 10)) + (a.alertes > 1 ? ', ' + a.alertes + ' alertes' : ''))}
+        ${ligne('Lieu', esc([a.cp, a.ville].filter(Boolean).join(' ') || '—'), e.secteur ? 'secteur : ' + eur(e.secteur.pm2 || 0) + ' /m²' : 'secteur sans prix de référence')}
+        ${ligne('Prix affiché', eur(e.prix), (a.historiquePrix || []).length > 1 ? a.historiquePrix.map(h => dateFr(h.date.slice(0, 10)) + ' : ' + eur(h.prix)).join(' · ') : '')}
+        ${e.r ? ligne('Revente estimée', eur(e.vente), eur(e.pm2) + ' /m² × ' + e.surface + ' m²') + ligne('Travaux estimés', eur(e.r.T), M.NIVEAUX[e.niveau].toLowerCase()) + ligne('Coût de revient', eur(e.r.C)) + ligne('Trésorerie maximale au prix affiché', `<span class="${e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>`, 'plafond ' + eur(e.criteres.tresoMax) + (e.tresoAuMax ? ' · ' + eur(e.tresoAuMax) + ' au prix maximum' : '')) + ligne('Marge nette au prix affiché', `<span class="${e.marge >= e.S.obj / 100 ? 'vert' : 'rouge'}">${pc(e.marge)}</span>`) + ligne('Prix d\'achat maximum', e.achatMax ? eur(e.achatMax) : 'aucun', e.nego > 0 ? 'négociation nécessaire : ' + pc(e.nego, 0) : 'sous le prix maximum') : ''}
+        ${ligne('Analyse', voyant(STATUTS_ANALYSE[e.statut][0], STATUTS_ANALYSE[e.statut][1]) + (e.score != null ? ' · score ' + e.score : ''), esc(e.motifs.concat(e.signaux.length ? ['signaux : ' + e.signaux.join(', ')] : []).join(' · ')))}
+      </div>
+      <div class="compte-titre">Corriger ou compléter</div>
+      <div class="grille-champs">
+        <div class="champ"><label for="akType">Type</label><select id="akType">${Object.entries(M.TYPES).map(([x, t]) => `<option value="${x}"${e.type === x ? ' selected' : ''}>${t.n}</option>`).join('')}</select></div>
+        <div class="champ"><label for="akSurf">Surface (m²)</label><input id="akSurf" type="number" inputmode="decimal" value="${k.surface || a.surface || ''}"></div>
+        <div class="champ"><label for="akLots">Lots ou pièces</label><input id="akLots" type="number" inputmode="numeric" value="${k.lots || a.lots || ''}"></div>
+        <div class="champ"><label for="akNiv">Travaux</label><select id="akNiv">${Object.entries(M.NIVEAUX).map(([x, l]) => `<option value="${x}"${(k.niveau || e.niveau) === x ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="champ"><label for="akPm2">Prix du secteur (€/m²)</label><input id="akPm2" type="number" inputmode="numeric" value="${k.pm2 || e.pm2 || ''}"></div>
+        <div class="champ"><label for="akCp">Code postal</label><input id="akCp" inputmode="numeric" value="${esc(a.cp || '')}"></div>
+      </div>
+      <label class="case"><input type="checkbox" id="akSecteur" checked> Enregistrer ce prix pour tout le secteur ${esc(a.cp || '')}</label>
+      ${a.texte ? `<details style="margin-top:.6rem"><summary class="aide">Texte de l'alerte</summary><p class="aide">${esc(a.texte)}</p></details>` : ''}`,
+      [{ l: 'Écarter', classe: 'bouton-danger', f: () => { a.statutTri = 'ecartee'; D.enregistrer('annonces', a); afficher(); } },
+       { l: 'Enregistrer', f: f => { corriger(a, f); afficher(); } },
+       { l: 'Retenir et prendre rendez-vous', classe: 'bouton-principal', f: f => { corriger(a, f); retenirAnnonce(D.obtenir('annonces', a.id)); } }]);
+  }
+  function corriger(a, f) {
+    const v = id => $(id, f).value.trim(), n = id => nb($(id, f).value);
+    const e = evalAnnonce(a);
+    a.corrections = Object.assign({}, a.corrections || {});
+    if (v('#akType') !== e.type || a.corrections.type) a.corrections.type = v('#akType');
+    ['surface', 'lots'].forEach((k2, i) => { const x = n(['#akSurf', '#akLots'][i]); if (x) a.corrections[k2] = x; });
+    if (v('#akNiv') !== MA.niveauDepuisTexte([a.titre, a.texte].join(' '), a.dpe) || a.corrections.niveau) a.corrections.niveau = v('#akNiv');
+    if (v('#akCp')) a.cp = v('#akCp');
+    const pm2 = n('#akPm2');
+    if (pm2 && $('#akSecteur', f).checked && a.cp) {
+      const R = reglages(); R.criteres = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); R.criteres.secteurs = (R.criteres.secteurs || []).slice();
+      const s = R.criteres.secteurs.find(x => String(x.cp) === String(a.cp));
+      const champ = (a.corrections.type || e.type) === 'box' ? 'prixBox' : 'pm2';
+      if (s) s[champ] = pm2; else R.criteres.secteurs.push({ cp: a.cp, commune: a.ville || '', [champ]: pm2 });
+      D.enregistrer('reglages', R); delete a.corrections.pm2;
+    } else if (pm2 && pm2 !== e.pm2) a.corrections.pm2 = pm2;
+    D.enregistrer('annonces', a); cacheAnn.clear();
+  }
+  function retenirAnnonce(a) {
+    const e = evalAnnonce(a), R = reglages();
+    let S = e.S ? clone(e.S) : M.fresh(e.type);
+    if (!e.S) { ['taux', 'obj', 'part', 'pfu', 'dmax', 'tvaT', 'tvaMode'].forEach(k => { if (R[k] != null) S[k] = R[k]; }); if (e.surface) S.surf = e.surface; if (e.prix) S.achat = e.prix; M.applyLevel(S); }
+    S.adresse = [a.titre, a.ville].filter(Boolean).join(', ');
+    const b = D.enregistrer('biens', { etape: 'repere', source: a.source, lien: a.lien || '', prixAffiche: e.prix, sim: S, comps: [], pieces: {}, liens: [], travaux: { lignes: [], utiliserReel: false }, creeLe: aujourdhui(), annonceId: a.id,
+      prochaine: { action: 'Prendre rendez-vous de visite', date: aujourdhui() } });
+    D.enregistrer('relances', { date: aujourdhui(), objet: 'Prendre rendez-vous de visite', bienId: b.id, fait: false });
+    D.enregistrer('journal', { bienId: b.id, date: (a.recueLe || aujourdhui()).slice(0, 10), type: 'note', texte: 'Annonce ' + (a.source || '') + ' reçue par alerte. Analyse : ' + (e.score != null ? 'score ' + e.score + ', ' : '') + (e.motifs.join(', ') || 'signalée') + '.', auto: true });
+    a.statutTri = 'retenue'; a.bienId = b.id; D.enregistrer('annonces', a);
+    notifier('Bien créé, relance « Prendre rendez-vous » pour aujourd\'hui.', 'succes');
+    aller('#/bien/' + b.id);
+  }
+  function ajouterAnnonce() {
+    modale('Ajouter une annonce', `<div class="grille-champs">
+      <div class="champ" style="grid-column:1/-1"><label for="naT">Titre</label><input id="naT" placeholder="Immeuble 4 lots à rénover"></div>
+      <div class="champ"><label for="naP">Prix affiché (€)</label><input id="naP" type="number" inputmode="numeric"></div>
+      <div class="champ"><label for="naS">Surface (m²)</label><input id="naS" type="number" inputmode="decimal"></div>
+      <div class="champ"><label for="naCp">Code postal</label><input id="naCp" inputmode="numeric"></div>
+      <div class="champ"><label for="naV">Ville</label><input id="naV"></div>
+      <div class="champ"><label for="naSrc">Source</label><input id="naSrc" value="Leboncoin"></div>
+      <div class="champ" style="grid-column:1/-1"><label for="naL">Lien</label><input id="naL" type="url"></div>
+      <div class="champ" style="grid-column:1/-1"><label for="naX">Description</label><textarea id="naX" rows="3"></textarea></div></div>`,
+      [{ l: 'Annuler' }, { l: 'Ajouter', classe: 'bouton-principal', f: f => {
+        const g = id => $(id, f).value.trim(); if (!nb(g('#naP'))) { notifier('Saisir le prix.', 'erreur'); return false; }
+        D.enregistrer('annonces', { titre: g('#naT'), prix: nb(g('#naP')), surface: nb(g('#naS')) || undefined, cp: g('#naCp'), ville: g('#naV'), source: g('#naSrc'), lien: g('#naL'), texte: g('#naX'), recueLe: new Date().toISOString(), statutTri: 'nouvelle', manuel: true });
+        afficher();
+      } }]);
+  }
+  function champsCriteres(R) {
+    const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {});
+    return `<div class="grille-champs">
+        <div class="champ"><label for="crTreso">Plafond de trésorerie (€)</label><input id="crTreso" data-cr="tresoMax" type="number" inputmode="numeric" step="5000" value="${C.tresoMax}"><small class="aide">achat, frais d'agence, notaire, travaux et aléas, annexes, TVA des travaux avancée</small></div>
+        <div class="champ"><label for="crEcart">Revente au-dessus de la trésorerie (%)</label><input id="crEcart" data-cr="ecartRevente" type="number" inputmode="numeric" value="${C.ecartRevente}"><small class="aide">écart minimum entre revente estimée et trésorerie</small></div>
+        <div class="champ"><label for="crObj">Objectif de marge nette (%)</label><input id="crObj" data-cr="obj" type="number" inputmode="decimal" value="${C.obj != null ? C.obj : R.obj}"></div>
+        <div class="champ"><label for="crNego">Négociation maximum (%)</label><input id="crNego" data-cr="negoMax" type="number" inputmode="numeric" value="${C.negoMax}"><small class="aide">au-delà, l'annonce est écartée</small></div>
+        <div class="champ" style="grid-column:1/-1"><label>Types analysés</label><div class="actions">${Object.entries(M.TYPES).map(([k, t]) => `<label class="case"><input type="checkbox" data-crtype="${k}"${C.types.includes(k) ? ' checked' : ''}> ${t.n}</label>`).join('')}</div><small class="aide">Immeubles et types non cochés : importés, écartés d'office.</small></div>
+        <div class="champ" style="grid-column:1/-1"><label for="crExclus">Mots exclus</label><input id="crExclus" data-crl="exclus" value="${esc(C.exclus.join(', '))}"></div>
+        <div class="champ" style="grid-column:1/-1"><label for="crSignaux">Signaux favorables</label><input id="crSignaux" data-crl="signaux" value="${esc(C.signaux.join(', '))}"></div>
+      </div>`;
+  }
+  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Trésorerie ≤ ' + eur(C.tresoMax) + ' · revente ≥ trésorerie + ' + C.ecartRevente + ' % · marge ≥ ' + (C.obj != null ? C.obj : R.obj) + ' % · négociation ≤ ' + C.negoMax + ' % · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
+  function editerCriteres() {
+    modale('Critères d\'analyse', champsCriteres(reglages()), [{ l: 'Fermer', classe: 'bouton-principal', f: () => afficher() }], f => brancherCriteres(f));
+  }
+  function carteCriteres(R) {
+    const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {});
+    return `<div class="carte"><h2>Analyse des annonces</h2>${champsCriteres(R)}</div>
+      <div class="carte"><h2>Prix des secteurs</h2>
+        <table class="tableau"><thead><tr><th>Code postal</th><th>Commune</th><th class="nombre">Logement rénové €/m²</th><th class="nombre">Box €</th><th></th></tr></thead><tbody>
+        ${(C.secteurs || []).map((s, i) => `<tr data-sec="${i}"><td><input data-sf="cp" value="${esc(s.cp || '')}" inputmode="numeric" style="width:80px"></td><td><input data-sf="commune" value="${esc(s.commune || '')}"></td><td><input data-sf="pm2" type="number" value="${s.pm2 || ''}" style="width:100px"></td><td><input data-sf="prixBox" type="number" value="${s.prixBox || ''}" style="width:90px"></td><td><button class="bouton-icone" data-secsuppr="${i}" aria-label="Supprimer">${I.fermer}</button></td></tr>`).join('') || '<tr><td colspan="5" class="discret">Aucun secteur : les annonces resteront « à compléter ».</td></tr>'}
+        </tbody></table><button class="bouton bouton-petit" id="secAjout" style="margin-top:.6rem">+ Secteur</button>
+        <p class="aide">Source conseillée : prix de vente réels de la base DVF (data.gouv.fr), logements rénovés du secteur.</p></div>`;
+  }
+  function brancherCriteres(c) {
+    const maj = f => { const R = reglages(); R.criteres = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); R.criteres.secteurs = (R.criteres.secteurs || []).map(s => Object.assign({}, s)); f(R.criteres); D.enregistrer('reglages', R); cacheAnn.clear(); };
+    $$('[data-cr]', c).forEach(el => el.onchange = () => { maj(C => C[el.dataset.cr] = nb(el.value)); notifier('Critère enregistré.', 'succes'); });
+    $$('[data-crtype]', c).forEach(el => el.onchange = () => { maj(C => C.types = $$('[data-crtype]', c).filter(x => x.checked).map(x => x.dataset.crtype)); notifier('Critère enregistré.', 'succes'); });
+    $$('[data-crl]', c).forEach(el => el.onchange = () => { maj(C => C[el.dataset.crl] = el.value.split(',').map(x => x.trim()).filter(Boolean)); notifier('Critère enregistré.', 'succes'); });
+    $$('tr[data-sec] [data-sf]', c).forEach(el => el.onchange = () => maj(C => { const s = C.secteurs[+el.closest('tr').dataset.sec]; s[el.dataset.sf] = ['cp', 'commune'].includes(el.dataset.sf) ? el.value.trim() : nb(el.value); }));
+    $$('[data-secsuppr]', c).forEach(el => el.onclick = () => { maj(C => C.secteurs.splice(+el.dataset.secsuppr, 1)); afficher(); });
+    const a = $('#secAjout', c); if (a) a.onclick = () => { maj(C => C.secteurs.push({ cp: '', commune: '' })); afficher(); };
+  }
+
   /* ================= Comparateur ================= */
   let selection = [], selectionInit = false;
   function vueComparateur(c) {
@@ -834,6 +1012,7 @@
           <div class="champ"><label for="g-tvaT">TVA sur les travaux</label><select id="g-tvaT" data-gs="tvaT"><option value="10">10 %</option><option value="20">20 %</option><option value="5.5">5,5 %</option></select></div>
           <div class="champ"><label for="g-tvaMode">TVA à la revente</label><select id="g-tvaMode" data-gs="tvaMode"><option value="marge">Sur la marge</option><option value="total">Sur le prix total</option><option value="none">Aucune</option></select></div>
         </div></div>
+        ${carteCriteres(R)}
         <div class="carte"><h2>Affichage</h2><div class="segments" id="theme"><button data-v="clair" aria-pressed="${R.theme !== 'sombre'}">Clair</button><button data-v="sombre" aria-pressed="${R.theme === 'sombre'}">Sombre</button></div></div>
       </div><div class="colonne">
         <div class="carte"><h2>Synchronisation</h2><div class="compte">
@@ -845,6 +1024,7 @@
         <div class="carte"><h2>Sauvegarde</h2><div class="actions"><button class="bouton" id="gExport">Exporter (JSON)</button><label class="bouton" for="gImport">Importer</label><input id="gImport" type="file" accept=".json" hidden></div></div>
       </div></div>`;
     $('#g-tvaT').value = String(R.tvaT); $('#g-tvaMode').value = R.tvaMode;
+    brancherCriteres(c);
     const sauver = (k, v) => { const R2 = reglages(); R2[k] = v; D.enregistrer('reglages', R2); cacheAnalyse.clear(); };
     $$('[data-g]', c).forEach(el => el.addEventListener('change', () => { sauver(el.dataset.g, nb(el.value)); notifier('Réglage enregistré.', 'succes'); }));
     $$('[data-gs]', c).forEach(el => el.addEventListener('change', () => sauver(el.dataset.gs, el.dataset.gs === 'tvaT' ? parseFloat(el.value) : el.value)));
@@ -914,7 +1094,7 @@
     majSynchro(E);
     /* Données reçues d'un autre appareil : on redessine hors saisie en cours. */
     let dernier = '';
-    D.abonner(() => { const k = D.liste('biens').map(b => b._maj).join() + D.liste('relances').length + D.liste('contacts').length + D.liste('journal').length; if (k !== dernier) { dernier = k; const a = document.activeElement; if (!a || !/INPUT|TEXTAREA|SELECT/.test(a.tagName)) { cacheAnalyse.clear(); afficher(); } else majNav(); } });
+    D.abonner(() => { const k = D.liste('biens').map(b => b._maj).join() + D.liste('relances').length + D.liste('contacts').length + D.liste('journal').length + D.liste('annonces').map(x => x._maj).join(); if (k !== dernier) { dernier = k; const a = document.activeElement; if (!a || !/INPUT|TEXTAREA|SELECT/.test(a.tagName)) { cacheAnalyse.clear(); afficher(); } else majNav(); } });
     window.addEventListener('hashchange', afficher);
     afficher();
   }
