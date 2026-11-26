@@ -284,6 +284,11 @@ function extraireDePage_(html, url) {
   enrichir_(a);
   return a;
 }
+/* À exécuter une fois depuis l'éditeur si « + Annonce » répond « Vous n'êtes pas autorisé à appeler UrlFetchApp.fetch » */
+function autoriserLectureAnnonces() {
+  UrlFetchApp.fetch('https://www.bienici.com/', { muteHttpExceptions: true });
+  Logger.log('Lecture des annonces autorisée.');
+}
 function decoder_(t) { return String(t || '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€').replace(/&#(\d+);/g, function (m, n) { return String.fromCharCode(+n); }); }
 
 /* ---------- Installation et secours ---------- */
@@ -294,6 +299,7 @@ function installer() {
   feuilleDonnees_(); onglet_('comptes', ['identifiant', 'sel', 'empreinte', 'actif']);
   var defaut = c.getSheetByName('Feuille 1') || c.getSheetByName('Sheet1');
   if (defaut && c.getSheets().length > 1) c.deleteSheet(defaut);
+  autoriserLectureAnnonces(); // demande dès l'installation l'autorisation de lire une page web (+ Annonce par lien)
   if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'importerAlertes'; }))
     ScriptApp.newTrigger('importerAlertes').timeBased().everyHours(1).create();
   if (!comptes_().length) {

@@ -26,6 +26,7 @@ function environnement() {
     SpreadsheetApp: { create: () => classeur, openById: () => classeur },
     Utilities: { DigestAlgorithm: { SHA_256: 1 }, Charset: { UTF_8: 1 }, sleep() {}, getUuid: () => crypto.randomUUID(),
       computeDigest: (a, s) => Array.from(crypto.createHash('sha256').update(s, 'utf8').digest()).map(b => b > 127 ? b - 256 : b) },
+    UrlFetchApp: { fetch: () => ({ getResponseCode: () => 200, getContentText: () => '' }) },
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create() {} }) }) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ContentService: { MimeType: { JSON: 1 }, createTextOutput: t => ({ setMimeType: () => ({ texte: t }) }) },
