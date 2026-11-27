@@ -62,7 +62,7 @@ test('page d\'annonce lue par le serveur : données structurées et agence', () 
   const html = '<html><head><title>Appartement 2 pièces 40 m² - Bondy | leboncoin</title><meta property="og:description" content="Appartement à rénover, DPE G"></head><body><script>{"price":[95000],"zipcode":"93140","city":"Bondy","attributes":[{"key":"square","value":"40"},{"key":"rooms","value":"2"}]}</script></body></html>';
   const a = ctx.extraireDePage_(html, 'https://www.leboncoin.fr/ad/ventes_immobilieres/123');
   assert.deepEqual([a.prix, a.surface, a.pieces, a.cp, a.ville, a.dpe], [95000, 40, 2, '93140', 'Bondy', 'G']);
-  const t = lire('bienici.txt').replace('Photo\n', "L'agence CENTURY 21 Exemple vous propose ce bien\nPhoto\n");
+  const t = lire('bienici.txt').replace(/Photo\r?\n/, "L'agence CENTURY 21 Exemple vous propose ce bien\nPhoto\n"); // fins de ligne CRLF sous Windows
   assert.equal(ctx.extraireAnnonces_('no_reply@bienici.com', 'Une annonce', t, '')[0].agence, 'CENTURY 21 Exemple');
 });
 
