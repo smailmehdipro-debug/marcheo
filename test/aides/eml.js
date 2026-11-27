@@ -19,7 +19,7 @@ function eml({ de, a, objet, texte, html, encodage = 'qp', date = 'Thu, 27 Nov 2
   const parties = [texte != null ? partie('text/plain', texte) : null, html != null ? partie('text/html', html) : null].filter(Boolean);
   return [
     'Received: from mail-sor-f41.google.com', transfertPour ? 'X-Forwarded-To: ' + transfertPour : null, transfertPour ? 'X-Forwarded-For: client@gmail.com ' + transfertPour : null,
-    'From: ' + motEncode(de.split('<')[0].trim()) + (de.includes('<') ? ' <' + de.split('<')[1] : ''), 'To: ' + a, 'Subject: ' + motEncode(objet), 'Date: ' + date, 'MIME-Version: 1.0',
+    'From: ' + motEncode(de.split('<')[0].trim()) + (de.includes('<') ? ' <' + de.split('<')[1] : ''), 'To: ' + a, 'Subject: ' + motEncode(objet), 'Date: ' + date, 'Message-ID: <' + b + '@mail.gmail.com>', 'MIME-Version: 1.0',
     `Content-Type: multipart/alternative; boundary="${b}"`, '', parties.map(p => '--' + b + '\r\n' + p).join('') + '--' + b + '--', ''
   ].filter(x => x !== null).join('\r\n');
 }

@@ -1,11 +1,15 @@
 /* Marchéo · données et synchronisation (mécanisme repris d'Hébéo)
-   - Serveur : script Google Apps Script déployé sur le compte Google de l'utilisateur, données dans un Google Sheet.
+   - Serveur : le serveur Marchéo hébergé (un compte par client, adresse ci-dessous), ou, en option avancée,
+     un script Google Apps Script déployé sur le compte Google de l'utilisateur (données dans un Google Sheet).
    - Une ligne par fiche (collection + identifiant + date de mise à jour) : seules les fiches modifiées circulent.
    - Écriture : la fiche la plus récente gagne, fiche par fiche (le téléphone et le PC ne s'écrasent pas en bloc).
    - Hors connexion : les modifications attendent dans une file et partent au retour du réseau.
    - Mode démonstration : aucune adresse de serveur, tout reste dans le navigateur. */
 (function (global) {
   'use strict';
+  /* Adresse du serveur Marchéo hébergé (Cloudflare Workers). À renseigner à la mise en ligne (DEPLOIEMENT.md).
+     Pour essayer un autre serveur sans modifier ce fichier : ouvrir l'application avec ?serveur=https://… une fois. */
+  const SERVEUR_MARCHEO = '';
   const COLLS = ['biens', 'contacts', 'relances', 'journal', 'reglages', 'annonces'];
   const CLE_CACHE = 'marcheo-cache-v1', CLE_FILE = 'marcheo-file-v1', CLE_CONF = 'marcheo-serveur', CLE_JETON = 'marcheo-jeton';
   const lire = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
@@ -16,12 +20,15 @@
   let cache = lire(CLE_CACHE, null) || { donnees: {}, depuis: '' };
   COLLS.forEach(c => { if (!cache.donnees[c]) cache.donnees[c] = {}; });
   let file = lire(CLE_FILE, []);
+  if (!cache.masquees) cache.masquees = {};
   let etat = { mode: 'demo', statut: 'ok', message: '' };
   const abonnes = new Set();
   const signaler = () => abonnes.forEach(f => { try { f(etat); } catch (e) { console.error(e); } });
   const persister = () => { ecrire(CLE_CACHE, cache); ecrire(CLE_FILE, file); };
 
   const conf = () => lire(CLE_CONF, null);
+  try { const q = new URLSearchParams(global.location ? global.location.search : '').get('serveur'); if (q && /^https?:\/\//.test(q)) localStorage.setItem('marcheo-serveur-heberge', q); } catch (e) {}
+  const serveurMarcheo = () => { try { return localStorage.getItem('marcheo-serveur-heberge') || SERVEUR_MARCHEO; } catch (e) { return SERVEUR_MARCHEO; } };
   const jeton = () => { try { return localStorage.getItem(CLE_JETON) || ''; } catch (e) { return ''; } };
 
   async function appeler(action, donnees) {
@@ -77,6 +84,7 @@
         const envoyes = new Set(lot.map(x => x.coll + '|' + x.id + '|' + x.majLe));
         file = file.filter(x => !envoyes.has(x.coll + '|' + x.id + '|' + x.majLe));
         (res.refuses || []).forEach(appliquer); // une version plus récente existait sur le serveur
+        (res.bloques || []).forEach(b => { const x = (cache.donnees[b.coll] || {})[b.id]; if (x) x._bloque = b.message; etat.limite = b.message; });
         persister();
       }
       const res = await appeler('lire', { depuis: cache.depuis || '' });
@@ -93,6 +101,8 @@
   /* Fusion fiche par fiche : la version la plus récente gagne, sauf si une modification locale plus récente attend d'être envoyée. */
   function appliquer(e) {
     if (!cache.donnees[e.coll]) return;
+    if (e.coll === 'annonces' && e.data && e.data.masquee) { cache.masquees[e.id] = e.data.recueLe || e.majLe; return; }
+    if (e.coll === 'annonces') delete cache.masquees[e.id];
     const local = cache.donnees[e.coll][e.id];
     const attente = file.find(x => x.coll === e.coll && x.id === e.id);
     if (attente && attente.majLe > e.majLe) return;
@@ -118,11 +128,34 @@
     const res = await appeler('connexion', { identifiant, motDePasse });
     try { localStorage.setItem(CLE_JETON, res.jeton); } catch (e) {}
     /* Changement de compte : on repart d'un cache vide. */
-    if (cache.compte !== identifiant) { cache = { donnees: {}, depuis: '', compte: identifiant }; COLLS.forEach(c => cache.donnees[c] = {}); file = []; persister(); }
+    nouveauCompte(identifiant);
     etat.mode = 'distant'; etat.session = true; etat.utilisateur = res.utilisateur || identifiant;
     await synchroniser();
     return res;
   }
+  /* Serveur Marchéo hébergé : inscription et connexion par adresse e-mail */
+  function nouveauCompte(identifiant) {
+    if (cache.compte !== identifiant) { cache = { donnees: {}, depuis: '', compte: identifiant, masquees: {} }; COLLS.forEach(c => cache.donnees[c] = {}); file = []; persister(); }
+  }
+  async function inscription(email, motDePasse) {
+    if (!serveurMarcheo()) throw Object.assign(new Error('Le serveur Marchéo n\'est pas encore configuré.'), { code: 'CONF' });
+    ecrire(CLE_CONF, { url: serveurMarcheo(), heberge: true });
+    const res = await appeler('inscription', { email, motDePasse });
+    try { localStorage.setItem(CLE_JETON, res.jeton); } catch (e) {}
+    nouveauCompte(res.utilisateur); try { localStorage.removeItem('marcheo-demo-vide'); } catch (e) {}
+    etat.mode = 'distant'; etat.session = true; etat.utilisateur = res.utilisateur;
+    await synchroniser();
+    return res;
+  }
+  async function connexionMarcheo(email, motDePasse) {
+    if (!serveurMarcheo()) throw Object.assign(new Error('Le serveur Marchéo n\'est pas encore configuré.'), { code: 'CONF' });
+    const res = await connexion(serveurMarcheo(), email, motDePasse);
+    ecrire(CLE_CONF, { url: serveurMarcheo(), heberge: true });
+    return res;
+  }
+  async function motDePasseOublie(email) { ecrire(CLE_CONF, Object.assign({}, conf() || {}, { url: (conf() || {}).url || serveurMarcheo() })); return appeler('motDePasseOublie', { email }); }
+  async function reinitialiserMotDePasse(jetonLien, motDePasse) { if (!(conf() || {}).url) ecrire(CLE_CONF, { url: serveurMarcheo(), heberge: true }); return appeler('reinitialiserMotDePasse', { jeton: jetonLien, motDePasse }); }
+
   async function deconnexion() {
     try { await appeler('deconnexion', {}); } catch (e) { /* hors ligne : le jeton expire seul */ }
     try { localStorage.removeItem(CLE_JETON); } catch (e) {}
@@ -135,6 +168,13 @@
   }
   function oublierServeur() { try { localStorage.removeItem(CLE_CONF); localStorage.removeItem(CLE_JETON); } catch (e) {} }
   function exporter() { const o = {}; COLLS.forEach(c => o[c] = liste(c)); return { application: 'Marchéo', version: 1, exporteLe: maintenant(), donnees: o }; }
+  function exporterCsv(coll) {
+    const l = liste(coll), cles = [];
+    l.forEach(x => Object.keys(x).forEach(k => { if (!cles.includes(k)) cles.push(k); }));
+    const cellule = v => { const t = v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v); return /[";\n\r]/.test(t) || /^[=+\-@]/.test(t) ? '"' + (/^[=+\-@]/.test(t) ? "'" : '') + t.replace(/"/g, '""') + '"' : t; };
+    /* Point-virgule et BOM : Excel en français ouvre le fichier directement, accents compris */
+    return '\ufeff' + [cles.join(';')].concat(l.map(x => cles.map(k => cellule(x[k])).join(';'))).join('\r\n');
+  }
   function importer(sauvegarde) {
     const d = sauvegarde && sauvegarde.donnees; if (!d) throw new Error('Fichier de sauvegarde non reconnu.');
     let n = 0; COLLS.forEach(c => (d[c] || []).forEach(x => { enregistrer(c, Object.assign({}, x)); n++; }));
@@ -144,7 +184,9 @@
   global.Donnees = {
     action: (nom, donnees) => appeler(nom, donnees),
     COLLS, nouvelId, liste, obtenir, enregistrer, supprimer, synchroniser, demarrer, connexion, deconnexion,
-    quitterDemo, reinitialiserDemo, oublierServeur, exporter, importer, conf,
+    quitterDemo, reinitialiserDemo, oublierServeur, exporter, exporterCsv, importer, conf,
+    inscription, connexionMarcheo, motDePasseOublie, reinitialiserMotDePasse, serveurMarcheo,
+    heberge: () => !!(conf() || {}).heberge, masquees: () => Object.keys(cache.masquees || {}).length,
     etat: () => etat, abonner: f => { abonnes.add(f); return () => abonnes.delete(f); }, enAttente: () => file.length
   };
 })(typeof window !== 'undefined' ? window : globalThis);

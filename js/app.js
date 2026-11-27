@@ -118,6 +118,7 @@
     { g: 'Suivi', id: 'relances', l: 'Relances', d: 'Aujourd\'hui et en retard', i: I.relances },
     { g: 'Suivi', id: 'contacts', l: 'Contacts', d: 'Agents, notaires, artisans', i: I.contacts },
     { g: 'Réglages', id: 'reperes', l: 'Repères', d: 'Prix unitaires des postes', i: I.reperes },
+    { g: 'Réglages', id: 'alertes', l: 'Recevoir mes alertes', d: 'Transfert depuis votre Gmail', i: I.annonces, si: () => D.heberge() },
     { g: 'Réglages', id: 'reglages', l: 'Réglages', d: 'Paramètres et synchronisation', i: I.reglages }
   ];
   function route() { const h = location.hash.replace(/^#\/?/, '').split('/'); return { m: h[0] || 'tableau', id: h[1] || '', o: h[2] || '' }; }
@@ -133,7 +134,7 @@
   function majNav() {
     if (!$('#listeModules')) return; // page Visite : pas de menu latéral
     const r = route(), q = ($('#rechercheModule') || {}).value || '', C = compteurs();
-    const mods = MODULES.filter(m => !q || (m.l + ' ' + m.d).toLowerCase().includes(q.toLowerCase()));
+    const mods = MODULES.filter(m => (!m.si || m.si()) && (!q || (m.l + ' ' + m.d).toLowerCase().includes(q.toLowerCase())));
     let g = '', h = '';
     mods.forEach(m => {
       if (m.g !== g) { g = m.g; h += `<div class="nav-groupe">${esc(g)}</div>`; }
@@ -169,7 +170,7 @@
     vueCourante = cle;
     const y = c.scrollTop, yw = window.scrollY;
     try {
-      ({ tableau: vueTableau, annonces: vueAnnonces, biens: vueBiens, bien: vueBien, comparateur: vueComparateur, relances: vueRelances, contacts: vueContacts, reperes: vueReperes, reglages: vueReglages }[r.m] || vueTableau)(c, r);
+      ({ alertes: vueRecevoirAlertes, tableau: vueTableau, annonces: vueAnnonces, biens: vueBiens, bien: vueBien, comparateur: vueComparateur, relances: vueRelances, contacts: vueContacts, reperes: vueReperes, reglages: vueReglages }[r.m] || vueTableau)(c, r);
     } catch (e) { console.error(e); c.innerHTML = `<div class="alerte-bandeau">Erreur d'affichage : ${esc(e.message)}</div>`; }
     suiviPastille(c, r); alternerEncarts(c);
     if (garderDefilement) { c.scrollTop = y; window.scrollTo(0, yw); } else { c.scrollTop = 0; window.scrollTo(0, 0); }
@@ -1733,6 +1734,7 @@
     c.innerHTML = `
       <div class="en-tete-page"><div><h1>Annonces</h1><p>${toutes.length} reçue(s)${derniere ? ' · dernière alerte le ' + dateFr(derniere.slice(0, 10)) : ''}</p></div>
         <div class="actions"><button class="bouton" id="anAjout">+ Annonce</button><button class="bouton" id="anCrit">Modifier les critères</button></div></div>
+      ${D.masquees() ? `<div class="bandeau-suivi bandeau-suivi-orange"><span class="point-suivi"></span><span>${D.masquees()} annonce(s) reçue(s) au-delà de l'offre gratuite ce mois-ci. Passez en Pro pour les voir.</span></div>` : ''}
       <div class="info-bandeau">${esc(resumeCriteres(reglages()))}</div>
       <nav class="onglets">${ONG.map(o => `<button class="${fa.onglet === o[0] ? 'actif' : ''}" data-ong="${o[0]}">${o[1]} <small class="discret">${groupes[o[0]].length}</small></button>`).join('')}</nav>
       <div class="barre-outils"><input type="search" id="anQ" placeholder="Rechercher : ville, titre…" value="${esc(fa.q)}" aria-label="Rechercher">
@@ -2255,12 +2257,14 @@
     c.innerHTML = `<div class="en-tete-page"><div><h1>Réglages</h1></div></div>
       <div class="pile">
         <div class="carte"><h2>Synchronisation</h2><div class="compte">
-          ${ligneCompte('Mode', E.mode === 'demo' ? 'Démonstration, données dans ce navigateur' : 'Serveur Google Apps Script')}
+          ${ligneCompte('Mode', E.mode === 'demo' ? 'Démonstration, données dans ce navigateur' : D.heberge() ? 'Serveur Marchéo' : 'Serveur Google Apps Script')}
           ${E.mode === 'distant' ? ligneCompte('État', esc(E.message || 'À jour')) + ligneCompte('Modifications en attente', D.enAttente()) + ligneCompte('Serveur', `<small>${esc((cf.url || '').replace(/^https:\/\/script\.google\.com\/macros\/s\//, '…/').slice(0, 40))}</small>`) : ''}
         </div><div class="actions" style="margin-top:.8rem">
           ${E.mode === 'demo' ? '<button class="bouton bouton-principal" id="gConnect">Connecter un serveur</button><button class="bouton" id="gVider">Partir d\'une base vide</button><button class="bouton" id="gDemo">Recharger la démonstration</button>' : '<button class="bouton" id="gSync">Synchroniser</button><button class="bouton" id="gDeco">Se déconnecter</button><button class="bouton bouton-danger" id="gOubli">Oublier ce serveur</button>'}
           <button class="bouton" id="gExport">Exporter une sauvegarde</button><label class="bouton" for="gImport">Importer une sauvegarde</label><input id="gImport" type="file" accept=".json" hidden>
         </div></div>
+        <div class="carte"><h2>Exporter mes données</h2><p class="aide">Un fichier par liste, à ouvrir dans Excel ou Google Sheets. Disponible dans toutes les offres.</p>
+          <div class="actions">${[['biens', 'Projets'], ['annonces', 'Annonces'], ['contacts', 'Contacts'], ['relances', 'Relances'], ['journal', 'Journal']].map(x => `<button class="bouton" data-csv="${x[0]}">${x[1]} (CSV)</button>`).join('')}</div></div>
         <div class="carte"><h2>Capital</h2><div class="grille-champs alignee">${champ('enveloppe', 'Enveloppe disponible (€)', 'commune à tous les projets')}${champ('seuilTravaux', 'Alerte de dépassement des travaux (%)')}</div></div>
         <div class="carte"><h2>Valeurs par défaut des nouveaux projets</h2><div class="grille-champs alignee">
           ${champ('taux', 'Intérêts associé investisseur (%/an)')}${champ('obj', 'Objectif de marge nette (%)')}${champ('part', 'Part associé opérateur (%)')}${champ('pfu', 'Prélèvement sur dividendes (%)')}${champ('dmax', 'Durée maximum (mois)')}
@@ -2283,6 +2287,7 @@
     on('gSync', () => D.synchroniser().then(() => { notifier('Synchronisation terminée.', 'succes'); afficher(); }));
     on('gDeco', () => D.deconnexion().then(() => location.reload()));
     on('gOubli', () => confirmer('Oublier l\'adresse du serveur sur cet appareil ? Les données restent sur le serveur.', () => { D.oublierServeur(); location.reload(); }));
+    $$('[data-csv]', c).forEach(b => b.onclick = () => { const blob = new Blob([D.exporterCsv(b.dataset.csv)], { type: 'text/csv;charset=utf-8' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'marcheo-' + b.dataset.csv + '-' + aujourdhui() + '.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); });
     $('#gExport').onclick = () => { const blob = new Blob([JSON.stringify(D.exporter(), null, 1)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'marcheo-sauvegarde-' + aujourdhui() + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
     $('#gImport').onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { const n = D.importer(JSON.parse(rd.result)); notifier(n + ' fiche(s) importée(s).', 'succes'); afficher(); } catch (err) { notifier(err.message, 'erreur'); } }; rd.readAsText(f); };
   }
@@ -2300,21 +2305,112 @@
   }
 
   /* ================= Connexion ================= */
-  function ecranConnexion(depuisDemo) {
-    const cf = D.conf() || {};
+  /* Accueil sans session : « Voir la démo », « Créer mon compte », « Me connecter ».
+     « Autre serveur » garde l'accès des clients installés sur Google Apps Script. */
+  function ecranConnexion(depuisDemo, ecran) {
+    const cf = D.conf() || {}, heberge = !!D.serveurMarcheo();
+    ecran = ecran || (cf.url && !cf.heberge ? 'serveur' : 'choix');
+    const indispo = heberge ? '' : '<p class="aide orange">Le serveur Marchéo hébergé n\'est pas encore en ligne : ouvrez la démonstration, ou connectez votre propre serveur (« Autre serveur »).</p>';
+    const champ = (id, l, type, ac, extra) => `<div class="champ"><label for="${id}">${l}</label><input id="${id}" type="${type}" autocomplete="${ac}" required autocapitalize="off" ${extra || ''}></div>`;
+    const formulaires = {
+      choix: `<div class="choix-accueil">
+          <button class="bouton bouton-principal bouton-large" data-ecran="creer"${heberge ? '' : ' disabled'}>Créer mon compte</button>
+          <button class="bouton bouton-large" data-ecran="connexion"${heberge ? '' : ' disabled'}>Me connecter</button>
+          <button class="bouton bouton-vert bouton-large" id="cDemo">${depuisDemo ? 'Revenir à la démonstration' : 'Voir la démo'}</button></div>${indispo}
+        <p class="aide" style="margin-top:1rem">Essai gratuit de 7 jours, sans carte bancaire. La démonstration fonctionne sans compte, dans ce navigateur.</p>
+        <button class="bouton-lien" data-ecran="serveur">Autre serveur (Google Apps Script)</button>`,
+      creer: `<form id="fConn" data-action="creer"><h2 class="titre-accueil">Créer mon compte</h2>
+          ${champ('cEmail', 'Adresse e-mail', 'email', 'email', 'inputmode="email"')}${champ('cMdp', 'Mot de passe (8 caractères minimum)', 'password', 'new-password', 'minlength="8"')}
+          <label class="case"><input type="checkbox" id="cCgu" required> <span>J'accepte les <a href="conditions.html" target="_blank" rel="noopener">conditions d'utilisation</a> et la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.</span></label>
+          <button class="bouton bouton-principal bouton-large" type="submit">Créer mon compte et démarrer l'essai</button><p id="cMsg" class="aide" role="status"></p></form>
+        <button class="bouton-lien" data-ecran="choix">Retour</button>`,
+      connexion: `<form id="fConn" data-action="connexion"><h2 class="titre-accueil">Me connecter</h2>
+          ${champ('cEmail', 'Adresse e-mail', 'email', 'username', 'inputmode="email"')}${champ('cMdp', 'Mot de passe', 'password', 'current-password')}
+          <button class="bouton bouton-principal bouton-large" type="submit">Me connecter</button><p id="cMsg" class="aide" role="status"></p></form>
+        <button class="bouton-lien" data-ecran="oubli">Mot de passe oublié ?</button> · <button class="bouton-lien" data-ecran="choix">Retour</button>`,
+      oubli: `<form id="fConn" data-action="oubli"><h2 class="titre-accueil">Mot de passe oublié</h2><p class="aide">Vous recevrez un lien pour choisir un nouveau mot de passe, valable une heure.</p>
+          ${champ('cEmail', 'Adresse e-mail', 'email', 'email', 'inputmode="email"')}
+          <button class="bouton bouton-principal bouton-large" type="submit">Recevoir le lien</button><p id="cMsg" class="aide" role="status"></p></form>
+        <button class="bouton-lien" data-ecran="connexion">Retour</button>`,
+      serveur: `<form id="fConn" data-action="serveur"><h2 class="titre-accueil">Autre serveur</h2>
+          <div class="champ"><label for="cUrl">Adresse du serveur</label><input id="cUrl" type="url" inputmode="url" required value="${esc(cf.heberge ? '' : cf.url || '')}" placeholder="https://script.google.com/macros/s/…/exec"><small class="aide">Adresse de l'application Web Apps Script, à saisir une fois par appareil.</small></div>
+          ${champ('cId', 'Identifiant', 'text', 'username')}${champ('cMdp', 'Mot de passe', 'password', 'current-password')}
+          <button class="bouton bouton-principal bouton-large" type="submit">Se connecter</button><p id="cMsg" class="aide" role="status"></p></form>
+        <button class="bouton-lien" data-ecran="choix">Retour</button>`
+    };
     document.body.innerHTML = `<div class="page-connexion"><div class="carte boite-connexion">
       <div class="marque"><img class="logo" src="icone.svg" alt=""><span class="marque-titre">Marchéo</span></div>
-      <form id="fConn"><div class="champ"><label for="cUrl">Adresse du serveur</label><input id="cUrl" type="url" inputmode="url" required value="${esc(cf.url || '')}" placeholder="https://script.google.com/macros/s/…/exec"><small class="aide">Adresse de l'application Web Apps Script, à saisir une fois par appareil.</small></div>
-      <div class="champ"><label for="cId">Identifiant</label><input id="cId" autocomplete="username" required autocapitalize="off"></div>
-      <div class="champ"><label for="cMdp">Mot de passe</label><input id="cMdp" type="password" autocomplete="current-password" required></div>
-      <button class="bouton bouton-principal" style="width:100%" type="submit">Se connecter</button><p id="cMsg" class="aide" role="status" style="margin-top:.6rem"></p></form>
-      <button class="bouton-lien" id="cDemo">${depuisDemo ? 'Revenir à la démonstration' : 'Ouvrir la démonstration'}</button></div></div><div id="notifications"></div>`;
-    $('#fConn').onsubmit = async e => {
-      e.preventDefault(); const msg = $('#cMsg'); msg.textContent = 'Connexion…'; msg.className = 'aide';
-      try { await D.connexion($('#cUrl').value, $('#cId').value.trim().toLowerCase(), $('#cMdp').value); location.hash = '#/tableau'; location.reload(); }
+      ${formulaires[ecran] || formulaires.choix}</div></div><div id="notifications"></div>`;
+    $$('[data-ecran]').forEach(b => b.onclick = () => ecranConnexion(depuisDemo, b.dataset.ecran));
+    const demo = $('#cDemo'); if (demo) demo.onclick = () => { try { localStorage.setItem('marcheo-accueil-vu', '1'); } catch (e) {} D.oublierServeur(); location.hash = ''; location.reload(); };
+    const f = $('#fConn'); if (!f) return;
+    f.onsubmit = async e => {
+      e.preventDefault(); const msg = $('#cMsg'), v = id => ($('#' + id) || {}).value || '';
+      msg.textContent = 'Un instant…'; msg.className = 'aide';
+      try {
+        const a = f.dataset.action;
+        if (a === 'creer') { await D.inscription(v('cEmail').trim().toLowerCase(), v('cMdp')); location.hash = MODE_VISITE ? '' : '#/alertes'; location.reload(); return; }
+        if (a === 'connexion') { await D.connexionMarcheo(v('cEmail').trim().toLowerCase(), v('cMdp')); location.hash = MODE_VISITE ? '' : '#/tableau'; location.reload(); return; }
+        if (a === 'oubli') { await D.motDePasseOublie(v('cEmail').trim().toLowerCase()); msg.textContent = 'Si un compte existe pour cette adresse, un e-mail vient de partir. Pensez à regarder les indésirables.'; msg.className = 'aide vert'; return; }
+        if (a === 'serveur') { await D.connexion(v('cUrl'), v('cId').trim().toLowerCase(), v('cMdp')); location.hash = MODE_VISITE ? '' : '#/tableau'; location.reload(); }
+      } catch (err) { msg.textContent = err.message; msg.className = 'aide rouge'; }
+    };
+  }
+  /* Lien reçu par e-mail : #/reinitialiser/<jeton> */
+  function ecranReinitialiser(jetonLien) {
+    document.body.innerHTML = `<div class="page-connexion"><div class="carte boite-connexion">
+      <div class="marque"><img class="logo" src="icone.svg" alt=""><span class="marque-titre">Marchéo</span></div>
+      <form id="fReinit"><h2 class="titre-accueil">Nouveau mot de passe</h2>
+        <div class="champ"><label for="rMdp">Mot de passe (8 caractères minimum)</label><input id="rMdp" type="password" autocomplete="new-password" minlength="8" required></div>
+        <button class="bouton bouton-principal bouton-large" type="submit">Enregistrer</button><p id="rMsg" class="aide" role="status"></p></form></div></div><div id="notifications"></div>`;
+    $('#fReinit').onsubmit = async e => {
+      e.preventDefault(); const msg = $('#rMsg');
+      try { await D.reinitialiserMotDePasse(jetonLien, $('#rMdp').value); history.replaceState(null, '', location.pathname); ecranConnexion(false, 'connexion'); notifier('Mot de passe enregistré : connectez-vous.', 'succes'); }
       catch (err) { msg.textContent = err.message; msg.className = 'aide rouge'; }
     };
-    $('#cDemo').onclick = () => { D.oublierServeur(); location.reload(); };
+  }
+
+  /* ================= Recevoir mes alertes (serveur hébergé) ================= */
+  let suiviTransfert = null;
+  function vueRecevoirAlertes(c) {
+    titre('Recevoir mes alertes', 'Transfert depuis votre Gmail', I.annonces);
+    c.innerHTML = `<div class="en-tete-page"><div><h1>Recevoir mes alertes</h1><p>Vos alertes Bien'ici, SeLoger, Leboncoin, PAP… arrivent dans votre Gmail. Un filtre les transfère à Marchéo, qui les trie pour vous.</p></div></div>
+      <div class="pile">
+        <div class="carte"><h2>1. Votre adresse de transfert</h2><div class="adresse-transfert"><code id="atAdr">…</code><button class="bouton" id="atCopier">Copier</button></div>
+          <p class="aide">Adresse propre à votre compte. Elle ne sert qu'à recevoir vos alertes.</p></div>
+        <div class="carte"><h2>2. Ajouter cette adresse dans Gmail</h2><ol class="etapes-guide">
+          <li>Dans Gmail sur ordinateur, ouvrez <b>Paramètres</b> (roue dentée) → <b>Voir tous les paramètres</b> → onglet <b>Transfert et POP/IMAP</b>.</li>
+          <li>Cliquez sur <b>Ajouter une adresse de transfert</b>, collez l'adresse ci-dessus, puis <b>Suivant</b> et <b>Continuer</b>.</li>
+          <li>Gmail envoie un code de confirmation à Marchéo : il s'affiche ci-dessous dès réception. Saisissez-le dans Gmail, ou ouvrez le lien de confirmation.</li>
+          <li>Laissez « Désactiver le transfert » coché : seul le filtre de l'étape 3 transférera vos alertes.</li></ol>
+          <div id="atCode" class="bandeau-suivi bandeau-suivi-orange"><span class="point-suivi"></span><span>En attente du code de confirmation de Gmail…</span></div></div>
+        <div class="carte"><h2>3. Créer le filtre</h2><ol class="etapes-guide">
+          <li>Copiez cette recherche et collez-la dans la barre de recherche de Gmail :<div class="adresse-transfert"><code id="atFiltre">…</code><button class="bouton" id="atCopierFiltre">Copier</button></div></li>
+          <li>Ouvrez les options de recherche (icône à droite de la barre), puis <b>Créer un filtre</b>.</li>
+          <li>Cochez <b>Transférer à</b> et choisissez votre adresse Marchéo. Pour ne pas être dérangé, cochez aussi <b>Ne pas afficher dans la boîte de réception</b> et <b>Marquer comme lu</b>.</li>
+          <li>Cliquez sur <b>Créer un filtre</b>.</li></ol></div>
+        <div class="carte"><h2>4. Première alerte</h2><div id="atPremiere" class="bandeau-suivi bandeau-suivi-orange"><span class="point-suivi"></span><span>Aucune annonce reçue pour l'instant. Créez vos alertes sur les sites d'annonces avec votre adresse Gmail habituelle.</span></div></div>
+        <div class="carte" id="atOffre"></div>
+      </div>`;
+    const copier = (id, msg) => { const t = $('#' + id).textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => notifier(msg, 'succes'), () => notifier('Copie impossible : sélectionnez le texte à la main.', 'erreur')); };
+    $('#atCopier').onclick = () => copier('atAdr', 'Adresse copiée.');
+    $('#atCopierFiltre').onclick = () => copier('atFiltre', 'Recherche copiée.');
+    const maj = async () => {
+      if (route().m !== 'alertes') { clearInterval(suiviTransfert); suiviTransfert = null; return; }
+      try {
+        const t = await D.action('etatTransfert', {});
+        $('#atAdr').textContent = t.adresse;
+        $('#atFiltre').textContent = 'from:(' + (t.expediteurs || []).join(' OR ') + ')';
+        if (t.confirmation) $('#atCode').outerHTML = `<div id="atCode" class="bandeau-suivi bandeau-suivi-vert"><span class="point-suivi"></span><span>Code de confirmation Gmail : <b>${esc(t.confirmation.code || '—')}</b>${t.confirmation.lien ? ` · <a href="${esc(t.confirmation.lien)}" target="_blank" rel="noopener">ou confirmer par le lien</a>` : ''}</span></div>`;
+        if (t.premiereAnnonce) $('#atPremiere').outerHTML = `<div id="atPremiere" class="bandeau-suivi bandeau-suivi-vert"><span class="point-suivi"></span><span>Première annonce reçue le ${dateFr(t.premiereAnnonce.slice(0, 10))}. <a href="#/annonces">Voir mes annonces</a></span></div>`;
+        const o = await D.action('compte', {});
+        const lib = { essai: 'Essai gratuit', gratuit: 'Gratuit', pro: 'Pro' }[o.offre] || o.offre;
+        $('#atOffre').innerHTML = `<h2>Mon offre</h2><div class="compte">${ligneCompte('Offre', esc(lib), { s: o.offre === 'essai' ? 'jusqu\'au ' + dateFr(String(o.essaiFin).slice(0, 10)) : '' })}
+          ${o.limites.annoncesMois != null ? ligneCompte('Annonces ce mois-ci', o.usage.annoncesMois + ' / ' + o.limites.annoncesMois) : ''}${o.limites.dvfMois != null ? ligneCompte('Recherches de ventes ce mois-ci', o.usage.dvfMois + ' / ' + o.limites.dvfMois) : ''}
+          ${o.masquees ? ligneCompte('Annonces masquées', '<span class="orange">' + o.masquees + '</span>', { s: 'reçues au-delà de l\'offre gratuite' }) : ''}</div>`;
+      } catch (err) { notifier(err.message, 'erreur'); clearInterval(suiviTransfert); suiviTransfert = null; }
+    };
+    clearInterval(suiviTransfert); maj(); suiviTransfert = setInterval(maj, 10000); // le code de Gmail arrive en quelques secondes
   }
 
   /* ================= Page Visite (visite.html) : accueil mobile ================= */
@@ -2410,10 +2506,15 @@
     const E = D.etat(); $('#modeUtilisateur').textContent = E.mode === 'demo' ? 'Démonstration' : (E.utilisateur || 'Connecté');
   }
   function demarrer() {
+    const reinit = location.hash.match(/^#\/reinitialiser\/(\w+)/);
+    if (reinit) { ecranReinitialiser(reinit[1]); return; }
     const E = D.demarrer();
     if (E.mode === 'distant' && !E.session) { ecranConnexion(false); return; }
+    /* Première visite : accueil (démo, création de compte, connexion) dès que le serveur Marchéo est configuré */
+    let accueilVu = true; try { accueilVu = !!localStorage.getItem('marcheo-accueil-vu'); } catch (e) {}
+    if (E.mode === 'demo' && D.serveurMarcheo() && !accueilVu) { ecranConnexion(false); return; }
     appliquerTheme(); if (MODE_VISITE) coquilleVisite(); else coquille(); appliquerReperes();
-    D.abonner(e => { majSynchro(e); if (e.mode === 'distant' && e.session === false) ecranConnexion(false); });
+    D.abonner(e => { majSynchro(e); if (e.limite) { notifier(e.limite, 'erreur'); e.limite = null; } if (e.mode === 'distant' && e.session === false) ecranConnexion(false); });
     majSynchro(E);
     /* Données reçues d'un autre appareil : on redessine hors saisie en cours. */
     let dernier = '';

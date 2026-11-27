@@ -747,3 +747,12 @@ tr.attention-rouge td:first-child { box-shadow: inset 4px 0 0 var(--rouge); }
 tr.attention-orange td { background: var(--orange-fond); }
 tr.attention-orange td:first-child { box-shadow: inset 4px 0 0 var(--orange); }
 .tableau-reperes input.modifie { border-color: var(--accent); }
+
+/* Accueil sans session et page « Recevoir mes alertes » */
+.choix-accueil { display: grid; gap: .6rem; }
+.titre-accueil { font-size: 1.15rem; margin: 0 0 .8rem; }
+.boite-connexion .bouton-large { width: 100%; }
+.boite-connexion form .case { margin: .4rem 0 .9rem; display: flex; gap: .5rem; align-items: flex-start; }
+.adresse-transfert { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin: .4rem 0; }
+.adresse-transfert code { font-size: 1rem; padding: .45rem .7rem; background: var(--surface-2); border: 1px solid var(--bordure); border-radius: var(--rayon-petit); word-break: break-all; }
+.etapes-guide { margin: 0 0 .8rem 1.1rem; padding: 0; display: grid; gap: .45rem; }

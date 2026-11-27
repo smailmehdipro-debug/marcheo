@@ -206,7 +206,8 @@ export function creerServeur(env, options = {}) {
     const c = await compte(compteId);
     const t = await DB.prepare('SELECT code, lien, recu_le FROM transferts WHERE compte_id = ? ORDER BY recu_le DESC LIMIT 1').bind(compteId).first();
     const p = await DB.prepare("SELECT MIN(recu_le) AS le FROM fiches WHERE compte_id = ? AND coll = 'annonces'").bind(compteId).first();
-    return { adresse: c.adresse_transfert + '@' + domaine(), confirmation: t ? { code: t.code, lien: t.lien, recuLe: t.recu_le } : null, premiereAnnonce: (p && p.le) || '' };
+    return { adresse: c.adresse_transfert + '@' + domaine(), confirmation: t ? { code: t.code, lien: t.lien, recuLe: t.recu_le } : null, premiereAnnonce: (p && p.le) || '',
+      expediteurs: EXPEDITEURS_ALERTES }; // pour la recherche Gmail à coller dans le filtre
   }
   async function infosCompte(compteId) {
     const c = await compte(compteId), p = mois();
