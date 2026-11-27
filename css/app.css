@@ -337,7 +337,7 @@ h1 { font-size: 1.85rem; line-height: 1.1; }
 .nav-laterale { background: linear-gradient(180deg, var(--nav-fond-2), var(--nav-fond)); border-right: 1px solid var(--laiton); color: var(--nav-texte); }
 .panneau-tete { background: transparent; border-bottom: 1px solid var(--nav-bordure); height: 68px; }
 .marque { color: var(--nav-texte); }
-.marque .logo { width: 38px; height: 38px; background: none; box-shadow: 0 0 0 1px var(--laiton-clair); }
+.marque .logo { width: 40px; height: 40px; background: none; border-radius: 22%; box-shadow: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
 .marque-titre { font-size: 1.6rem; color: var(--nav-texte); }
 .recherche-modules input { background: rgba(255, 255, 255, 0.06); color: var(--nav-texte); border: 1px solid var(--nav-bordure); }
 .recherche-modules input::placeholder, .recherche-modules .loupe { color: var(--nav-texte-2); }
@@ -503,7 +503,7 @@ input.modifie { border-color: var(--orange); background: var(--orange-fond); }
 /* ================= Page Visite (visite.html) ================= */
 .page-visite { min-height: 100vh; display: flex; flex-direction: column; }
 .vacc-tete { display: flex; align-items: center; gap: .6rem; padding: .6rem .9rem; padding-top: calc(.6rem + env(safe-area-inset-top)); background: var(--nav-fond); color: var(--nav-texte); position: sticky; top: 0; z-index: 10; }
-.vacc-tete .logo { width: 38px; height: 38px; }
+.vacc-tete .logo { width: 40px; height: 40px; border-radius: 22%; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
 .vacc-tete div { flex: 1; display: flex; flex-direction: column; line-height: 1.1; }
 .vacc-tete strong { font-family: var(--serif); font-size: 1.35rem; }
 .vacc-tete small { color: var(--laiton-clair); text-transform: uppercase; letter-spacing: .14em; font-size: .7rem; font-weight: 700; }
