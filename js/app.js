@@ -211,7 +211,7 @@
       <div class="section-titre"><h2>Capital</h2></div>
       <div class="indicateurs">
         ${indic('Enveloppe', eur(R.enveloppe), { detail: 'modifiable dans les Réglages', lien: '#/reglages' })}
-        ${indic('Capital engagé', eur(engage), { detail: engages.length + ' projet(s), trésorerie maximale', etat: engage > R.enveloppe ? 'rouge' : '' })}
+        ${indic('Capital engagé', eur(engage), { detail: engages.length + ' projet(s), budget', etat: engage > R.enveloppe ? 'rouge' : '' })}
         ${indic('Capital disponible', eur(dispo), { detail: pc(R.enveloppe ? dispo / R.enveloppe : 0, 0) + ' de l\'enveloppe', etat: dispo < 0 ? 'rouge' : dispo < R.enveloppe * .2 ? 'orange' : 'vert', c: dispo < 0 ? 'rouge' : '' })}
       </div>
       <div class="section-titre"><h2>Bilan comptable</h2></div>
@@ -564,7 +564,7 @@
         ${indic('Marge nette', pc(r.m), { etat: ETATS[A.etat][0], c: ETATS[A.etat][0], detail: 'objectif ' + S.obj + ' %' })}
         ${indic('Bénéfice net', eur(r.N), { c: r.N < 0 ? 'rouge' : '' })}
         ${indic('Coût de revient', eur(r.C))}
-        ${indic('Trésorerie maximale', eur(r.treso), { etat: r.treso > S.env ? 'rouge' : '', detail: 'enveloppe ' + eur(S.env) })}
+        ${indic('Budget', eur(r.treso), { etat: r.treso > S.env ? 'rouge' : '', detail: 'enveloppe ' + eur(S.env) })}
       </div>
       <div class="carte"><h2>Où va le prix de revente</h2>
         <p class="repartition-phrase">Sur <b>100 €</b> de revente : ${parts.map(p => `<span style="color:${COULEURS[p[0]]}">${cent(p[1])} € ${p[0] === 'Bénéfice net' ? 'de <b>bénéfice net</b>' : p[0].toLowerCase()}</span>`).join(', ')}.</p>
@@ -593,10 +593,10 @@
         ${ligneCompte('− Prélèvement sur dividendes', eur(P.operateur.prelevement), { s: String(S.pfu).replace('.', ',') + ' %' })}
         ${ligneCompte('= Net de l\'associé opérateur', eur(P.operateur.net), { total: 1 })}
         ${ligneCompte('Fiscalité totale de l\'opération', eur(P.fiscalite), { s: 'droits, TVA, IS, prélèvement' })}
-        ${ligneCompte('TVA des travaux avancée puis récupérée', eur(P.tvaTravaux), { s: 'pèse sur la trésorerie' })}
+        ${ligneCompte('TVA des travaux avancée puis récupérée', eur(P.tvaTravaux), { s: 'pèse sur le budget' })}
       </div>
       <div class="compte-titre">Associé investisseur</div><div class="compte">
-        ${ligneCompte('Capital avancé', eur(P.investisseur.capital), { s: 'trésorerie maximale' })}
+        ${ligneCompte('Capital avancé', eur(P.investisseur.capital), { s: 'budget' })}
         ${ligneCompte('Intérêts reçus', eur(P.investisseur.interets))}
         ${ligneCompte('Dividendes reçus', eur(P.investisseur.dividendes), { s: (100 - S.part) + ' % du bénéfice net' })}
         ${ligneCompte('− IS estimé', eur(P.investisseur.is), { s: '15 % des intérêts et de 5 % des dividendes' })}
@@ -1966,7 +1966,7 @@
     const choisis = selection.map(id => biens.find(b => b.id === id)).filter(Boolean);
     const lignes = [
       ['Prix d\'achat', A => A.r.achat, -1, eur], ['Travaux HT', A => A.r.T, -1, eur], ['Coût de revient', A => A.r.C, -1, eur], ['Revente', A => A.r.vente, 1, eur],
-      ['Bénéfice net', A => A.r.N, 1, eur], ['Marge nette', A => A.r.m, 1, v => pc(v)], ['Trésorerie maximale', A => A.r.treso, -1, eur], ['Durée', A => A.S.duree, -1, v => v + ' mois'],
+      ['Bénéfice net', A => A.r.N, 1, eur], ['Marge nette', A => A.r.m, 1, v => pc(v)], ['Budget', A => A.r.treso, -1, eur], ['Durée', A => A.S.duree, -1, v => v + ' mois'],
       ['Contrôles', A => A.controles.score, 1, v => v + ' / 4'], ['Prix d\'achat maximum', A => A.lim.achatMax || 0, 0, v => v ? eur(v) : 'aucun'],
       ['Revenus nets de l\'associé investisseur', A => A.partage.investisseur.net, 1, eur], ['Rendement annuel de l\'associé investisseur', A => A.partage.investisseur.rendementAn, 1, v => pc(v)],
       ['Net de l\'associé opérateur', A => A.partage.operateur.net, 1, eur]

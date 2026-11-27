@@ -66,13 +66,13 @@
     ligne('- Prélèvement sur dividendes', String(S.pfu).replace('.', ',') + ' %', eur(P.operateur.prelevement));
     ligne('= Net perçu par l\'associé opérateur', '', eur(P.operateur.net), { bold: true, vcolor: VC.ok });
     ligne('Total fiscalité de l\'opération', 'droits d\'achat, TVA, IS, prélèvement sur dividendes', eur(P.fiscalite));
-    ligne('TVA des travaux avancée puis récupérée', 'pèse sur la trésorerie, pas sur la marge', eur(P.tvaTravaux));
+    ligne('TVA des travaux avancée puis récupérée', 'pèse sur le budget, pas sur la marge', eur(P.tvaTravaux));
 
     /* ---------- Page 2 : analyse et décision ---------- */
     doc.addPage(); page(); y = 16;
     doc.setFont('times', 'bold'); doc.setFontSize(18); doc.setTextColor(ENCRE[0], ENCRE[1], ENCRE[2]); doc.text(c('Analyse et décision'), MG, y); y += 8;
     titre('Revenus de l\'associé investisseur');
-    ligne('Capital avancé, remboursé à la revente', 'trésorerie maximale sortie', eur(P.investisseur.capital));
+    ligne('Capital avancé, remboursé à la revente', 'budget', eur(P.investisseur.capital));
     ligne('Intérêts reçus', String(S.taux).replace('.', ',') + ' % par an sur ' + r.duree + ' mois', eur(P.investisseur.interets));
     ligne('Dividendes reçus', (100 - S.part) + ' % du bénéfice net', eur(P.investisseur.dividendes));
     ligne('- IS de l\'associé investisseur, estimation', '15 % sur les intérêts et sur 5 % des dividendes', eur(P.investisseur.is));
@@ -95,7 +95,7 @@
     ligne('Baisse de revente supportable', 'avant la perte : ' + pc(Math.max(0, ind.baissePerte.v)), pc(Math.max(0, ind.baisseObjectif.v)));
     ligne('Coût d\'un mois de retard', 'sur le bénéfice net', eur(ind.coutMois.v));
     if (ind.fiscaliteMarge.v != null) ligne('TVA et IS sur la marge brute', '', pc(ind.fiscaliteMarge.v, 0));
-    ligne('Trésorerie / enveloppe', 'enveloppe ' + eur(S.env), ind.tresorerie.reste >= 0 ? 'reste ' + eur(ind.tresorerie.reste) : 'manque ' + eur(-ind.tresorerie.reste), { vcolor: VC[ind.tresorerie.etat] });
+    ligne('Budget / enveloppe', 'enveloppe ' + eur(S.env), ind.tresorerie.reste >= 0 ? 'reste ' + eur(ind.tresorerie.reste) : 'manque ' + eur(-ind.tresorerie.reste), { vcolor: VC[ind.tresorerie.etat] });
     ind.alertesType.forEach(a => ligne('Point de vigilance', '', a, { vcolor: VC.juste }));
     if (S.abf === 'Oui') ligne('Zone ABF', 'accord requis pour les travaux visibles', 'délais allongés', { vcolor: VC.juste });
     if (S.preempt === 'Oui') ligne('Zone de préemption', 'délai de réponse de la mairie', 'à prévoir', { vcolor: VC.juste });
