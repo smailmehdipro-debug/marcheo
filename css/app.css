@@ -739,3 +739,5 @@ tr.attention-rouge td:first-child { box-shadow: inset 4px 0 0 var(--rouge); }
 .bulle-menu.alerte { background: #d9463b; animation: pulse-pastille 2s ease-out infinite; }
 .bulle-menu[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .bulle-menu.alerte { animation: none; } }
+.bandeau-suivi-orange { background: var(--orange-fond); border-color: var(--orange); color: var(--texte); }
+.bandeau-suivi-orange .point-suivi { background: var(--orange); }

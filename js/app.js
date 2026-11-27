@@ -127,7 +127,7 @@
   const attentionBien = b => { const d = b.prochaine && b.prochaine.date, t = aujourdhui(); return !d || ['ecarte', 'vendu'].includes(b.etape) ? '' : d < t ? ' attention-rouge' : d === t ? ' attention-vert' : ''; };
   function compteurs() {
     const t = aujourdhui(), rel = D.liste('relances').filter(r => !r.fait && r.date && r.date <= t);
-    return { annonces: D.liste('annonces').filter(a => a.statutTri !== 'vue' && aExaminer(a)).length, relances: rel.length, retard: rel.some(r => r.date < t), biens: D.liste('biens').filter(b => b.etape !== 'ecarte' && b.etape !== 'vendu' && b.prochaine && b.prochaine.date && b.prochaine.date <= t).length,
+    return { annonces: D.liste('annonces').filter(a => (a.statutTri !== 'vue' && aExaminer(a)) || attenteDue(a)).length, relances: rel.length, retard: rel.some(r => r.date < t), biens: D.liste('biens').filter(b => b.etape !== 'ecarte' && b.etape !== 'vendu' && b.prochaine && b.prochaine.date && b.prochaine.date <= t).length,
       biensRetard: D.liste('biens').some(b => b.etape !== 'ecarte' && b.etape !== 'vendu' && b.prochaine && b.prochaine.date && b.prochaine.date < t) };
   }
   function majNav() {
@@ -179,7 +179,8 @@
   function suiviPastille(c, r) {
     const C = compteurs(), tete = $('.en-tete-page', c); if (!tete) return;
     const s = n => n > 1 ? 's' : '';
-    const b = r.m === 'annonces' && !r.id && C.annonces ? ['vert', C.annonces + ' nouvelle' + s(C.annonces) + ' annonce' + s(C.annonces) + ' à examiner : surlignée' + s(C.annonces) + ' en vert ci-dessous.']
+    const nAtt = D.liste('annonces').filter(attenteDue).length, nNouv = C.annonces - nAtt;
+    const b = r.m === 'annonces' && (!r.id || ['examiner', 'attente'].includes(r.id)) && C.annonces ? ['vert', [nNouv ? nNouv + ' nouvelle' + s(nNouv) + ' annonce' + s(nNouv) + ' à examiner (en vert)' : '', nAtt ? nAtt + ' annonce' + s(nAtt) + ' en attente à revoir (onglet « En attente »)' : ''].filter(Boolean).join(' · ') + '.']
       : r.m === 'relances' && C.relances ? [C.retard ? 'rouge' : 'vert', C.relances + ' relance' + s(C.relances) + ' à faire' + (C.retard ? ' : en rouge si en retard, en vert si pour aujourd\'hui.' : ' aujourd\'hui, en vert ci-dessous.')]
       : r.m === 'biens' && C.biens ? [C.biensRetard ? 'rouge' : 'vert', C.biens + ' projet' + s(C.biens) + ' avec une action due : ' + (C.biensRetard ? 'en rouge si en retard, en vert si pour aujourd\'hui.' : 'en vert ci-dessous.')] : null;
     if (!b) return;
@@ -1630,9 +1631,45 @@
     return cacheAnn.get(k);
   }
   const STATUTS_ANALYSE = { signalee: ['vert', 'À examiner'], ecartee: ['gris', 'Écartée par l\'analyse'], a_completer: ['orange', 'À compléter'] };
-  const aExaminer = a => !['retenue', 'ecartee'].includes(a.statutTri) && evalAnnonce(a).statut === 'signalee';
-  const statutAnnonce = (a, e) => a.statutTri === 'retenue' ? ['vert', 'Retenue'] : a.statutTri === 'ecartee' ? ['gris', 'Écartée'] : STATUTS_ANALYSE[e.statut];
+  const aExaminer = a => !['retenue', 'ecartee', 'attente'].includes(a.statutTri) && evalAnnonce(a).statut === 'signalee';
+  const statutAnnonce = (a, e) => a.statutTri === 'retenue' ? ['vert', 'Retenue'] : a.statutTri === 'ecartee' ? ['gris', 'Écartée'] : a.statutTri === 'attente' ? ['orange', 'En attente'] : STATUTS_ANALYSE[e.statut];
+  /* Mise en attente : un motif, un sous-motif, des précisions et, au choix, une date pour la revoir */
+  const MOTIFS_ATTENTE = {
+    infos: ['Informations à obtenir', ['Surface Carrez ou plan', 'Diagnostics (DPE, amiante, plomb, électricité)', 'Charges de copropriété et taxe foncière', 'PV d\'assemblée générale et règlement de copropriété', 'Situation locative ou occupation', 'Raison de la vente et délai du vendeur', 'Photos ou visite virtuelle']],
+    technique: ['Faisabilité technique', ['Création d\'une salle d\'eau ou d\'un WC', 'Évacuations, arrivée d\'eau, électricité', 'Murs porteurs ou structure', 'Division en plusieurs lots', 'Humidité, toiture ou façade', 'Hauteur sous plafond ou mezzanine']],
+    urbanisme: ['Urbanisme et copropriété', ['Accord de l\'assemblée générale pour les travaux', 'Déclaration préalable ou permis', 'Règles du PLU', 'Changement d\'usage ou de destination', 'Servitudes ou parties communes']],
+    chiffrage: ['Chiffrage', ['Devis d\'artisan à obtenir', 'Visite d\'un artisan à organiser', 'Prix de revente à confirmer auprès d\'agents', 'Ventes comparables DVF à vérifier']],
+    prix: ['Prix et négociation', ['Offre envoyée, réponse attendue', 'Attente d\'une baisse de prix', 'Vendeur ou agent à recontacter', 'Autre acquéreur sur le bien']],
+    financement: ['Financement', ['Accord de la banque', 'Apport ou trésorerie disponible', 'Associé ou investisseur à consulter']],
+    visite: ['Visite', ['Visite à programmer', 'Contre-visite à prévoir', 'Clés ou accès à obtenir']],
+    autre: ['Autre', ['Autre (préciser)']]
+  };
+  const libelleAttente = x => x ? (MOTIFS_ATTENTE[x.motif] ? MOTIFS_ATTENTE[x.motif][0] : 'En attente') + (x.sousMotif ? ' · ' + x.sousMotif : '') : '';
+  const attenteDue = a => a.statutTri === 'attente' && a.attente && a.attente.revoirLe && a.attente.revoirLe <= aujourdhui();
+  function mettreEnAttente(a) {
+    const x = a.attente || {}, opt = (v, l, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(l)}</option>`;
+    const sous = m => (MOTIFS_ATTENTE[m] || MOTIFS_ATTENTE.autre)[1];
+    modale('Mettre en attente', `<p class="aide">${esc(a.titre || 'Annonce')}</p>
+      <div class="grille-champs">
+        <div class="champ"><label for="atMotif">Motif</label><select id="atMotif">${Object.entries(MOTIFS_ATTENTE).map(([k, v]) => opt(k, v[0], k === (x.motif || 'infos'))).join('')}</select></div>
+        <div class="champ"><label for="atSous">Précisément</label><select id="atSous"></select></div>
+        <div class="champ" style="grid-column:1/-1"><label for="atPrec">Précisions</label><textarea id="atPrec" rows="3" placeholder="Ex. : demander à l'agence si l'évacuation des eaux usées passe par la cour ; devis plombier pour une douche et un WC.">${esc(x.precision || '')}</textarea></div>
+        <div class="champ"><label for="atDate">À revoir le (facultatif)</label><input id="atDate" type="date" value="${esc(x.revoirLe || '')}"><small class="aide">Ce jour-là, l'annonce passe en couleur et la pastille du menu la compte.</small></div>
+      </div>`,
+      [a.statutTri === 'attente' ? { l: 'Sortir de l\'attente', f: () => { a.statutTri = 'vue'; D.enregistrer('annonces', a); afficher(); } } : null,
+       { l: 'Annuler' },
+       { l: 'Mettre en attente', classe: 'bouton-principal', f: f => {
+         a.statutTri = 'attente';
+         a.attente = { motif: $('#atMotif', f).value, sousMotif: $('#atSous', f).value, precision: $('#atPrec', f).value.trim(), revoirLe: $('#atDate', f).value, le: aujourdhui() };
+         D.enregistrer('annonces', a); notifier('Annonce mise en attente : ' + libelleAttente(a.attente) + '.', 'succes'); afficher();
+       } }].filter(Boolean),
+      f => { const m = $('#atMotif', f), sSel = $('#atSous', f);
+        const remplir = () => { sSel.innerHTML = sous(m.value).map(v => opt(v, v, v === x.sousMotif)).join(''); };
+        m.onchange = remplir; remplir(); });
+  }
   const nomSite = a => a.source || ((a.lien || '').match(/https?:\/\/(?:www\.)?([^\/.]+)/) || [])[1] || 'le site';
+  /* Date d'une annonce : sa dernière alerte reçue */
+  const dateAnnonce = a => [a.vueLe, a.recueLe].filter(Boolean).sort().pop() || '';
   const fa = { onglet: 'examiner', q: '', source: '', type: '', surligne: '' };
   /* Routes : #/annonces/<onglet> ou #/annonces/a/<identifiant> (ouvre la fiche et met la ligne en évidence) */
   function vueAnnonces(c, r) {
@@ -1645,9 +1682,10 @@
     const toutes = D.liste('annonces'), E = new Map(toutes.map(a => [a.id, evalAnnonce(a)]));
     const groupes = {
       examiner: toutes.filter(aExaminer),
-      completer: toutes.filter(a => !['retenue', 'ecartee'].includes(a.statutTri) && E.get(a.id).statut === 'a_completer'),
+      completer: toutes.filter(a => !['retenue', 'ecartee', 'attente'].includes(a.statutTri) && E.get(a.id).statut === 'a_completer'),
       toutes,
-      ecartees: toutes.filter(a => !['retenue', 'ecartee'].includes(a.statutTri) && E.get(a.id).statut === 'ecartee'),
+      ecartees: toutes.filter(a => !['retenue', 'ecartee', 'attente'].includes(a.statutTri) && E.get(a.id).statut === 'ecartee'),
+      attente: toutes.filter(a => a.statutTri === 'attente'),
       traitees: toutes.filter(a => ['retenue', 'ecartee'].includes(a.statutTri))
     };
     if (ouvrir) {
@@ -1655,7 +1693,7 @@
       /* l'adresse « ouvrir telle annonce » ne sert qu'une fois : sinon chaque enregistrement rouvrirait la fiche */
       history.replaceState(null, '', '#/annonces/' + fa.onglet); vueCourante = 'annonces/' + fa.onglet + '/';
     }
-    const ONG = [['examiner', 'À examiner'], ['completer', 'À compléter'], ['ecartees', 'Écartées par l\'analyse'], ['traitees', 'Traitées'], ['toutes', 'Toutes']];
+    const ONG = [['examiner', 'À examiner'], ['attente', 'En attente'], ['completer', 'À compléter'], ['ecartees', 'Écartées par l\'analyse'], ['traitees', 'Traitées'], ['toutes', 'Toutes']];
     const sources = [...new Set(toutes.map(a => a.source).filter(Boolean))].sort();
     const derniere = toutes.reduce((m, a) => (a.vueLe || a.recueLe || '') > m ? (a.vueLe || a.recueLe) : m, '');
     c.innerHTML = `
@@ -1670,19 +1708,19 @@
     const zone = () => {
       const q = fa.q.trim().toLowerCase();
       const l = groupes[fa.onglet].filter(a => (!fa.source || a.source === fa.source) && (!fa.type || E.get(a.id).type === fa.type) && (!q || [a.titre, a.ville, a.cp, a.texte].join(' ').toLowerCase().includes(q)))
-        .sort((x, y) => (aExaminer(y) - aExaminer(x)) || (E.get(y.id).score ?? -1) - (E.get(x.id).score ?? -1) || (y.recueLe || '').localeCompare(x.recueLe || ''));
+        .sort((x, y) => dateAnnonce(y).localeCompare(dateAnnonce(x)));
       const vis = l.slice(0, 200);
       $('#anZone').innerHTML = !l.length ? `<div class="vide">${fa.onglet === 'examiner' ? 'Aucune annonce ne mérite l\'attention pour l\'instant.' : 'Aucune annonce.'}</div>` :
         `<div class="tableau-conteneur"><table class="tableau adaptable tableau-annonces"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente</th><th class="nombre">Travaux</th><th class="nombre">Budget</th><th class="nombre">Marge brute</th><th class="nombre">Prix max.</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
           const e = E.get(a.id), st = statutAnnonce(a, e), ex = aExaminer(a);
-          return `<tr class="cliquable${ex ? ' a-examiner' : ''}${ex && a.statutTri !== 'vue' ? ' a-traiter' : ''}${a.id === fa.surligne ? ' surligne' : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span>${a.notes ? `<span class="sous-ligne remarque-annonce">Remarques : ${esc(a.notes.length > 90 ? a.notes.slice(0, 90) + '…' : a.notes)}</span>` : ''}</td>
+          return `<tr class="cliquable${ex ? ' a-examiner' : ''}${ex && a.statutTri !== 'vue' ? ' a-traiter' : ''}${a.id === fa.surligne ? ' surligne' : ''}${attenteDue(a) ? (a.attente.revoirLe < aujourdhui() ? ' attention-rouge' : ' attention-vert') : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span>${a.notes ? `<span class="sous-ligne remarque-annonce">Remarques : ${esc(a.notes.length > 90 ? a.notes.slice(0, 90) + '…' : a.notes)}</span>` : ''}</td>
             <td class="nombre" data-titre="Prix affiché">${eur(e.prix)}${prixM2(e.prix, e.surface)}${a.prixPrecedent ? `<span class="sous-ligne vert">avant ${eur(a.prixPrecedent)}</span>` : ''}</td>
             <td class="nombre" data-titre="Revente">${e.vente ? eur(e.vente) : '—'}</td>
             <td class="nombre" data-titre="Travaux">${e.travaux ? eur(e.travaux.total) + `<span class="sous-ligne">${M.NIVEAUX[e.travaux.niveau].toLowerCase()}</span>` : '—'}</td>
             <td class="nombre" data-titre="Budget">${e.tresoAffiche ? `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>` : '—'}</td>
             <td class="nombre" data-titre="Marge brute">${e.margeBrute != null ? `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)}</span><span class="sous-ligne">${eur(e.margeBruteEur)}</span>` : '—'}</td>
             <td class="nombre" data-titre="Prix max.">${e.achatMax ? eur(Math.floor(e.achatMax / 1000) * 1000) + `<span class="sous-ligne ${e.nego <= 0 ? 'vert' : e.statut === 'signalee' ? 'orange' : 'rouge'}">${e.nego <= 0 ? 'sans négociation' : '− ' + pc(e.nego, 0)}</span>` : '—'}</td>
-            <td data-titre="Analyse">${voyant(st[0], st[1])}${e.score != null ? ` <b class="montant">${e.score}</b>` : ''}<span class="sous-ligne">${esc(e.motifs.join(' · '))}</span></td></tr>`;
+            <td data-titre="Analyse">${voyant(st[0], st[1])}${e.score != null ? ` <b class="montant">${e.score}</b>` : ''}${a.statutTri === 'attente' && a.attente ? `<span class="sous-ligne orange">${esc(libelleAttente(a.attente))}${a.attente.revoirLe ? ' · à revoir le ' + dateFr(a.attente.revoirLe) : ''}</span>${a.attente.precision ? `<span class="sous-ligne">${esc(a.attente.precision.length > 90 ? a.attente.precision.slice(0, 90) + '…' : a.attente.precision)}</span>` : ''}` : `<span class="sous-ligne">${esc(e.motifs.join(' · '))}</span>`}</td></tr>`;
         }).join('')}</tbody></table></div>${l.length > 200 ? `<p class="aide">200 premières sur ${l.length}. Affiner la recherche.</p>` : ''}`;
       $$('tr[data-id]', $('#anZone')).forEach(tr => tr.onclick = () => ficheAnnonce(D.obtenir('annonces', tr.dataset.id)));
       const sl = $('tr.surligne', $('#anZone')); if (sl) sl.scrollIntoView({ block: 'center' });
@@ -1720,11 +1758,13 @@
         ${a.chargesAnnuelles ? ligne('Charges de copropriété', eur(a.chargesAnnuelles) + ' par an', 'annoncées par le site') : ''}
         ${e.signaux.length ? ligne('Signaux', `<span class="vert">${esc(e.signaux.join(', '))}</span>`) : ''}
       </div>
+      ${a.statutTri === 'attente' && a.attente ? `<div class="bandeau-suivi bandeau-suivi-orange"><span class="point-suivi"></span><span><b>En attente</b> · ${esc(libelleAttente(a.attente))}${a.attente.revoirLe ? ' · à revoir le ' + dateFr(a.attente.revoirLe) : ''}${a.attente.precision ? '<br><span class="discret">' + esc(a.attente.precision) + '</span>' : ''}</span></div>` : ''}
       <div class="champ ann-remarques"><label for="annNotes">Mes remarques</label><textarea id="annNotes" data-sans-focus rows="3" placeholder="Ex. : pas de douche ni WC, juste un lavabo. Vérifier l'arrivée d'eau et l'évacuation pour créer une salle d'eau (sanibroyeur possible ?), accord de la copropriété…">${esc(a.notes || '')}</textarea><small class="aide">Enregistrées automatiquement. L'annonce reste dans sa liste ; « Retenir » reporte ces remarques dans le journal du bien.</small></div>
       <div id="annDVF" class="ann-dvf">${blocDVFAnnonce(a, e)}</div>
       ${a.texte ? `<details style="margin-top:.6rem"><summary class="aide">Texte de l'alerte</summary><p class="aide">${esc(a.texte)}</p></details>` : ''}`,
       [{ l: 'Écarter', classe: 'bouton-danger', f: () => { a.statutTri = 'ecartee'; D.enregistrer('annonces', a); afficher(); } },
        { l: 'Corriger', f: () => { setTimeout(() => corrigerAnnonce(D.obtenir('annonces', a.id)), 0); } },
+       { l: a.statutTri === 'attente' ? 'Modifier l\'attente' : 'Mettre en attente', f: () => { setTimeout(() => mettreEnAttente(D.obtenir('annonces', a.id)), 0); } },
        { l: 'Retenir et prendre rendez-vous', classe: 'bouton-principal', f: () => retenirAnnonce(D.obtenir('annonces', a.id)) }]);
     lierDVFAnnonce(fond, a, e);
     const zn = $('#annNotes', fond); let tn;
