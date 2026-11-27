@@ -33,7 +33,10 @@ function environnement() {
     ContentService: { MimeType: { JSON: 1 }, createTextOutput: t => ({ setMimeType: () => ({ texte: t }) }) },
     Logger: { log: m => { ctx.journal.push(m); } }, journal: []
   };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../serveur/Code.gs'), 'utf8'), ctx);
+  /* Comme dans Apps Script : commun.js et Code.gs partagent la même portée globale */
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../serveur/commun.js'), 'utf8'), ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../serveur/Code.gs'), 'utf8'), ctx);
   ctx.appel = (action, donnees, jeton) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify({ action, donnees, jeton }) } }).texte);
   return ctx;
 }
