@@ -32,6 +32,19 @@
       edate: 380, photo: 300, compta: 1200, banque: 15, banque_min: 100
     }
   };
+  /* Fourchette tout compris (fourniture + pose) par poste : [bas, moyen, haut, part de main d'œuvre en %].
+     Le moyen est le repère par défaut ci-dessus. Bas et haut, et la part de main d'œuvre, sont des ordres de grandeur
+     Île-de-France 2026, à confronter aux devis. */
+  const REF_NIV = {
+    demo: [25, 40, 60, 85], macon: [40, 60, 100, 60], vitrine: [4000, 6000, 9000, 40], raccord: [2500, 3500, 5000, 60],
+    cloisons: [30, 45, 65, 55], isol: [45, 70, 100, 45], elec: [70, 100, 140, 60], plomb: [50, 70, 100, 60], chauf: [40, 60, 90, 35],
+    ecs: [600, 900, 1400, 35], vmc: [600, 900, 1500, 45], fen: [550, 850, 1300, 30], portes: [200, 350, 600, 40], pentree: [900, 1500, 2500, 30],
+    sols: [30, 50, 90, 50], enduit: [22, 35, 50, 80], peint: [20, 30, 45, 75], sdb: [4000, 6000, 9500, 50], wc: [450, 700, 1200, 40],
+    cuis: [2500, 4500, 8000, 25], retouch: [15, 25, 40, 70], deco: [25, 40, 70, 30], deco_min: [1000, 1500, 2500, 30], nett: [5, 8, 12, 95],
+    toit: [60, 90, 150, 55], facade: [35, 50, 80, 65], assain: [5000, 8000, 12000, 50], bporte: [600, 900, 1500, 30], bpeint: [200, 300, 450, 70],
+    bserr: [50, 80, 130, 40], belec: [150, 250, 400, 55], betanch: [40, 60, 90, 50], tviab: [5000, 8000, 12000, 50], tacces: [2000, 3000, 5000, 50],
+    tdebr: [1200, 2000, 3500, 85]
+  };
   /* Repères signalés comme estimations sans source vérifiée (brief, « À savoir sur les repères de prix »). */
   const REF_ESTIME = ['x.plans_m2', 'x.plans_min', 'x.copro_box', 'x.copro_m2', 'x.tf_terrain', 'x.tf_box', 'x.tf_m2',
     'x.assur', 'x.compta', 'w.demo', 'w.cloisons', 'w.chauf', 'w.enduit', 'w.deco', 'w.deco_min'];
@@ -323,7 +336,7 @@
   }
 
   return {
-    version: 1, r50, ALLB, W, X, XI, M1, M2, TYPES, NIVEAUX, GAMMES, DEF, REF_DEF, REF_ESTIME,
+    version: 1, r50, ALLB, W, X, XI, M1, M2, TYPES, NIVEAUX, GAMMES, DEF, REF_DEF, REF_ESTIME, REF_NIV,
     setRef, getRef, vis, xVis, wDef, applyLevel, initLines, setType, fresh, normalize,
     notaire, travaux, compute, solve, limits,
     unite, etat, partage, parseComps, comparables, quartier, controles, scenarios, limitesAffichees, indicateurs, analyse,

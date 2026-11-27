@@ -741,3 +741,9 @@ tr.attention-rouge td:first-child { box-shadow: inset 4px 0 0 var(--rouge); }
 @media (prefers-reduced-motion: reduce) { .bulle-menu.alerte { animation: none; } }
 .bandeau-suivi-orange { background: var(--orange-fond); border-color: var(--orange); color: var(--texte); }
 .bandeau-suivi-orange .point-suivi { background: var(--orange); }
+
+/* Repères : filtres et lignes positionnées */
+.filtres-reperes { align-items: center; gap: .6rem; flex-wrap: wrap; }
+tr.attention-orange td { background: var(--orange-fond); }
+tr.attention-orange td:first-child { box-shadow: inset 4px 0 0 var(--orange); }
+.tableau-reperes input.modifie { border-color: var(--accent); }

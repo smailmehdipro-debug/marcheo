@@ -2164,30 +2164,87 @@
     audit: 'Audit énergétique', edate: 'État daté', photo: 'Photos et annonces', compta: 'Comptabilité et juridique', banque: 'Frais bancaires, par mois', banque_min: 'Frais bancaires : minimum'
   };
   const UNITE_W = { m2: '€/m²', f: '€ forfait', fen: '€ par fenêtre', porte: '€ par porte', unit: '€ par unité' };
+  /* Repères : fourchette basse / moyenne / haute par poste, en tout compris, main d'œuvre ou fournitures.
+     « Mon prix » se compare aux 3 niveaux. Le chiffrage des projets utilise, par poste, le prix tout compris saisi ;
+     sinon la somme de ma main d'œuvre et de mes fournitures (le moyen de référence complète la part non saisie). */
+  const fr_ = { mode: 'tc', niv: ['b', 'm', 'h'], filtre: 'tous', onglet: 'travaux' };
+  const MODES_REF = [['tc', 'Tout compris'], ['mo', 'Main d\'œuvre'], ['fo', 'Fournitures']];
+  const NIV_REF = [['b', 'Bas', 0], ['m', 'Moyen', 1], ['h', 'Haut', 2]];
+  const arrondiRef = v => v >= 100 ? Math.round(v / 10) * 10 : Math.round(v);
+  const niveauxPoste = (id, mode) => { const n = M.REF_NIV[id]; if (!n) return null; const k = mode === 'mo' ? n[3] / 100 : mode === 'fo' ? 1 - n[3] / 100 : 1; return [0, 1, 2].map(i => arrondiRef(n[i] * k)); };
+  const mesPrix = R => { const m = R.mesPrix ? clone(R.mesPrix) : { tc: Object.assign({}, (R.ref || {}).w || {}), mo: {}, fo: {} }; ['tc', 'mo', 'fo'].forEach(k => { m[k] = m[k] || {}; }); return m; };
+  /* Prix tout compris retenu pour le chiffrage, à partir de mes prix */
+  function refDepuisMesPrix(m) {
+    const w = {};
+    Object.keys(M.REF_DEF.w).forEach(id => {
+      if (m.tc[id] != null) { w[id] = m.tc[id]; return; }
+      if (m.mo[id] == null && m.fo[id] == null) return;
+      const mo = niveauxPoste(id, 'mo'), fo = niveauxPoste(id, 'fo');
+      w[id] = (m.mo[id] != null ? m.mo[id] : mo ? mo[1] : 0) + (m.fo[id] != null ? m.fo[id] : fo ? fo[1] : 0);
+    });
+    return w;
+  }
+  function positionPrix(v, n) {
+    if (v == null || !n) return null;
+    const ecart = n[1] ? v / n[1] - 1 : 0;
+    const zone = v <= n[0] ? ['vert', 'sous la fourchette basse'] : v <= n[1] ? ['vert', 'entre bas et moyen'] : v <= n[2] ? ['orange', 'entre moyen et haut'] : ['rouge', 'au-dessus de la fourchette haute'];
+    const gain = v > n[0] ? v - n[0] : 0;
+    return { c: zone[0], t: zone[1], ecart, gain };
+  }
   function vueReperes(c) {
-    titre('Repères', 'Prix unitaires modifiables', I.reperes);
-    const R = reglages(), ref = R.ref || { w: {}, x: {} }, est = new Set(M.REF_ESTIME);
-    const ligne = (g, k, lib, unite) => { const d = M.REF_DEF[g][k], v = (ref[g] || {})[k], mod = v != null && v !== d; return `<tr><td data-titre="Poste">${esc(lib)}${est.has(g + '.' + k) ? ' <span class="etiquette orange">estimation</span>' : ''}</td><td class="nombre" data-titre="Unité">${unite}</td><td class="nombre" data-titre="Par défaut">${d.toLocaleString('fr-FR')}</td><td data-titre="Retenu"><input type="number" inputmode="decimal" min="0" step="any" data-ref="${g}.${k}" data-initial="${v != null ? v : d}" value="${v != null ? v : d}" style="width:110px" class="${mod ? 'orange' : ''}"></td></tr>`; };
-    c.innerHTML = `<div class="en-tete-page"><div><h1>Repères</h1><p>Prix unitaires du chiffrage poste par poste des projets. Relevés fin novembre 2026 ; les lignes « estimation » n'ont pas de source vérifiée.</p></div><div class="actions"><button class="bouton" id="refRaz">Valeurs par défaut</button></div></div>
-      <div class="info-bandeau">Mettre ici les prix des artisans et fournisseurs habituels. L'analyse des annonces, elle, utilise le budget travaux au m² des critères.</div>
-      <div class="section-titre"><h2>Travaux</h2><span class="aide">avant coefficient de gamme</span></div>
-      <div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Poste</th><th class="nombre">Unité</th><th class="nombre">Par défaut</th><th>Retenu</th></tr></thead><tbody>
-        ${M.W.map(i => ligne('w', i.id, i.l, UNITE_W[i.per])).join('')}${ligne('w', 'deco_min', 'Décoration et mise en scène : minimum', '€')}</tbody></table></div>
-      <div class="section-titre"><h2>Frais annexes</h2></div>
-      <div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Poste</th><th class="nombre">Unité</th><th class="nombre">Par défaut</th><th>Retenu</th></tr></thead><tbody>
-        ${Object.keys(M.REF_DEF.x).map(k => ligne('x', k, LIB_X[k] || k, k.endsWith('pct') ? '%' : '€')).join('')}</tbody></table></div>
-      <div class="barre-enregistrer"><span id="refEtat" class="discret">Aucune modification</span><span class="actions"><button class="bouton" id="refAnnuler" disabled>Annuler</button><button class="bouton bouton-principal" id="refEnr" disabled>Enregistrer les modifications</button></span></div>`;
-    const modifies = () => $$('[data-ref]', c).filter(el => nb(el.value) !== nb(el.dataset.initial));
+    titre('Repères', 'Prix unitaires : 3 niveaux et mes prix', I.reperes);
+    const R = reglages(), ref = R.ref || { w: {}, x: {} }, est = new Set(M.REF_ESTIME), mp = mesPrix(R);
+    const ONG = [['travaux', 'Travaux'], ['annexes', 'Frais annexes']];
+    const entete = `<div class="en-tete-page"><div><h1>Repères</h1><p>Fourchettes de prix par poste et vos propres prix, pour voir où vous vous situez.</p></div><div class="actions"><button class="bouton" id="refRaz">Effacer mes prix</button></div></div>
+      <nav class="onglets">${ONG.map(o => `<button class="${fr_.onglet === o[0] ? 'actif' : ''}" data-rong="${o[0]}">${o[1]}</button>`).join('')}</nav>`;
+    const barre = `<div class="barre-enregistrer"><span id="refEtat" class="discret">Aucune modification</span><span class="actions"><button class="bouton" id="refAnnuler" disabled>Annuler</button><button class="bouton bouton-principal" id="refEnr" disabled>Enregistrer mes prix</button></span></div>`;
+    if (fr_.onglet === 'annexes') {
+      const ligneX = k => { const d = M.REF_DEF.x[k], v = (ref.x || {})[k]; return `<tr><td data-titre="Poste">${esc(LIB_X[k] || k)}${est.has('x.' + k) ? ' <span class="etiquette orange">estimation</span>' : ''}</td><td class="nombre" data-titre="Unité">${k.endsWith('pct') ? '%' : '€'}</td><td class="nombre" data-titre="Référence">${d.toLocaleString('fr-FR')}</td><td data-titre="Mon prix"><input type="number" inputmode="decimal" min="0" step="any" data-refx="${k}" data-initial="${v != null ? v : ''}" value="${v != null ? v : ''}" placeholder="${d}" style="width:110px"></td></tr>`; };
+      c.innerHTML = entete + `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr><th>Poste</th><th class="nombre">Unité</th><th class="nombre">Référence</th><th>Mon prix</th></tr></thead><tbody>${Object.keys(M.REF_DEF.x).map(ligneX).join('')}</tbody></table></div>` + barre;
+    } else {
+      const unite = it => it ? UNITE_W[it.per] : '€ forfait';
+      const postes = M.W.map(it => ({ id: it.id, l: it.l, u: unite(it) })).concat([{ id: 'deco_min', l: 'Décoration et mise en scène : minimum', u: '€ forfait' }]);
+      const lignes = postes.map(p => {
+        const n = niveauxPoste(p.id, fr_.mode), v = mp[fr_.mode][p.id], pos = positionPrix(v, n);
+        return Object.assign({}, p, { n, v, pos });
+      }).filter(x => fr_.filtre === 'tous' || (fr_.filtre === 'mes' && x.v != null) || (fr_.filtre === 'ameliorer' && x.pos && x.pos.c !== 'vert'));
+      const vus = NIV_REF.filter(x => fr_.niv.includes(x[0]));
+      const cellPos = x => !x.n ? '' : x.pos ? `<span class="voyant voyant-${x.pos.c}"><span class="pastille"></span>${esc(x.pos.t)}</span><span class="sous-ligne">${x.pos.ecart >= 0 ? '+' : '−'} ${pc(Math.abs(x.pos.ecart), 0)} par rapport au moyen${x.pos.gain ? ' · ' + eur(x.pos.gain) + ' de mieux possible (niveau bas)' : ''}</span>` : '<span class="discret">pas de prix saisi : le moyen sert au chiffrage</span>';
+      c.innerHTML = entete + `
+        <div class="barre-outils filtres-reperes">
+          <div class="segments" role="group" aria-label="Type de prix">${MODES_REF.map(m => `<button type="button" data-rmode="${m[0]}" aria-pressed="${fr_.mode === m[0]}">${m[1]}</button>`).join('')}</div>
+          <div class="segments" role="group" aria-label="Niveaux affichés">${NIV_REF.map(x => `<button type="button" data-rniv="${x[0]}" aria-pressed="${fr_.niv.includes(x[0])}">${x[1]}</button>`).join('')}</div>
+          <select id="refFiltre" aria-label="Postes affichés"><option value="tous"${fr_.filtre === 'tous' ? ' selected' : ''}>Tous les postes</option><option value="mes"${fr_.filtre === 'mes' ? ' selected' : ''}>Mes prix seulement</option><option value="ameliorer"${fr_.filtre === 'ameliorer' ? ' selected' : ''}>Où je peux m'améliorer</option></select>
+        </div>
+        <div class="info-bandeau">${fr_.mode === 'tc' ? 'Prix fourniture et pose compris.' : fr_.mode === 'mo' ? 'Main d\'œuvre seule (pose). Exemple : un carreleur à 15 €/m² se saisit sur la ligne « Sols ».' : 'Fournitures et matériaux seuls, sans la pose.'} Saisissez votre prix dans « Mon prix » : il se compare aux 3 niveaux. Le chiffrage des projets prend votre prix tout compris, ou à défaut votre main d'œuvre plus vos fournitures (le moyen complète ce qui manque). Fourchettes indicatives Île-de-France 2026, avant coefficient de gamme.</div>
+        <div class="tableau-conteneur"><table class="tableau adaptable tableau-reperes"><thead><tr><th>Poste</th><th class="nombre">Unité</th>${vus.map(x => `<th class="nombre">${x[1]}</th>`).join('')}<th>Mon prix</th><th>Où je me situe</th></tr></thead><tbody>
+          ${lignes.map(x => `<tr${x.pos ? ' class="attention-' + (x.pos.c === 'vert' ? 'vert' : x.pos.c === 'orange' ? 'orange' : 'rouge') + '"' : ''}><td data-titre="Poste">${esc(x.l)}${est.has('w.' + x.id) ? ' <span class="etiquette orange">estimation</span>' : ''}</td><td class="nombre" data-titre="Unité">${x.u}</td>
+            ${vus.map(n => `<td class="nombre" data-titre="${n[1]}">${x.n ? x.n[n[2]].toLocaleString('fr-FR') : '—'}</td>`).join('')}
+            <td data-titre="Mon prix"><input type="number" inputmode="decimal" min="0" step="any" data-mp="${fr_.mode}.${x.id}" data-initial="${x.v != null ? x.v : ''}" value="${x.v != null ? x.v : ''}" placeholder="${x.n ? x.n[1] : ''}" style="width:100px"></td>
+            <td data-titre="Où je me situe">${cellPos(x)}</td></tr>`).join('') || `<tr><td colspan="${4 + vus.length}" class="vide">${fr_.filtre === 'mes' ? 'Aucun prix saisi dans ce mode.' : 'Aucun poste à améliorer : tous vos prix sont au niveau moyen ou en dessous.'}</td></tr>`}
+        </tbody></table></div>` + barre;
+      $$('[data-rmode]', c).forEach(b => b.onclick = () => { fr_.mode = b.dataset.rmode; afficher(); });
+      $$('[data-rniv]', c).forEach(b => b.onclick = () => { const k = b.dataset.rniv; fr_.niv = fr_.niv.includes(k) ? fr_.niv.filter(x => x !== k) : fr_.niv.concat(k); if (!fr_.niv.length) fr_.niv = [k]; fr_.niv.sort((a, z) => 'bmh'.indexOf(a) - 'bmh'.indexOf(z)); afficher(); });
+      $('#refFiltre').onchange = e => { fr_.filtre = e.target.value; afficher(); };
+    }
+    $$('[data-rong]', c).forEach(b => b.onclick = () => { fr_.onglet = b.dataset.rong; afficher(); });
+    const champs = () => $$('[data-mp], [data-refx]', c);
+    const modifies = () => champs().filter(el => el.value.trim() !== el.dataset.initial);
     const majBarre = () => { const n = modifies().length; $('#refEtat').textContent = n ? n + ' modification' + (n > 1 ? 's' : '') + ' non enregistrée' + (n > 1 ? 's' : '') : 'Aucune modification'; $('#refEtat').className = n ? 'orange' : 'discret'; $('#refEnr').disabled = $('#refAnnuler').disabled = !n; };
-    $$('[data-ref]', c).forEach(el => el.addEventListener('input', () => { el.classList.toggle('modifie', nb(el.value) !== nb(el.dataset.initial)); majBarre(); }));
+    champs().forEach(el => el.addEventListener('input', () => { el.classList.toggle('modifie', el.value.trim() !== el.dataset.initial); majBarre(); }));
     $('#refAnnuler').onclick = () => afficher();
     $('#refEnr').onclick = () => {
-      const R2 = reglages(); R2.ref = JSON.parse(JSON.stringify(R2.ref || { w: {}, x: {} })); R2.ref.w = R2.ref.w || {}; R2.ref.x = R2.ref.x || {};
-      const l = modifies();
-      l.forEach(el => { const [g, k] = el.dataset.ref.split('.'), v = nb(el.value); if (v === M.REF_DEF[g][k]) delete R2.ref[g][k]; else R2.ref[g][k] = v; });
-      D.enregistrer('reglages', R2); appliquerReperes(); cacheAnalyse.clear(); notifier(l.length + ' repère(s) enregistré(s).', 'succes'); afficher();
+      const R2 = reglages(), m = mesPrix(R2), l = modifies();
+      R2.ref = JSON.parse(JSON.stringify(R2.ref || { w: {}, x: {} })); R2.ref.x = R2.ref.x || {};
+      l.forEach(el => {
+        const vide = el.value.trim() === '', v = nb(el.value);
+        if (el.dataset.mp) { const [mode, id] = el.dataset.mp.split('.'); if (vide) delete m[mode][id]; else m[mode][id] = v; }
+        else { const k = el.dataset.refx; if (vide || v === M.REF_DEF.x[k]) delete R2.ref.x[k]; else R2.ref.x[k] = v; }
+      });
+      R2.mesPrix = m; R2.ref.w = refDepuisMesPrix(m);
+      D.enregistrer('reglages', R2); appliquerReperes(); cacheAnalyse.clear(); notifier(l.length + ' prix enregistré(s).', 'succes'); afficher();
     };
-    $('#refRaz').onclick = () => confirmer('Revenir à tous les repères par défaut ?', () => { const R2 = reglages(); R2.ref = { w: {}, x: {} }; D.enregistrer('reglages', R2); appliquerReperes(); afficher(); });
+    $('#refRaz').onclick = () => confirmer('Effacer tous vos prix (travaux et frais annexes) et revenir aux repères de référence ?', () => { const R2 = reglages(); R2.ref = { w: {}, x: {} }; R2.mesPrix = { tc: {}, mo: {}, fo: {} }; D.enregistrer('reglages', R2); appliquerReperes(); afficher(); });
   }
 
   /* ================= Réglages ================= */
