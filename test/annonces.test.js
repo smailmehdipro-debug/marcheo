@@ -1,5 +1,5 @@
 /* Analyse des annonces (js/annonces.js) : tri en trois étapes
-   1. prix affiché ≤ 130 000 € ; 2. argent total à sortir ≤ 140 000 € ; 3. marge brute ≥ 10 % de la revente. */
+   1. prix affiché ≤ 130 000 € ; 2. budget maximum à respecter : 140 000 € ; 3. marge brute ≥ 10 % de la revente. */
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -35,7 +35,7 @@ test('l\'exemple d\'arbitrage : 130 000 € en bon état, revendu 170 000 €, e
 
 test('étape 2 : 120 000 € avec gros travaux : argent à sortir trop élevé, écartée', () => {
   const e = A.evaluer({ titre: 'Appartement 3 pièces à rénover entièrement', prix: 120000, surface: 65, cp: '93400' }, R);
-  assert.equal(e.statut, 'ecartee'); assert.match(e.motifs.join(), /argent à sortir/);
+  assert.equal(e.statut, 'ecartee'); assert.match(e.motifs.join(), /budget maximum à respecter/);
 });
 
 test('étape 3 : marge brute calculée comme dans le simulateur', () => {

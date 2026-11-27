@@ -50,7 +50,7 @@ Le serveur lit toutes les heures les alertes des sites listés dans `EXPEDITEURS
 L'analyse se fait dans Marchéo, au moment de l'affichage, avec toutes les lignes du simulateur. Tri en trois étapes :
 
 1. prix affiché ≤ 130 000 €, sinon écartée d'office, sans calcul ;
-2. argent total à sortir ≤ 140 000 € : achat, frais d'agence, notaire, travaux et aléas, frais annexes, TVA des travaux avancée ;
+2. budget maximum à respecter : 140 000 € : achat, frais d'agence, notaire, travaux et aléas, frais annexes, TVA des travaux avancée ;
 3. marge brute ≥ 10 % du prix de revente (revente moins coût de revient).
 
 Avant ces trois étapes, l'annonce doit être dans la zone (75 et 95 entiers, communes listées du 92 nord, du 93 est et du 78 nord, liste modifiable) et d'un type retenu.

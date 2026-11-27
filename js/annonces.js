@@ -2,7 +2,7 @@
    Chaque annonce passe dans le moteur de calcul (calc.js) : type, surface, lots et niveau de travaux déduits du texte,
    revente estimée au prix du secteur. Tri en trois étapes :
    1. prix affiché au plus égal au plafond d'entrée (130 000 € par défaut), sinon écartée d'office ;
-   2. argent total à sortir (trésorerie maximale : achat, frais d'agence, notaire, travaux et aléas, annexes,
+   2. budget maximum à respecter (trésorerie maximale : achat, frais d'agence, notaire, travaux et aléas, annexes,
       TVA des travaux avancée) au plus égal au plafond (140 000 € par défaut) ;
    3. marge brute (revente moins coût de revient) d'au moins 10 % du prix de revente.
    Les étapes 2 et 3 s'apprécient au prix obtenu après une négociation réaliste (15 % au plus par défaut).
@@ -15,7 +15,7 @@
 
   const CRITERES_DEF = {
     prixAfficheMax: 130000, // au-dessus, écartée d'office sans calcul (€ ; 0 = sans limite)
-    tresoMax: 140000,       // argent total à sortir, trésorerie maximale (€ ; 0 = sans limite)
+    tresoMax: 140000,       // budget maximum à respecter, trésorerie maximale (€ ; 0 = sans limite)
     margeBruteMin: 10,      // marge brute minimum, en % du prix de revente
     negoMax: 15,            // négociation maximum jugée réaliste sur le prix affiché (%)
     reventeCoef: 80,        // revente estimée = ce % du haut de fourchette DVF (3e quartile des ventes)
@@ -177,7 +177,7 @@
     /* Motifs : ce qui ne tient pas au prix négocié au maximum réaliste */
     const pNego = prix * (1 - C.negoMax / 100), cn = controles(pNego);
     if (nego > C.negoMax / 100) {
-      if (!cn.treso) motifs.push('argent à sortir ' + Math.round(cn.q.treso).toLocaleString('fr-FR') + ' € > ' + (+C.tresoMax).toLocaleString('fr-FR') + ' €');
+      if (!cn.treso) motifs.push('budget ' + Math.round(cn.q.treso).toLocaleString('fr-FR') + ' € > budget maximum à respecter ' + (+C.tresoMax).toLocaleString('fr-FR') + ' €');
       if (!cn.marge) motifs.push('marge brute ' + (brute(cn.q) * 100).toFixed(1).replace('.', ',') + ' % < ' + C.margeBruteMin + ' %');
       motifs.push(achatMax ? 'négociation de ' + Math.round(nego * 100) + ' % nécessaire' : 'aucun prix d\'achat ne tient les critères');
     }

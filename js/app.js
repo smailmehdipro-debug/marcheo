@@ -1647,13 +1647,13 @@
         .sort((x, y) => (aExaminer(y) - aExaminer(x)) || (E.get(y.id).score ?? -1) - (E.get(x.id).score ?? -1) || (y.recueLe || '').localeCompare(x.recueLe || ''));
       const vis = l.slice(0, 200);
       $('#anZone').innerHTML = !l.length ? `<div class="vide">${fa.onglet === 'examiner' ? 'Aucune annonce ne mérite l\'attention pour l\'instant.' : 'Aucune annonce.'}</div>` :
-        `<div class="tableau-conteneur"><table class="tableau adaptable tableau-annonces"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente</th><th class="nombre">Travaux</th><th class="nombre">À sortir</th><th class="nombre">Marge brute</th><th class="nombre">Prix max.</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
+        `<div class="tableau-conteneur"><table class="tableau adaptable tableau-annonces"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente</th><th class="nombre">Travaux</th><th class="nombre">Budget</th><th class="nombre">Marge brute</th><th class="nombre">Prix max.</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
           const e = E.get(a.id), st = statutAnnonce(a, e), ex = aExaminer(a);
           return `<tr class="cliquable${ex ? ' a-examiner' : ''}${a.id === fa.surligne ? ' surligne' : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span>${a.notes ? `<span class="sous-ligne remarque-annonce">Remarques : ${esc(a.notes.length > 90 ? a.notes.slice(0, 90) + '…' : a.notes)}</span>` : ''}</td>
             <td class="nombre" data-titre="Prix affiché">${eur(e.prix)}${prixM2(e.prix, e.surface)}${a.prixPrecedent ? `<span class="sous-ligne vert">avant ${eur(a.prixPrecedent)}</span>` : ''}</td>
             <td class="nombre" data-titre="Revente">${e.vente ? eur(e.vente) : '—'}</td>
             <td class="nombre" data-titre="Travaux">${e.travaux ? eur(e.travaux.total) + `<span class="sous-ligne">${M.NIVEAUX[e.travaux.niveau].toLowerCase()}</span>` : '—'}</td>
-            <td class="nombre" data-titre="À sortir">${e.tresoAffiche ? `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>` : '—'}</td>
+            <td class="nombre" data-titre="Budget">${e.tresoAffiche ? `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>` : '—'}</td>
             <td class="nombre" data-titre="Marge brute">${e.margeBrute != null ? `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)}</span><span class="sous-ligne">${eur(e.margeBruteEur)}</span>` : '—'}</td>
             <td class="nombre" data-titre="Prix max.">${e.achatMax ? eur(Math.floor(e.achatMax / 1000) * 1000) + `<span class="sous-ligne ${e.nego <= 0 ? 'vert' : e.statut === 'signalee' ? 'orange' : 'rouge'}">${e.nego <= 0 ? 'sans négociation' : '− ' + pc(e.nego, 0)}</span>` : '—'}</td>
             <td data-titre="Analyse">${voyant(st[0], st[1])}${e.score != null ? ` <b class="montant">${e.score}</b>` : ''}<span class="sous-ligne">${esc(e.motifs.join(' · '))}</span></td></tr>`;
@@ -1687,7 +1687,7 @@
         ${ligne('Prix affiché', eur(e.prix) + prixM2(e.prix, e.surface), (a.historiquePrix || []).length > 1 ? a.historiquePrix.map(h => dateFr(h.date.slice(0, 10)) + ' : ' + eur(h.prix)).join(' · ') : '')}
         ${e.r ? ligne('Revente estimée', eur(e.vente), eur(e.pm2) + ' /m² × ' + e.surface + ' m² · ' + (e.secteur && e.secteur.origine === 'DVF' ? (e.coefRevente < 1 ? Math.round(e.coefRevente * 100) + ' % du haut de fourchette DVF (' + eur(e.pm2Haut) + ' /m²), ' : 'haut de fourchette DVF, ') + (e.secteur.zone ? 'ventes ' + e.secteur.zone + ', ' + e.secteur.n + ' ventes' : (e.type === 'maison' ? e.secteur.nMaisons + ' ventes de maisons' : e.secteur.n + ' ventes d\'appartements') + ' du code postal') : 'prix saisi'))
           + ligne('Travaux estimés', eur(e.r.T), M.NIVEAUX[tv.niveau].toLowerCase() + ' · ' + eur(tv.m2) + ' /m² × ' + e.surface + ' m²' + (tv.piece && tv.pieces ? ' + ' + eur(tv.piece) + ' × ' + tv.pieces + ' pièce' + (tv.pieces > 1 ? 's' : '') : '') + (tv.ht <= tv.min ? ' (minimum ' + eur(tv.min) + ')' : '') + ', aléas ' + tv.aleas + ' % compris')
-          + ligne('Argent total à sortir', `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>`, 'au prix affiché · plafond ' + eur(e.criteres.tresoMax))
+          + ligne('Budget total', `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>`, 'au prix affiché · budget maximum à respecter ' + eur(e.criteres.tresoMax))
           + ligne('Marge brute', `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)} · ${eur(e.margeBruteEur)}</span>`, 'au prix affiché · minimum ' + e.criteres.margeBruteMin + ' % de la revente')
           + ligne('Bénéfice net', eur(e.r.N), 'au prix affiché, après TVA, intérêts et impôt')
           + ligne('Prix d\'achat maximum', e.achatMax ? eur(e.achatMax) : 'aucun', e.nego > 0 ? 'négociation nécessaire : ' + pc(e.nego, 0) : 'le prix affiché passe') : ''}
@@ -1774,7 +1774,7 @@
     const apres = evalAnnonce(a), d = [];
     const cmp = (l, x, y, f) => { if (Math.round(x || 0) !== Math.round(y || 0)) d.push(l + ' : ' + f(x) + ' → <b>' + f(y) + '</b>'); };
     cmp('Travaux', avant.travaux && avant.travaux.total, apres.travaux && apres.travaux.total, eur);
-    cmp('Argent à sortir', avant.tresoAffiche, apres.tresoAffiche, eur);
+    cmp('Budget total', avant.tresoAffiche, apres.tresoAffiche, eur);
     cmp('Revente', avant.vente, apres.vente, eur);
     if (avant.margeBrute != null || apres.margeBrute != null) cmp('Marge brute', (avant.margeBrute || 0) * 1000, (apres.margeBrute || 0) * 1000, x => pc(x / 1000));
     cmp('Prix maximum', avant.achatMax, apres.achatMax, eur);
@@ -1908,7 +1908,7 @@
     const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {});
     return `<div class="grille-champs alignee">
         <div class="champ"><label for="crPrix">1. Prix affiché maximum (€)</label><input id="crPrix" data-cr="prixAfficheMax" type="number" inputmode="numeric" step="5000" value="${C.prixAfficheMax}"><small class="aide">au-dessus : écartée d'office, sans calcul</small></div>
-        <div class="champ"><label for="crTreso">2. Argent total à sortir maximum (€)</label><input id="crTreso" data-cr="tresoMax" type="number" inputmode="numeric" step="5000" value="${C.tresoMax}"><small class="aide">achat, frais d'agence, notaire, travaux et aléas, annexes, TVA des travaux avancée</small></div>
+        <div class="champ"><label for="crTreso">2. Budget maximum à respecter (€)</label><input id="crTreso" data-cr="tresoMax" type="number" inputmode="numeric" step="5000" value="${C.tresoMax}"><small class="aide">achat, frais d'agence, notaire, travaux et aléas, annexes, TVA des travaux avancée</small></div>
         <div class="champ"><label for="crMb">3. Marge brute minimum (% de la revente)</label><input id="crMb" data-cr="margeBruteMin" type="number" inputmode="decimal" value="${C.margeBruteMin}"><small class="aide">revente moins coût de revient</small></div>
         <div class="champ"><label for="crNego">Négociation maximum (%)</label><input id="crNego" data-cr="negoMax" type="number" inputmode="numeric" value="${C.negoMax}"><small class="aide">les étapes 2 et 3 s'apprécient au prix négocié</small></div>
         <div class="champ"><label for="crRev">Revente estimée (% du haut de fourchette DVF)</label><input id="crRev" data-cr="reventeCoef" type="number" inputmode="numeric" min="50" max="120" value="${C.reventeCoef}"><small class="aide">haut de fourchette = 3e quartile des ventes réelles du secteur</small></div>
@@ -1925,7 +1925,7 @@
       </div>`;
   }
   const zoneCourte = z => { const d = {}; z.forEach(x => { const m = String(x).match(/^(\d{2})/); const k = m ? m[1] : x; d[k] = (d[k] || 0) + 1; }); return Object.entries(d).map(([k, n]) => n > 1 ? k + ' (' + n + ' communes)' : k).join(', '); };
-  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Prix affiché ≤ ' + eur(C.prixAfficheMax) + ' · argent à sortir ≤ ' + eur(C.tresoMax) + ' · marge brute ≥ ' + C.margeBruteMin + ' % de la revente · travaux ' + (() => { const t = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}); return t.r.m2 + ' / ' + t.c.m2 + ' / ' + t.l.m2 + ' €/m², par défaut ' + M.NIVEAUX[t.defaut].toLowerCase(); })() + ' · négociation ≤ ' + C.negoMax + ' % · revente à ' + C.reventeCoef + ' % du haut de fourchette DVF · zone : ' + (C.zone && C.zone.length ? zoneCourte(C.zone) : 'partout') + ' · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
+  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Prix affiché ≤ ' + eur(C.prixAfficheMax) + ' · budget maximum à respecter ' + eur(C.tresoMax) + ' · marge brute ≥ ' + C.margeBruteMin + ' % de la revente · travaux ' + (() => { const t = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}); return t.r.m2 + ' / ' + t.c.m2 + ' / ' + t.l.m2 + ' €/m², par défaut ' + M.NIVEAUX[t.defaut].toLowerCase(); })() + ' · négociation ≤ ' + C.negoMax + ' % · revente à ' + C.reventeCoef + ' % du haut de fourchette DVF · zone : ' + (C.zone && C.zone.length ? zoneCourte(C.zone) : 'partout') + ' · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
   function editerCriteres() {
     modale('Critères d\'analyse', champsCriteres(reglages()), [{ l: 'Fermer', classe: 'bouton-principal', f: () => afficher() }], f => brancherCriteres(f));
   }
