@@ -132,3 +132,21 @@ page('banniere.html', 1584, 396,
      '<div class="caps" style="margin-top:22px;font-size:17px;color:#cfd8cc">Annonces · Visite · DVF · Simulation · Chantier · Bilan</div></div>'
      f'<img src="{L}marcheo-vertical-transparent.svg" style="position:absolute;right:96px;top:118px;height:160px"></div>')
 print('ok')
+
+# Visuel produit 2400 × 1350 : ordinateur + téléphone (captures/ refaites en mode démonstration)
+page('visuel.html', 2400, 1350,
+     f'<div class="metal" style="width:2400px;height:1350px;position:relative;color:{IVOIRE}">'
+     f'<img src="{L}marcheo-signature-transparent.svg" style="position:absolute;left:120px;top:140px;height:150px">'
+     '<div class="serif" style="position:absolute;left:130px;top:360px;font-size:104px;font-weight:600;line-height:1.02">Du repérage<br>à la <i style="font-weight:500;color:#c9ab74">revente.</i></div>'
+     '<div style="position:absolute;left:130px;top:640px;font-size:30px;line-height:2;color:#dfe6dc">'
+     + ''.join(f'<div><span style="color:{LAITON};margin-right:26px">—</span>{t}</div>' for t in
+               ['Annonces triées à la marge', 'Visite guidée sur téléphone', 'Prix réels du secteur (DVF)', 'Simulation, chantier, bilan']) +
+     '</div>'
+     # ordinateur
+     '<div style="position:absolute;left:860px;top:170px;width:1440px;height:900px;padding:18px;border-radius:26px;background:#0b0f0d;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 2px #2a3a31">'
+     '<img src="../../captures/bureau-tableau.png" style="width:100%;height:100%;display:block;border-radius:10px;object-fit:cover;object-position:top left"></div>'
+     # téléphone
+     '<div style="position:absolute;left:760px;top:560px;width:390px;height:740px;padding:14px;border-radius:56px;background:#0b0f0d;box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 0 2px #2a3a31">'
+     '<img src="../../captures/mobile-visite.png" style="width:100%;height:100%;display:block;border-radius:44px;object-fit:cover;object-position:top"></div>'
+     '</div>')
+print('visuel ok')
