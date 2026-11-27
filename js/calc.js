@@ -20,10 +20,10 @@
      src : 'verifie' quand une source existe, 'estime' quand la valeur est une estimation sans source vérifiée. */
   const REF_DEF = {
     w: {
-      demo: 40, macon: 60, vitrine: 6000, raccord: 3500, cloisons: 45, isol: 70, elec: 100, plomb: 70, chauf: 60,
-      ecs: 900, vmc: 900, fen: 850, portes: 350, pentree: 1500, sols: 50, enduit: 35, peint: 30, sdb: 6000, wc: 700,
-      cuis: 4500, retouch: 25, deco: 40, deco_min: 1500, nett: 8, toit: 90, facade: 50, assain: 8000,
-      bporte: 900, bpeint: 300, bserr: 80, belec: 250, betanch: 60, tviab: 8000, tacces: 3000, tdebr: 2000
+      demo: 60, macon: 70, vitrine: 14000, raccord: 3500, cloisons: 70, isol: 70, elec: 130, plomb: 90, chauf: 60,
+      ecs: 1000, vmc: 1250, fen: 920, portes: 460, pentree: 2900, sols: 85, enduit: 100, peint: 125, sdb: 8000, wc: 800,
+      cuis: 6300, retouch: 25, deco: 30, deco_min: 1150, nett: 9, toit: 150, facade: 90, assain: 5800,
+      bporte: 1000, bpeint: 300, bserr: 80, belec: 250, betanch: 60, tviab: 11500, tacces: 3000, tdebr: 4600
     },
     x: {
       plans_m2: 10, plans_min: 500, archi_local: 2500, archi: 1500, struct: 1200, geo_terrain: 2500, geo: 1800,
@@ -33,21 +33,51 @@
     }
   };
   /* Fourchette tout compris (fourniture + pose) par poste : [bas, moyen, haut, part de main d'œuvre en %].
-     Le moyen est le repère par défaut ci-dessus. Bas et haut, et la part de main d'œuvre, sont des ordres de grandeur
-     Île-de-France 2026, à confronter aux devis. */
+     Le moyen est le repère par défaut ci-dessus. Barèmes publiés 2025-2026 (sites de devis et guides de prix, voir REF_SRC),
+     moyennes nationales majorées de 15 % pour l'Île-de-France. La part de main d'œuvre est souvent estimée. */
   const REF_NIV = {
-    demo: [25, 40, 60, 85], macon: [40, 60, 100, 60], vitrine: [4000, 6000, 9000, 40], raccord: [2500, 3500, 5000, 60],
-    cloisons: [30, 45, 65, 55], isol: [45, 70, 100, 45], elec: [70, 100, 140, 60], plomb: [50, 70, 100, 60], chauf: [40, 60, 90, 35],
-    ecs: [600, 900, 1400, 35], vmc: [600, 900, 1500, 45], fen: [550, 850, 1300, 30], portes: [200, 350, 600, 40], pentree: [900, 1500, 2500, 30],
-    sols: [30, 50, 90, 50], enduit: [22, 35, 50, 80], peint: [20, 30, 45, 75], sdb: [4000, 6000, 9500, 50], wc: [450, 700, 1200, 40],
-    cuis: [2500, 4500, 8000, 25], retouch: [15, 25, 40, 70], deco: [25, 40, 70, 30], deco_min: [1000, 1500, 2500, 30], nett: [5, 8, 12, 95],
-    toit: [60, 90, 150, 55], facade: [35, 50, 80, 65], assain: [5000, 8000, 12000, 50], bporte: [600, 900, 1500, 30], bpeint: [200, 300, 450, 70],
-    bserr: [50, 80, 130, 40], belec: [150, 250, 400, 55], betanch: [40, 60, 90, 50], tviab: [5000, 8000, 12000, 50], tacces: [2000, 3000, 5000, 50],
-    tdebr: [1200, 2000, 3500, 85]
+    demo: [35, 60, 90, 75], macon: [35, 70, 140, 65], vitrine: [9000, 14000, 17500, 55], raccord: [2500, 3500, 5000, 60], cloisons: [50, 70, 115, 55],
+    isol: [45, 70, 105, 55], elec: [90, 130, 185, 55], plomb: [60, 90, 125, 60], chauf: [35, 60, 105, 30], ecs: [700, 1000, 1700, 35],
+    vmc: [700, 1250, 2300, 50], fen: [580, 920, 1320, 35], portes: [290, 460, 800, 55], pentree: [1700, 2900, 5200, 25], sols: [35, 85, 185, 45],
+    enduit: [40, 100, 145, 80], peint: [85, 125, 195, 75], sdb: [5200, 8000, 11500, 45], wc: [460, 800, 1600, 40], cuis: [3500, 6300, 10400, 20],
+    retouch: [15, 25, 40, 70], deco: [10, 30, 60, 60], deco_min: [350, 1150, 1750, 60], nett: [5, 9, 17, 85], toit: [35, 150, 520, 40],
+    facade: [45, 90, 165, 60], assain: [2900, 5800, 10900, 65], bporte: [580, 1000, 1800, 30], bpeint: [200, 300, 450, 70], bserr: [50, 80, 130, 40],
+    belec: [150, 250, 400, 55], betanch: [40, 60, 90, 50], tviab: [6900, 11500, 17300, 40], tacces: [2000, 3000, 5000, 50], tdebr: [1700, 4600, 10400, 75]
+  };
+  /* Sources des fourchettes (barèmes publiés 2025-2026, moyennes nationales majorées de 15 % pour l'Île-de-France) */
+  const REF_SRC = {
+    demo: 'Saint-Gobain 2026, Ynspir',
+    macon: 'Hellowatt, Travaux.com (estimation)',
+    vitrine: 'Construires.fr 2026, Qoridor 2026',
+    cloisons: 'Habitatpresto, Saint-Gobain, Prix-Pose',
+    isol: 'Quelle Énergie, ABC Travaux 2026, Saint-Gobain',
+    elec: 'Habitatpresto 2025, IZI by EDF, Ootravaux 2026',
+    plomb: 'Mesdepanneurs 2026',
+    chauf: 'Prix-travaux-m2 2026, Habitatpresto',
+    ecs: 'Selectra, Mesdepanneurs 2026, Hellio 2026',
+    vmc: 'Hellowatt, Habitatpresto, Selectra 2026',
+    fen: 'Saint-Gobain 2026, Prix-Pose 2025, Selectra',
+    portes: 'ABC Travaux 2026, Prix-Pose 2025',
+    pentree: 'Prix-travaux-m2 2026, Habitatpresto 2025, Saint-Gobain 2025',
+    sols: 'Saint-Gobain 2025-2026, Travaux.com, Habitatpresto, Prix-Pose',
+    enduit: 'Saint-Gobain, Prix-Pose, Habitatpresto',
+    peint: 'Saint-Gobain 2026, Travaux.com 2026',
+    sdb: 'Espace Aubade 2025, Saint-Gobain 2026',
+    wc: 'Mesdepanneurs 2026, Habitatpresto',
+    cuis: 'Habitatpresto 2026, Travaux.com, Obat 2026',
+    deco: 'Magnolia 2026, Qoridor 2026 (estimation au m²)',
+    deco_min: 'Magnolia 2026',
+    nett: 'Ynspir 2026, Companeo 2026',
+    toit: 'Prix-Pose 2025, Prix-travaux-m2 2026, Habitatpresto',
+    facade: 'Habitatpresto 2025, Quelle Énergie 2026, Ootravaux',
+    assain: 'Habitatpresto, Prix-Pose, Obat',
+    bporte: 'Prix-Pose 2025, Mesdepanneurs, Ootravaux',
+    tviab: 'Obat, SeLoger',
+    tdebr: 'Ootravaux, Prix-Pose (forfait reconstitué)'
   };
   /* Repères signalés comme estimations sans source vérifiée (brief, « À savoir sur les repères de prix »). */
   const REF_ESTIME = ['x.plans_m2', 'x.plans_min', 'x.copro_box', 'x.copro_m2', 'x.tf_terrain', 'x.tf_box', 'x.tf_m2',
-    'x.assur', 'x.compta', 'w.demo', 'w.cloisons', 'w.chauf', 'w.enduit', 'w.deco', 'w.deco_min'];
+    'x.assur', 'x.compta', 'w.macon', 'w.raccord', 'w.retouch', 'w.deco', 'w.bpeint', 'w.bserr', 'w.belec', 'w.betanch', 'w.tacces', 'w.tdebr'];
 
   let REF = clone(REF_DEF);
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -336,7 +366,7 @@
   }
 
   return {
-    version: 1, r50, ALLB, W, X, XI, M1, M2, TYPES, NIVEAUX, GAMMES, DEF, REF_DEF, REF_ESTIME, REF_NIV,
+    version: 1, r50, ALLB, W, X, XI, M1, M2, TYPES, NIVEAUX, GAMMES, DEF, REF_DEF, REF_ESTIME, REF_NIV, REF_SRC,
     setRef, getRef, vis, xVis, wDef, applyLevel, initLines, setType, fresh, normalize,
     notaire, travaux, compute, solve, limits,
     unite, etat, partage, parseComps, comparables, quartier, controles, scenarios, limitesAffichees, indicateurs, analyse,

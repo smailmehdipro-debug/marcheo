@@ -22,10 +22,17 @@ function moteurOrigine() {
   return Object.assign({ applyLevel: ctx.applyLevel }, ctx.module.exports);
 }
 const O = moteurOrigine();
+/* Repères du simulateur d'origine : les tests d'équivalence comparent les formules à prix identiques,
+   indépendamment des repères par défaut du logiciel (mis à jour avec des barèmes publiés). */
+const REF_ORIGINE = { w: {
+  demo: 40, macon: 60, vitrine: 6000, raccord: 3500, cloisons: 45, isol: 70, elec: 100, plomb: 70, chauf: 60,
+  ecs: 900, vmc: 900, fen: 850, portes: 350, pentree: 1500, sols: 50, enduit: 35, peint: 30, sdb: 6000, wc: 700,
+  cuis: 4500, retouch: 25, deco: 40, deco_min: 1500, nett: 8, toit: 90, facade: 50, assain: 8000,
+  bporte: 900, bpeint: 300, bserr: 80, belec: 250, betanch: 60, tviab: 8000, tacces: 3000, tdebr: 2000 } };
 const eur = n => Math.round(n);
 
 test('valeurs de contrôle du brief', () => {
-  M.setRef(null);
+  M.setRef(REF_ORIGINE);
   const S = M.fresh(), r = M.compute(S), L = M.limits(S);
   assert.equal(eur(r.not), 2821, 'frais de notaire');
   assert.equal(eur(r.T), 37565, 'travaux HT aléas compris');
@@ -62,7 +69,7 @@ function etatAleatoire(rand, mod) {
 }
 
 test('équivalence avec le moteur d\'origine (3 000 états)', () => {
-  M.setRef(null);
+  M.setRef(REF_ORIGINE);
   const ra = rng(42);
   for (let n = 0; n < 3000; n++) {
     const seed = Math.floor(ra() * 1e9);
@@ -76,7 +83,7 @@ test('équivalence avec le moteur d\'origine (3 000 états)', () => {
 });
 
 test('repères affichés identiques (libellés et montants)', () => {
-  M.setRef(null);
+  M.setRef(REF_ORIGINE);
   for (const t of Object.keys(M.TYPES)) {
     const S1 = O.fresh(), S2 = M.fresh(); O.setType(S1, t); M.setType(S2, t);
     assert.deepEqual(JSON.parse(JSON.stringify(M.travaux(S2))), JSON.parse(JSON.stringify(O.travaux(S1))), 'travaux ' + t);
@@ -86,10 +93,11 @@ test('repères affichés identiques (libellés et montants)', () => {
 });
 
 test('repères modifiables', () => {
+  M.setRef(null);
   const S = M.fresh(), avant = M.compute(S);
-  M.setRef({ w: { elec: 120 }, x: { photo: 500 } });
+  M.setRef({ w: { elec: 150 }, x: { photo: 500 } });
   const apres = M.compute(S);
-  assert.equal(M.wDef(M.W.find(i => i.id === 'elec'), S).v, 5050, '120 €/m² × 42 m² arrondi à 50 €');
+  assert.equal(M.wDef(M.W.find(i => i.id === 'elec'), S).v, 6300, '150 €/m² × 42 m²');
   assert.ok(apres.C > avant.C);
   M.setRef(null);
   assert.equal(M.compute(S).C, avant.C, 'retour aux repères par défaut');
@@ -97,7 +105,7 @@ test('repères modifiables', () => {
 });
 
 test('coût réel des travaux à la place du budget', () => {
-  M.setRef(null);
+  M.setRef(REF_ORIGINE);
   const S = M.fresh(), base = M.compute(S);
   S.trvReel = 45000;
   const r = M.compute(S);
@@ -108,7 +116,7 @@ test('coût réel des travaux à la place du budget', () => {
 });
 
 test('partage et revenus de l\'associé investisseur', () => {
-  M.setRef(null);
+  M.setRef(REF_ORIGINE);
   const S = M.fresh(), r = M.compute(S), p = M.partage(S, r);
   assert.equal(eur(p.operateur.dividendes), eur(r.N * .5));
   assert.equal(eur(p.operateur.prelevement), eur(r.N * .5 * .314));
@@ -117,7 +125,7 @@ test('partage et revenus de l\'associé investisseur', () => {
 });
 
 test('contrôles, comparables et scénarios', () => {
-  M.setRef(null);
+  M.setRef(REF_ORIGINE);
   const S = M.fresh();
   S.comps = 'Rue A;40;140000;2026-03\nRue B;45;162000\nRue C;38;125400';
   S.abf = 'Non'; S.preempt = 'Oui';
