@@ -2,6 +2,14 @@
 
 Étapes à faire par une personne, une seule fois. Comptez environ une heure. Rien de tout cela n'a été exécuté : le code a été construit et testé en local, sans compte Cloudflare.
 
+## État au 27/11/2026
+
+- Fait : compte Cloudflare (smail.mehdi.pro), base D1 `marcheo` (tables créées), Worker en ligne sur https://marcheo-serveur.marcheo-serveur.workers.dev, adresse renseignée dans `js/donnees.js`. Essai en ligne réussi : inscription, écriture, lecture, cloisonnement entre deux comptes, ventes DVF.
+- Reste à faire :
+  - R2 (photos) : à activer dans le tableau de bord (une carte bancaire est demandée), puis décommenter `[[r2_buckets]]` dans `wrangler.toml` et redéployer. D'ici là, le dépôt de photos répond « pas encore activé » et les fichiers DVF sont relus sans cache.
+  - Réception des alertes (§ 4) : demande un nom de domaine. D'ici là, la page « Recevoir mes alertes » affiche « Bientôt disponible ».
+  - Stripe (§ 5) et l'envoi des e-mails « mot de passe oublié » (§ 6).
+
 ## 0. Prérequis
 
 - Un compte Cloudflare (l'offre gratuite suffit pour démarrer).

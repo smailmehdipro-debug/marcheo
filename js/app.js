@@ -2376,20 +2376,21 @@
     titre('Recevoir mes alertes', 'Transfert depuis votre Gmail', I.annonces);
     c.innerHTML = `<div class="en-tete-page"><div><h1>Recevoir mes alertes</h1><p>Vos alertes Bien'ici, SeLoger, Leboncoin, PAP… arrivent dans votre Gmail. Un filtre les transfère à Marchéo, qui les trie pour vous.</p></div></div>
       <div class="pile">
-        <div class="carte"><h2>1. Votre adresse de transfert</h2><div class="adresse-transfert"><code id="atAdr">…</code><button class="bouton" id="atCopier">Copier</button></div>
+        <div class="carte" id="atInactif" hidden><h2>Bientôt disponible</h2><p>La réception automatique de vos alertes par e-mail n'est pas encore ouverte sur ce serveur. Vous serez prévenu dès qu'elle le sera. En attendant, ajoutez vos annonces depuis la page <a href="#/annonces">Annonces</a>.</p></div>
+        <div class="carte at-etape"><h2>1. Votre adresse de transfert</h2><div class="adresse-transfert"><code id="atAdr">…</code><button class="bouton" id="atCopier">Copier</button></div>
           <p class="aide">Adresse propre à votre compte. Elle ne sert qu'à recevoir vos alertes.</p></div>
-        <div class="carte"><h2>2. Ajouter cette adresse dans Gmail</h2><ol class="etapes-guide">
+        <div class="carte at-etape"><h2>2. Ajouter cette adresse dans Gmail</h2><ol class="etapes-guide">
           <li>Dans Gmail sur ordinateur, ouvrez <b>Paramètres</b> (roue dentée) → <b>Voir tous les paramètres</b> → onglet <b>Transfert et POP/IMAP</b>.</li>
           <li>Cliquez sur <b>Ajouter une adresse de transfert</b>, collez l'adresse ci-dessus, puis <b>Suivant</b> et <b>Continuer</b>.</li>
           <li>Gmail envoie un code de confirmation à Marchéo : il s'affiche ci-dessous dès réception. Saisissez-le dans Gmail, ou ouvrez le lien de confirmation.</li>
           <li>Laissez « Désactiver le transfert » coché : seul le filtre de l'étape 3 transférera vos alertes.</li></ol>
           <div id="atCode" class="bandeau-suivi bandeau-suivi-orange"><span class="point-suivi"></span><span>En attente du code de confirmation de Gmail…</span></div></div>
-        <div class="carte"><h2>3. Créer le filtre</h2><ol class="etapes-guide">
+        <div class="carte at-etape"><h2>3. Créer le filtre</h2><ol class="etapes-guide">
           <li>Copiez cette recherche et collez-la dans la barre de recherche de Gmail :<div class="adresse-transfert"><code id="atFiltre">…</code><button class="bouton" id="atCopierFiltre">Copier</button></div></li>
           <li>Ouvrez les options de recherche (icône à droite de la barre), puis <b>Créer un filtre</b>.</li>
           <li>Cochez <b>Transférer à</b> et choisissez votre adresse Marchéo. Pour ne pas être dérangé, cochez aussi <b>Ne pas afficher dans la boîte de réception</b> et <b>Marquer comme lu</b>.</li>
           <li>Cliquez sur <b>Créer un filtre</b>.</li></ol></div>
-        <div class="carte"><h2>4. Première alerte</h2><div id="atPremiere" class="bandeau-suivi bandeau-suivi-orange"><span class="point-suivi"></span><span>Aucune annonce reçue pour l'instant. Créez vos alertes sur les sites d'annonces avec votre adresse Gmail habituelle.</span></div></div>
+        <div class="carte at-etape"><h2>4. Première alerte</h2><div id="atPremiere" class="bandeau-suivi bandeau-suivi-orange"><span class="point-suivi"></span><span>Aucune annonce reçue pour l'instant. Créez vos alertes sur les sites d'annonces avec votre adresse Gmail habituelle.</span></div></div>
         <div class="carte" id="atOffre"></div>
       </div>`;
     const copier = (id, msg) => { const t = $('#' + id).textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => notifier(msg, 'succes'), () => notifier('Copie impossible : sélectionnez le texte à la main.', 'erreur')); };
@@ -2399,6 +2400,7 @@
       if (route().m !== 'alertes') { clearInterval(suiviTransfert); suiviTransfert = null; return; }
       try {
         const t = await D.action('etatTransfert', {});
+        $('#atInactif').hidden = t.actif !== false; document.querySelectorAll('.at-etape').forEach(e => e.hidden = t.actif === false);
         $('#atAdr').textContent = t.adresse;
         $('#atFiltre').textContent = 'from:(' + (t.expediteurs || []).join(' OR ') + ')';
         if (t.confirmation) $('#atCode').outerHTML = `<div id="atCode" class="bandeau-suivi bandeau-suivi-vert"><span class="point-suivi"></span><span>Code de confirmation Gmail : <b>${esc(t.confirmation.code || '—')}</b>${t.confirmation.lien ? ` · <a href="${esc(t.confirmation.lien)}" target="_blank" rel="noopener">ou confirmer par le lien</a>` : ''}</span></div>`;

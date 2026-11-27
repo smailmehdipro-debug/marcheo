@@ -25,7 +25,7 @@ function codeGs() {
 async function environnement(o = {}) {
   const { creerServeur } = await import('../serveur-cloudflare/src/serveur.js');
   const horloge = { t: new Date('2026-11-27T12:00:00Z').getTime() };
-  const env = { DB: d1(), STOCKAGE: r2(), ENVOI: envoi(), ALERTES_DOMAINE: DOMAINE, APP_URL: 'https://app.exemple.fr/', STRIPE_WEBHOOK_SECRET: 'whsec_test' };
+  const env = { DB: d1(), STOCKAGE: o.sansR2 ? undefined : r2(), ENVOI: envoi(), ALERTES_DOMAINE: DOMAINE, APP_URL: 'https://app.exemple.fr/', STRIPE_WEBHOOK_SECRET: 'whsec_test' };
   const appels = [];
   const fetch = o.fetch || (async (url) => { appels.push(url); return reponse(404, ''); });
   const S = creerServeur(env, { fetch: async (...a) => { appels.push(a[0]); return fetch(...a); }, maintenant: () => new Date(horloge.t), completer: o.completer });
@@ -233,6 +233,16 @@ test('ventes DVF : comparables, cache par commune et par année', async () => {
   await E.appel('ventesDVF', { type: 'maison', cp: '78711', ville: 'Mantes-la-Ville', surface: 100 }, A.jeton);
   assert.equal(E.appels.filter(u => /geo-dvf.*2025/.test(u)).length, avant, 'deuxième recherche servie par le cache');
   assert.equal((await E.appel('ventesDVF', { type: 'box', cp: '78711' }, A.jeton)).code, 'DVF');
+});
+
+test('serveur sans stockage R2 : photos refusées proprement, DVF lu sans cache', async () => {
+  const E = await environnement({ fetch: fauxReseauDVF(), sansR2: true });
+  const A = await E.inscrire('a@exemple.fr');
+  const p = await E.appel('deposerPhoto', { base64: 'aGVsbG8=', type: 'image/jpeg', nom: 'a.jpg' }, A.jeton);
+  assert.equal(p.ok, false); assert.equal(p.code, 'PHOTO'); assert.match(p.message, /pas encore activé/);
+  assert.equal((await E.appel('lirePhoto', { id: A.utilisateur + '/x/y.jpg' }, A.jeton)).code, 'PHOTO');
+  const r = (await E.appel('ventesDVF', { type: 'maison', cp: '78711', ville: 'Mantes-la-Ville', surface: 100 }, A.jeton)).resultat;
+  assert.ok(r.ventes.length > 0 && r.secteur.mediane > 0);
 });
 
 test('lecture d\'une annonce par son lien : page structurée, Bien\'ici, site bloqué', async () => {

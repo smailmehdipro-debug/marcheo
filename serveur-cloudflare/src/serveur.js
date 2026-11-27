@@ -206,7 +206,7 @@ export function creerServeur(env, options = {}) {
     const c = await compte(compteId);
     const t = await DB.prepare('SELECT code, lien, recu_le FROM transferts WHERE compte_id = ? ORDER BY recu_le DESC LIMIT 1').bind(compteId).first();
     const p = await DB.prepare("SELECT MIN(recu_le) AS le FROM fiches WHERE compte_id = ? AND coll = 'annonces'").bind(compteId).first();
-    return { adresse: c.adresse_transfert + '@' + domaine(), confirmation: t ? { code: t.code, lien: t.lien, recuLe: t.recu_le } : null, premiereAnnonce: (p && p.le) || '',
+    return { actif: !!env.ALERTES_DOMAINE, adresse: c.adresse_transfert + '@' + domaine(), confirmation: t ? { code: t.code, lien: t.lien, recuLe: t.recu_le } : null, premiereAnnonce: (p && p.le) || '',
       expediteurs: EXPEDITEURS_ALERTES }; // pour la recherche Gmail à coller dans le filtre
   }
   async function infosCompte(compteId) {
@@ -228,6 +228,7 @@ export function creerServeur(env, options = {}) {
 
   /* ---------- Photos et documents (R2) ---------- */
   async function deposerPhoto(compteId, d) {
+    if (!R2) throw erreur("Le stockage des photos n'est pas encore activé sur ce serveur.", 'PHOTO');
     const base64 = String(d.base64 || '');
     if (!base64 || base64.length > 12000000) throw erreur('Photo ou document absent ou trop lourd.', 'PHOTO');
     const c = await compte(compteId), lim = limites(c);
@@ -243,6 +244,7 @@ export function creerServeur(env, options = {}) {
   async function lirePhoto(compteId, id) {
     id = String(id || '');
     if (!id.startsWith(compteId + '/') || id.includes('..')) throw erreur('Photo inconnue.', 'PHOTO'); // jamais la photo d'un autre compte
+    if (!R2) throw erreur("Le stockage des photos n'est pas encore activé sur ce serveur.", 'PHOTO');
     const o = await R2.get('photos/' + id); if (!o) throw erreur('Photo inconnue.', 'PHOTO');
     const u = new Uint8Array(await o.arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
     return { base64: btoa(s) };
@@ -263,12 +265,12 @@ export function creerServeur(env, options = {}) {
     return { lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], insee: f.properties.citycode, commune: f.properties.city, cp: f.properties.postcode, libelle: f.properties.label, precis };
   }
   async function fichierDVF(annee, dep, insee) {
-    const cle = 'dvf/' + annee + '/' + insee + '.csv', o = await R2.get(cle);
+    const cle = 'dvf/' + annee + '/' + insee + '.csv', o = R2 ? await R2.get(cle) : null; // sans stockage R2 : fichier relu à chaque fois, sans cache
     const frais = o && (annee < maintenant().getFullYear() - 1 || maintenant().getTime() - new Date(o.uploaded || 0).getTime() < 30 * 86400000);
     if (frais) return o.text();
     const r = await fetchF('https://files.data.gouv.fr/geo-dvf/latest/csv/' + annee + '/communes/' + dep + '/' + insee + '.csv', { redirect: 'follow' });
     if (r.status !== 200) return o ? o.text() : null;
-    const t = await r.text(); await R2.put(cle, t, { httpMetadata: { contentType: 'text/csv' } });
+    const t = await r.text(); if (R2) await R2.put(cle, t, { httpMetadata: { contentType: 'text/csv' } });
     return t;
   }
   async function ventesDVF(compteId, d) {

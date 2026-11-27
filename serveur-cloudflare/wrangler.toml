@@ -5,17 +5,19 @@ compatibility_date = "2026-11-01"
 
 [vars]
 # Domaine des adresses de transfert : <adresse>@alertes.<domaine> (Email Routing en catch-all vers ce Worker)
-ALERTES_DOMAINE = "alertes.exemple.fr"
+# ALERTES_DOMAINE = "alertes.<votre domaine>"  (à activer avec Email Routing, voir DEPLOIEMENT.md § 4)
 # Adresse publique de l'application (liens de réinitialisation du mot de passe)
 APP_URL = "https://smailmehdipro-debug.github.io/marcheo/"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "marcheo"
-database_id = "A_REMPLACER_APRES_wrangler_d1_create"
+database_id = "d2a6508e-8957-4f99-9121-41f92276a495"
 
-[[r2_buckets]]
-binding = "STOCKAGE"
-bucket_name = "marcheo-stockage"
+# Photos : à décommenter une fois R2 activé dans le tableau de bord Cloudflare (npx wrangler r2 bucket create marcheo-stockage).
+# Sans ce stockage, le dépôt de photos répond « pas encore activé » et les fichiers DVF sont relus sans cache.
+# [[r2_buckets]]
+# binding = "STOCKAGE"
+# bucket_name = "marcheo-stockage"
 
 # Secret à définir hors du dépôt : wrangler secret put STRIPE_WEBHOOK_SECRET

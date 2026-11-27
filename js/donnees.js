@@ -9,7 +9,7 @@
   'use strict';
   /* Adresse du serveur Marchéo hébergé (Cloudflare Workers). À renseigner à la mise en ligne (DEPLOIEMENT.md).
      Pour essayer un autre serveur sans modifier ce fichier : ouvrir l'application avec ?serveur=https://… une fois. */
-  const SERVEUR_MARCHEO = '';
+  const SERVEUR_MARCHEO = 'https://marcheo-serveur.marcheo-serveur.workers.dev';
   const COLLS = ['biens', 'contacts', 'relances', 'journal', 'reglages', 'annonces'];
   const CLE_CACHE = 'marcheo-cache-v1', CLE_FILE = 'marcheo-file-v1', CLE_CONF = 'marcheo-serveur', CLE_JETON = 'marcheo-jeton';
   const lire = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
