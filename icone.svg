@@ -1,71 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <radialGradient id="fond" cx="50%" cy="28%" r="80%">
-      <stop offset="0" stop-color="#2a6a4a"/>
-      <stop offset=".55" stop-color="#123a28"/>
-      <stop offset="1" stop-color="#071710"/>
-    </radialGradient>
-    <linearGradient id="or" gradientUnits="userSpaceOnUse" x1="0" y1="130" x2="0" y2="410">
-      <stop offset="0" stop-color="#fff6d2"/>
-      <stop offset=".22" stop-color="#e9c674"/>
-      <stop offset=".48" stop-color="#9c7125"/>
-      <stop offset=".62" stop-color="#f3d88e"/>
-      <stop offset=".82" stop-color="#b8892f"/>
-      <stop offset="1" stop-color="#6e4c14"/>
-    </linearGradient>
-    <linearGradient id="orCadre" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#fff1c0"/>
-      <stop offset=".3" stop-color="#c99a45"/>
-      <stop offset=".55" stop-color="#7a561a"/>
-      <stop offset=".8" stop-color="#e8c77a"/>
-      <stop offset="1" stop-color="#8a6420"/>
-    </linearGradient>
-    <linearGradient id="reflet" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff" stop-opacity=".22"/>
-      <stop offset=".46" stop-color="#fff" stop-opacity=".05"/>
-      <stop offset=".54" stop-color="#fff" stop-opacity="0"/>
-    </linearGradient>
-    <filter id="relief" x="-20%" y="-20%" width="140%" height="150%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="flou"/>
-      <feSpecularLighting in="flou" surfaceScale="6" specularConstant="1.1" specularExponent="22" lighting-color="#fff6dc" result="spec">
-        <feDistantLight azimuth="235" elevation="48"/>
-      </feSpecularLighting>
-      <feComposite in="spec" in2="SourceAlpha" operator="in" result="spec2"/>
-      <feComposite in="SourceGraphic" in2="spec2" operator="arithmetic" k1="0" k2="1" k3=".75" k4="0" result="metal"/>
-      <feDropShadow in="metal" dx="0" dy="10" stdDeviation="9" flood-color="#000" flood-opacity=".55"/>
-    </filter>
-    <filter id="creux" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="10"/>
-      <feOffset dy="8"/>
-      <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="ombre"/>
-      <feFlood flood-color="#000" flood-opacity=".6"/>
-      <feComposite in2="ombre" operator="in"/>
-      <feComposite in2="SourceGraphic" operator="over"/>
-    </filter>
-  </defs>
-
-  <!-- Plaque émaillée -->
-  <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#orCadre)"/>
-  <rect x="22" y="22" width="468" height="468" rx="100" fill="#3d2a0b" opacity=".55"/>
-  <rect x="28" y="28" width="456" height="456" rx="95" fill="url(#fond)" filter="url(#creux)"/>
-  <rect x="28" y="28" width="456" height="456" rx="95" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="2"/>
-
-  <!-- Emblème : un M dont le tracé est une toiture à deux pignons -->
-  <g filter="url(#relief)" fill="none" stroke="url(#or)" stroke-linejoin="round">
-    <!-- cheminée -->
-    <path d="M350 200 V142 H382 V232 Z" fill="url(#or)" stroke="none"/>
-    <rect x="342" y="128" width="48" height="18" rx="4" fill="url(#or)" stroke="none"/>
-    <!-- toits -->
-    <path d="M100 262 L196 158 L256 226 L316 158 L412 262" stroke-width="34" stroke-linecap="round"/>
-    <!-- murs = jambages du M -->
-    <path d="M148 226 V392 M364 226 V392" stroke-width="34" stroke-linecap="butt"/>
-    <!-- porte en arche -->
-    <path d="M228 392 V330 A28 28 0 0 1 284 330 V392" stroke-width="16"/>
-    <!-- sol -->
-    <path d="M112 400 H400" stroke-width="16" stroke-linecap="round"/>
-  </g>
-  <circle cx="271" cy="364" r="6" fill="url(#or)" filter="url(#relief)"/>
-
-  <!-- Reflet vitré -->
-  <rect x="28" y="28" width="456" height="456" rx="95" fill="url(#reflet)"/>
+<title>Marchéo</title>
+<defs>
+  <linearGradient id="or" gradientUnits="userSpaceOnUse" x1="150" y1="96" x2="330" y2="430">
+    <stop offset="0" stop-color="#fff1c4"/><stop offset=".28" stop-color="#e2c486"/>
+    <stop offset=".55" stop-color="#b8924f"/><stop offset=".75" stop-color="#e8cf95"/><stop offset="1" stop-color="#8a6630"/>
+  </linearGradient>
+  <linearGradient id="orCadre" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#f6e3b0"/><stop offset=".45" stop-color="#b8924f"/>
+    <stop offset=".7" stop-color="#ecd49c"/><stop offset="1" stop-color="#7d5a28"/>
+  </linearGradient>
+  <radialGradient id="fond" cx=".5" cy=".28" r=".85">
+    <stop offset="0" stop-color="#245a40"/><stop offset=".55" stop-color="#123a28"/><stop offset="1" stop-color="#071a11"/>
+  </radialGradient>
+  <filter id="relief" x="-10%" y="-10%" width="120%" height="125%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="b"/>
+    <feSpecularLighting in="b" surfaceScale="5" specularConstant="1" specularExponent="24" lighting-color="#fff6dc" result="s"><feDistantLight azimuth="235" elevation="50"/></feSpecularLighting>
+    <feComposite in="s" in2="SourceAlpha" operator="in" result="s2"/>
+    <feComposite in="SourceGraphic" in2="s2" operator="arithmetic" k2="1" k3=".55" result="lit"/>
+    <feDropShadow in="lit" dx="0" dy="7" stdDeviation="6" flood-color="#000" flood-opacity=".55"/>
+  </filter>
+  <filter id="grave" x="-5%" y="-5%" width="110%" height="110%">
+    <feOffset dy="3"/><feGaussianBlur stdDeviation="2" result="o"/>
+    <feComposite in="SourceAlpha" in2="o" operator="out" result="in"/>
+    <feFlood flood-color="#000" flood-opacity=".7"/><feComposite in2="in" operator="in" result="ombre"/>
+    <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="ombre"/></feMerge>
+  </filter>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#orCadre)"/><rect x="20" y="20" width="472" height="472" rx="92" fill="url(#fond)"/><rect x="34" y="34" width="444" height="444" rx="80" fill="none" stroke="#c9ab74" stroke-opacity=".45" stroke-width="2"/><g filter="url(#relief)"><path d="M96 238 L256 98 L416 238 L416 418 L96 418 Z" fill="url(#or)" stroke="url(#or)" stroke-width="12" stroke-linejoin="round"/></g><path d="M369.8 392.0H268.6V386.7H287.4V263.3H286.9L237.3 392.0H222.6L171.7 263.5V343.0Q171.7 354.1 174.2 364.7Q176.6 375.2 181.8 381.0Q186.9 386.7 197.3 386.7H199.9V392.0H142.2V386.7Q153.8 386.7 159.6 374.4Q165.3 362.1 165.3 346.4V256.2L160.1 247.3H145.9V242.0H230.6L261.1 316.6L289.9 242.0H369.8V247.3H351.6V386.7H369.8Z" fill="#0f2f20" filter="url(#grave)"/>
 </svg>
