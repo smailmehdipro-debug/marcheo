@@ -6,7 +6,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ctx = {};
-vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../serveur/Code.gs'), 'utf8'), ctx);
+/* Comme dans Apps Script : commun.js et Code.gs partagent la même portée globale */
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../serveur/commun.js'), 'utf8'), ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../serveur/Code.gs'), 'utf8'), ctx);
 const lire = f => fs.readFileSync(path.join(__dirname, 'alertes', f), 'utf8');
 
 test("alerte Bien'ici : une annonce par identifiant, sans doublon", () => {
