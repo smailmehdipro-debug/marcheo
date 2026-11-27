@@ -170,7 +170,7 @@ function extraireAnnonces_(expediteur, sujet, texte, date) {
   var url = function (l) { return l.replace(/^\[|\]$/g, ''); };
   var out = [], de = String(expediteur || '').toLowerCase();
   /* E-mails de service (alerte créée, modifiée, désactivée, confirmation de compte) : aucune annonce, même si un prix y figure */
-  if (/alerte.*(cr[ée]{2}e|enregistr|activ|modifi|supprim|d[ée]sactiv)|recherche.*(enregistr|sauvegard)|confirm|bienvenue|mot de passe|v[ée]rifi/i.test(String(sujet || ''))) return [];
+  if (/alerte.*(cr[ée]{2}e|enregistr|activ|modifi|supprim|d[ée]sactiv)|(cr[ée]ation|enregistrement|modification|suppression) de (votre |l.)?(alerte|recherche)|recherche.*(enregistr|sauvegard)|confirm|bienvenue|mot de passe|v[ée]rifi/i.test(String(sujet || ''))) return [];
 
   if (de.indexOf('bienici') >= 0) {
     /* Bien'ici : chaque ligne de texte est suivie du lien de son annonce (…/annonce/<identifiant>?…) */
