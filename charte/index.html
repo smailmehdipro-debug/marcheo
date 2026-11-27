@@ -127,12 +127,29 @@ footer .w { padding-block: 28px; color: #a9b8a8; font-size: .85rem; }
   <figure style="margin-top:20px"><img src="supports/visuel-crm-2400x1350.png" alt="Visuel du CRM sur ordinateur et téléphone"><figcaption>Visuel du CRM 2400 × 1350 · présentation, réseaux</figcaption></figure>
 </div></section>
 
-<section style="background:var(--surface);border-top:1px solid var(--bordure)"><div class="w">
-  <p class="sur">6 · Fichiers</p><h2>Où sont les pièces</h2>
+<section style="background:var(--surface);border-block:1px solid var(--bordure)"><div class="w">
+  <p class="sur">6 · Réseaux sociaux</p><h2>Publications, carrousel, lancement, stories</h2>
+  <p class="chapo">Une fonction par publication, en alternance fond vert métallisé / ivoire et accent or / vert clair. Les extraits d'écran viennent des captures en mode démonstration et le disent ; aucun autre chiffre n'est affiché. Avant publication, remplacer « [durée] » et « [adresse e-mail] » dans la dernière diapo du carrousel et la story 2.</p>
+  <h3 style="font:600 1.4rem/1.2 var(--serif);margin:0 0 14px">Publications carrées · 1080 × 1080</h3>
+  <div class="grille" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))"><figure><img src="reseaux/carre-1.png" alt="Annonces triées à la marge" loading="lazy"><figcaption>01 · Annonces triées à la marge</figcaption></figure><figure><img src="reseaux/carre-2.png" alt="Visite, application mobile" loading="lazy"><figcaption>02 · Visite, application mobile</figcaption></figure><figure><img src="reseaux/carre-3.png" alt="Prix DVF du secteur" loading="lazy"><figcaption>03 · Prix DVF du secteur</figcaption></figure><figure><img src="reseaux/carre-4.png" alt="Simulation" loading="lazy"><figcaption>04 · Simulation</figcaption></figure><figure><img src="reseaux/carre-5.png" alt="Chantier et bilan" loading="lazy"><figcaption>05 · Chantier et bilan</figcaption></figure><figure><img src="reseaux/carre-6.png" alt="Tableau de bord des alertes" loading="lazy"><figcaption>06 · Tableau de bord des alertes</figcaption></figure></div>
+  <h3 style="font:600 1.4rem/1.2 var(--serif);margin:36px 0 14px">Carrousel LinkedIn · 1080 × 1350 · le parcours d'un bien</h3>
+  <div class="grille" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"><figure><img src="reseaux/carrousel-1.png" alt="Carrousel, diapo 1 : Couverture" loading="lazy"><figcaption>01 · Couverture</figcaption></figure><figure><img src="reseaux/carrousel-2.png" alt="Carrousel, diapo 2 : Repérage" loading="lazy"><figcaption>02 · Repérage</figcaption></figure><figure><img src="reseaux/carrousel-3.png" alt="Carrousel, diapo 3 : Visite" loading="lazy"><figcaption>03 · Visite</figcaption></figure><figure><img src="reseaux/carrousel-4.png" alt="Carrousel, diapo 4 : Prix" loading="lazy"><figcaption>04 · Prix</figcaption></figure><figure><img src="reseaux/carrousel-5.png" alt="Carrousel, diapo 5 : Décision" loading="lazy"><figcaption>05 · Décision</figcaption></figure><figure><img src="reseaux/carrousel-6.png" alt="Carrousel, diapo 6 : Chantier" loading="lazy"><figcaption>06 · Chantier</figcaption></figure><figure><img src="reseaux/carrousel-7.png" alt="Carrousel, diapo 7 : Revente" loading="lazy"><figcaption>07 · Revente</figcaption></figure><figure><img src="reseaux/carrousel-8.png" alt="Carrousel, diapo 8 : Essai gratuit" loading="lazy"><figcaption>08 · Essai gratuit</figcaption></figure></div>
+  <h3 style="font:600 1.4rem/1.2 var(--serif);margin:36px 0 14px">Lancement · 1200 × 628 (lien LinkedIn, Facebook)</h3>
+  <figure><img src="reseaux/lancement-1200x628.png" alt="Visuel de lancement" loading="lazy"><figcaption>Du repérage à la revente, un seul outil</figcaption></figure>
+  <h3 style="font:600 1.4rem/1.2 var(--serif);margin:36px 0 14px">Stories · 1080 × 1920 (Instagram, Facebook)</h3>
+  <div class="grille" style="grid-template-columns:repeat(auto-fit,minmax(200px,280px))">
+    <figure><img src="reseaux/story-1-visite.png" alt="Story : la visite dans votre poche" loading="lazy"><figcaption>Story 1 · application de visite</figcaption></figure>
+    <figure><img src="reseaux/story-2-parcours.png" alt="Story : du repérage à la revente" loading="lazy"><figcaption>Story 2 · parcours et essai gratuit</figcaption></figure>
+  </div>
+</div></section>
+
+<section><div class="w">
+  <p class="sur">7 · Fichiers</p><h2>Où sont les pièces</h2>
   <div class="table-wrap"><table class="fichiers">
     <tr><td>logos/</td><td>SVG vectorisés : signature horizontale et verticale, monogramme, chacun en « clair » et « transparent »</td></tr>
+    <tr><td>reseaux/</td><td>PNG des réseaux sociaux : 6 carrés, carrousel de 8 diapos, lancement, 2 stories</td></tr>
     <tr><td>supports/</td><td>Aperçus PNG : avatar, bannière, visuel CRM</td></tr>
-    <tr><td>sources/</td><td>Scripts générateurs : <code>gen_icones.py</code> (icônes d'appli), <code>gen_charte.py</code> (logos et pages des supports, rendues avec Chrome sans interface)</td></tr>
+    <tr><td>sources/</td><td>Scripts générateurs : <code>gen_icones.py</code> (icônes d'appli), <code>gen_charte.py</code> (logos et pages des supports, rendues avec Chrome sans interface), <code>gen_reseaux.py</code> + <code>rendu_reseaux.js</code> (pages des réseaux sociaux, rendues avec Playwright)</td></tr>
     <tr><td>captures/</td><td>Écrans du CRM en mode démonstration : tableau de bord (ordinateur), page Visite (téléphone)</td></tr>
   </table></div>
 </div></section>
