@@ -186,7 +186,7 @@
       <div class="en-tete-page"><div><h1>Tableau de bord</h1><p>Au ${dateFr(t)}</p></div>
         <div class="actions"><a class="bouton bouton-vert" href="visite.html">Visite</a><button class="bouton bouton-principal" id="nouveauBien">+ Nouveau projet</button></div></div>
       <div class="section-titre"><h2>Prospection</h2></div>
-      <div class="indicateurs">
+      <div class="indicateurs alternes">
         ${indic('Annonces à examiner', annonces.length, { etat: annonces.length ? 'vert' : '', detail: annonces.length ? 'passent les trois étapes du tri' : 'aucune pour l\'instant', lien: '#/annonces/examiner' })}
         ${indic('Relances du jour', duJour.length, { detail: retard.length ? retard.length + ' en retard' : 'aucune en retard', etat: retard.length ? 'rouge' : '', lien: '#/relances' })}
         ${indic('Offres en cours', offres.length, { detail: offres.length ? eur(offres.reduce((s, b) => s + montantOffre(b), 0)) + ' offerts' : 'aucune', lien: '#/biens' })}
@@ -196,7 +196,7 @@
         <div class="carte"><h2>À faire</h2>${listeRelances(retard.concat(duJour), true) || '<div class="vide">Rien d\'échu.</div>'}</div>
       </div>
       <div class="section-titre"><h2>Projets en cours</h2></div>
-      <div class="indicateurs">
+      <div class="indicateurs alternes">
         ${indic('Projets actifs', actifs.length, { detail: parEtape.vendu.length + ' vendu(s), ' + parEtape.ecarte.length + ' écarté(s)', lien: '#/biens' })}
         ${indic('Projets en retard', enRetard.length, { detail: enRetard.length ? enRetard.map(x => esc(titreBien(x[0]))).join(', ') : 'aucun', etat: enRetard.length ? 'rouge' : '' })}
         ${indic('Chantiers en dépassement', depass.length, { detail: depass.length ? depass.map(b => esc(titreBien(b))).join(', ') : 'aucun', etat: depass.length ? 'rouge' : '' })}
@@ -209,7 +209,7 @@
         <div class="carte"><h2>Prochaines actions</h2>${prochainesActions(actifs)}</div>
       </div>
       <div class="section-titre"><h2>Capital</h2></div>
-      <div class="indicateurs">
+      <div class="indicateurs alternes">
         ${indic('Enveloppe', eur(R.enveloppe), { detail: 'modifiable dans les Réglages', lien: '#/reglages' })}
         ${indic('Capital engagé', eur(engage), { detail: engages.length + ' projet(s), budget', etat: engage > R.enveloppe ? 'rouge' : '' })}
         ${indic('Capital disponible', eur(dispo), { detail: pc(R.enveloppe ? dispo / R.enveloppe : 0, 0) + ' de l\'enveloppe', etat: dispo < 0 ? 'rouge' : dispo < R.enveloppe * .2 ? 'orange' : 'vert', c: dispo < 0 ? 'rouge' : '' })}

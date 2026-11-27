@@ -680,3 +680,17 @@ a.prochaine-etape span { color: var(--c); font-weight: 700; font-size: .9rem; }
 .simulation .grille-champs.alignee { grid-template-columns: 1fr 1fr; }
 .choix-type { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 480px) { .choix-type { grid-template-columns: 1fr 1fr; } }
+
+/* Tableau de bord : indicateurs en alternance ivoire / vert clair pour mieux les distinguer.
+   Le fond alterne toujours ; les alertes (rouge, orange) gardent leur bordure et leur filet. */
+.indicateurs.alternes > .indicateur:nth-child(odd) { box-shadow: inset 3px 0 0 #c9ab74; }
+.indicateurs.alternes > .indicateur:nth-child(even) { background: #e2ebe3; border-color: #b9cfbe; box-shadow: inset 3px 0 0 #2f6b4c; }
+.indicateurs.alternes > .indicateur:nth-child(even) .indicateur-titre { color: #0f4a30; }
+.indicateurs.alternes > .indicateur:nth-child(even) .indicateur-detail { color: #2c4a3a; }
+.indicateurs.alternes > a.indicateur:nth-child(even):hover { background: #d6e3d8; }
+[data-theme="sombre"] .indicateurs.alternes > .indicateur:nth-child(even) { background: #17342a; border-color: #2f6b4c; box-shadow: inset 3px 0 0 #8cc78a; }
+[data-theme="sombre"] .indicateurs.alternes > .indicateur:nth-child(even) .indicateur-titre { color: #cfe5d2; }
+[data-theme="sombre"] .indicateurs.alternes > .indicateur:nth-child(even) .indicateur-detail { color: #a3c2a8; }
+[data-theme="sombre"] .indicateurs.alternes > a.indicateur:nth-child(even):hover { background: #1d3f32; }
+.indicateurs.alternes > .indicateur.indicateur-rouge { border-color: var(--rouge); box-shadow: inset 3px 0 0 var(--rouge); }
+.indicateurs.alternes > .indicateur.indicateur-orange { border-color: var(--orange); box-shadow: inset 3px 0 0 var(--orange); }
