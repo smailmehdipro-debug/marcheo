@@ -41,6 +41,17 @@
     signaux: ['succession', 'urgent', 'mutation', 'divorce', 'à rénover', 'travaux', 'rénovation', 'plateau', 'baisse de prix', 'investisseur', 'marchand de biens', 'à saisir', 'libre'],
     secteurs: []            // [{cp, commune, pm2, pm2Terrain, prixBox}]
   };
+  /* Annonces de produits locatifs (vendu loué, LMNP, résidence gérée…) : toujours écartées, quels que soient les Réglages.
+     Un marchand de biens revend libre : un bien loué ou vendu comme placement ne se revend pas au prix du secteur. */
+  const LOCATIF = [
+    [/investissement (?:locatif|lmnp|lmp|pinel|meuble)|projet locatif|placement locatif|produit locatif|ideal (?:pour )?(?:un )?(?:investissement|placement) locatif/, 'investissement locatif'],
+    [/\blmnp\b|\blmp\b|loueur meuble|statut (?:de )?(?:loueur|lmnp)|amortissement lmnp/, 'LMNP'],
+    [/rendement locatif|rentabilite locative|revenus? locatifs?|loyer (?:annuel|mensuel|actuel|percu)|loyers? (?:garantis?|percus?)/, 'rendement locatif'],
+    [/vendue? (?:loue|louee)|actuellement (?:loue|louee)|deja (?:loue|louee)|locataire(?:s)? en place|bail en cours|vendue? occupee?|occupe par (?:un|une|des) locataire/, 'vendu loué'],
+    [/residence (?:etudiante|de tourisme|services?|seniors?|geree|hoteliere|d'affaires|affaires)|bail commercial (?:avec|aupres d')? ?(?:un |l')?(?:gestionnaire|exploitant)|censi[ -]?bouvard|\bpinel\b/, 'résidence gérée'],
+    [/(?:reserve|destine|ideal|uniquement|exclusivement) (?:aux |a un |pour )?investisseurs? (?:uniquement|seulement)|investisseurs? (?:uniquement|seulement)/, 'pour investisseur uniquement']
+  ];
+  const motifsLocatif = t => { const x = norm(t).replace(/[’]/g, "'"); return LOCATIF.filter(r => r[0].test(x)).map(r => r[1]); };
   const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
 
   const TYPES_HORS = { immeuble: 'Immeuble', terrain: 'Terrain' };
@@ -131,6 +142,8 @@
     if (/[FG]/.test(a.dpe || '')) signaux.push('DPE ' + a.dpe);
     const base = { type, surface, prix, pm2, pm2Haut: haut, coefRevente: coef, secteur: sec, signaux, exclus };
     if (exclus.length) motifs.push('exclu : ' + exclus.join(', '));
+    const locatif = motifsLocatif(texte);
+    if (locatif.length) motifs.push('produit locatif : ' + locatif.join(', '));
     const zoneOk = dansZone(a, C.zone);
     if (zoneOk === false) motifs.push('hors zone : ' + ([a.cp, a.ville].filter(Boolean).join(' ')));
     if (zoneOk === null) manque.push('code postal');
@@ -177,6 +190,6 @@
       tresoAffiche: r.treso, tresoAuMax: qMax ? qMax.treso : null, margeBrute: brute(r), margeBruteEur: r.vente - r.C, criteres: C });
   }
 
-  const api = { DVF, CRITERES_DEF, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, piecesDepuisTexte, lireTexte, evaluer, secteur };
+  const api = { DVF, CRITERES_DEF, motifsLocatif, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, piecesDepuisTexte, lireTexte, evaluer, secteur };
   if (typeof module === 'object' && module.exports) module.exports = api; else global.MarcheoAnnonces = api;
 })(typeof window !== 'undefined' ? window : globalThis);

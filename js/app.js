@@ -27,6 +27,9 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const eur = n => (isFinite(n) ? Math.round(n) : 0).toLocaleString('fr-FR') + ' €';
+  /* Prix au m², affiché sous chaque prix */
+  const prixM2 = (prix, surf) => prix && surf > 0 ? `<span class="sous-ligne prix-m2">${eur(prix / surf)} /m²</span>` : '';
+  const surfBien = b => { const S = b.sim || {}; return S.type === 'box' ? 0 : +S.surf || 0; };
   const pc = (n, d = 1) => (isFinite(n) ? n * 100 : 0).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' %';
   const nb = v => { const x = parseFloat(String(v).replace(/\s/g, '').replace(',', '.')); return isFinite(x) ? x : 0; };
   const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -65,7 +68,7 @@
     (actions || []).forEach(a => { const b = document.createElement('button'); b.className = 'bouton ' + (a.classe || ''); b.textContent = a.l; b.onclick = () => { if (a.f && a.f(fond) === false) return; fermer(); }; $('.modale-actions', fond).appendChild(b); });
     fond.addEventListener('click', e => { if (e.target === fond || e.target.closest('[data-fermer]')) fermer(); });
     document.body.appendChild(fond); if (surOuverture) surOuverture(fond);
-    const premier = $('input, select, textarea', fond); if (premier) premier.focus();
+    const premier = $('input:not([data-sans-focus]), select, textarea:not([data-sans-focus])', fond); if (premier) premier.focus();
     return fond;
   }
   const confirmer = (texte, f) => modale('Confirmation', `<p>${esc(texte)}</p>`, [{ l: 'Annuler' }, { l: 'Confirmer', classe: 'bouton-principal', f }]);
@@ -88,6 +91,8 @@
   const cacheAnalyse = new Map();
   function analyse(b) {
     appliquerReperes();
+    /* Revente : toujours le % réglé (80 % par défaut) du haut de fourchette DVF du bien, tant qu'elle n'a pas été saisie à la main */
+    if (alignerRevente(b)) { const cur = D.obtenir('biens', b.id); if (cur && cur !== b) cur.sim = b.sim; sauverPlusTard('biens', cur || b, 800); }
     const R = D.obtenir('reglages', 'reglages'), k = b.id + '|' + b._maj + '|' + (R ? R._maj : '');
     if (cacheAnalyse.has(k)) return cacheAnalyse.get(k);
     const S = simEffective(b), A = M.analyse(S, b.comps || []);
@@ -187,7 +192,7 @@
         ${indic('Offres en cours', offres.length, { detail: offres.length ? eur(offres.reduce((s, b) => s + montantOffre(b), 0)) + ' offerts' : 'aucune', lien: '#/biens' })}
       </div>
       <div class="deux-colonnes">
-        <div class="carte"><h2>Annonces à examiner</h2>${annonces.length ? `<div class="compte">${annonces.slice(0, 6).map(a => { const e = evalAnnonce(a); return ligneCompte(`<a href="#/annonces/a/${a.id}">${esc(a.titre || 'Annonce')}</a><small class="discret">${esc([a.ville, e.surface ? e.surface + ' m²' : '', a.source].filter(Boolean).join(' · '))}</small>`, eur(e.prix) + `<small class="sous-ligne vert">marge brute ${pc(e.margeBrute, 0)}</small>`); }).join('')}</div>${annonces.length > 6 ? `<p class="aide"><a href="#/annonces/examiner">Voir les ${annonces.length} annonces</a></p>` : ''}` : '<div class="vide">Aucune annonce à examiner.</div>'}</div>
+        <div class="carte"><h2>Annonces à examiner</h2>${annonces.length ? `<div class="compte">${annonces.slice(0, 6).map(a => { const e = evalAnnonce(a); return ligneCompte(`<a href="#/annonces/a/${a.id}">${esc(a.titre || 'Annonce')}</a><small class="discret">${esc([a.ville, e.surface ? e.surface + ' m²' : '', a.source].filter(Boolean).join(' · '))}</small>`, eur(e.prix) + prixM2(e.prix, e.surface) + `<small class="sous-ligne vert">marge brute ${pc(e.margeBrute, 0)}</small>`); }).join('')}</div>${annonces.length > 6 ? `<p class="aide"><a href="#/annonces/examiner">Voir les ${annonces.length} annonces</a></p>` : ''}` : '<div class="vide">Aucune annonce à examiner.</div>'}</div>
         <div class="carte"><h2>À faire</h2>${listeRelances(retard.concat(duJour), true) || '<div class="vide">Rien d\'échu.</div>'}</div>
       </div>
       <div class="section-titre"><h2>Projets en cours</h2></div>
@@ -265,7 +270,7 @@
     const l = biensFiltres(), t = aujourdhui();
     if (filtres.vue === 'colonnes') {
       const etapes = ETAPES.filter(e => filtres.etape ? e[0] === filtres.etape : (e[0] !== 'ecarte' || filtres.ecartes));
-      z.innerHTML = `<div class="colonnes">${etapes.map(e => { const bs = l.filter(b => (b.etape || 'repere') === e[0]); return `<div class="colonne-etape" data-etape="${e[0]}"><div class="colonne-tete"><span>${e[1]}</span><span>${bs.length}</span></div>${bs.map(b => { const A = analyse(b); return `<div class="fiche-mini" draggable="true" data-id="${b.id}"><strong>${esc(titreBien(b))}</strong><div class="ligne"><span>${esc(typeBien(b))} · ${surfaceBien(b)}</span><b>${eur(b.prixAffiche || A.r.achat)}</b></div><div class="ligne"><span>${b.prochaine && b.prochaine.date ? `<span class="${b.prochaine.date < t ? 'rouge' : ''}">${dateFr(b.prochaine.date)}</span>` : ''}</span><b class="${ETATS[A.etat][0]}">${pc(A.r.m)}</b></div></div>`; }).join('')}</div>`; }).join('')}</div>`;
+      z.innerHTML = `<div class="colonnes">${etapes.map(e => { const bs = l.filter(b => (b.etape || 'repere') === e[0]); return `<div class="colonne-etape" data-etape="${e[0]}"><div class="colonne-tete"><span>${e[1]}</span><span>${bs.length}</span></div>${bs.map(b => { const A = analyse(b); return `<div class="fiche-mini" draggable="true" data-id="${b.id}"><strong>${esc(titreBien(b))}</strong><div class="ligne"><span>${esc(typeBien(b))} · ${surfaceBien(b)}</span><b>${eur(b.prixAffiche || A.r.achat)}${prixM2(b.prixAffiche || A.r.achat, surfBien(b))}</b></div><div class="ligne"><span>${b.prochaine && b.prochaine.date ? `<span class="${b.prochaine.date < t ? 'rouge' : ''}">${dateFr(b.prochaine.date)}</span>` : ''}</span><b class="${ETATS[A.etat][0]}">${pc(A.r.m)}</b></div></div>`; }).join('')}</div>`; }).join('')}</div>`;
       $$('.fiche-mini', z).forEach(f => {
         f.onclick = () => aller('#/bien/' + f.dataset.id);
         f.ondragstart = e => e.dataTransfer.setData('text/plain', f.dataset.id);
@@ -283,7 +288,7 @@
     const th = (k, lib, n) => `<th class="triable${n ? ' nombre' : ''}" data-tri="${k}">${lib}${filtres.tri === k ? (filtres.sens > 0 ? ' ▲' : ' ▼') : ''}</th>`;
     z.innerHTML = `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr>${th('adresse', 'Bien')}${th('etape', 'Étape')}${th('surface', 'Surface', 1)}${th('prix', 'Prix affiché', 1)}${th('source', 'Source')}${th('marge', 'Marge nette', 1)}${th('action', 'Prochaine action')}</tr></thead><tbody>${l.map(b => {
       const A = analyse(b), p = b.prochaine || {};
-      return `<tr class="cliquable" data-id="${b.id}"><td data-titre="Bien"><strong>${esc(titreBien(b))}</strong><span class="sous-ligne">${esc(typeBien(b))}${b.lien ? ` · <a href="${esc(b.lien)}" target="_blank" rel="noopener" data-stop>annonce</a>` : ''}</span></td><td data-titre="Étape"><span class="etiquette">${ETAPE[b.etape || 'repere']}</span>${b.etape === 'ecarte' && b.motif ? `<span class="sous-ligne">${esc(b.motif)}</span>` : ''}</td><td class="nombre" data-titre="Surface">${surfaceBien(b)}</td><td class="nombre" data-titre="Prix affiché">${b.prixAffiche ? eur(b.prixAffiche) : '—'}</td><td data-titre="Source">${esc(b.source || '')}</td><td class="nombre" data-titre="Marge nette">${voyant(ETATS[A.etat][0], pc(A.r.m))}<span class="sous-ligne">${eur(A.r.N)}</span></td><td data-titre="Prochaine action">${p.action ? `${esc(p.action)}<span class="sous-ligne ${p.date && p.date < t ? 'rouge' : ''}">${dateFr(p.date)}</span>` : ''}</td></tr>`;
+      return `<tr class="cliquable" data-id="${b.id}"><td data-titre="Bien"><strong>${esc(titreBien(b))}</strong><span class="sous-ligne">${esc(typeBien(b))}${b.lien ? ` · <a href="${esc(b.lien)}" target="_blank" rel="noopener" data-stop>annonce</a>` : ''}</span></td><td data-titre="Étape"><span class="etiquette">${ETAPE[b.etape || 'repere']}</span>${b.etape === 'ecarte' && b.motif ? `<span class="sous-ligne">${esc(b.motif)}</span>` : ''}</td><td class="nombre" data-titre="Surface">${surfaceBien(b)}</td><td class="nombre" data-titre="Prix affiché">${b.prixAffiche ? eur(b.prixAffiche) + prixM2(b.prixAffiche, surfBien(b)) : '—'}</td><td data-titre="Source">${esc(b.source || '')}</td><td class="nombre" data-titre="Marge nette">${voyant(ETATS[A.etat][0], pc(A.r.m))}<span class="sous-ligne">${eur(A.r.N)}</span></td><td data-titre="Prochaine action">${p.action ? `${esc(p.action)}<span class="sous-ligne ${p.date && p.date < t ? 'rouge' : ''}">${dateFr(p.date)}</span>` : ''}</td></tr>`;
     }).join('')}</tbody></table></div>`;
     $$('th[data-tri]', z).forEach(h => h.onclick = () => { if (filtres.tri === h.dataset.tri) filtres.sens *= -1; else { filtres.tri = h.dataset.tri; filtres.sens = 1; } zoneBiens(); });
     $$('tr[data-id]', z).forEach(tr => tr.onclick = e => { if (!e.target.closest('[data-stop]')) aller('#/bien/' + tr.dataset.id); });
@@ -373,7 +378,7 @@
       : S.trvForfait != null ? (S.trvForfaitOrigine === 'visite' ? 'estimés à la visite' : 'estimés d\'après l\'annonce') + ' : ' + M.NIVEAUX[S.niveau].toLowerCase() + ', ' + eur(S.surf ? r.T / S.surf : 0) + ' /m²'
       : 'poste par poste (repères), ' + M.NIVEAUX[S.niveau].toLowerCase();
     const q = A.quartier, d = b.dvf && b.dvf.secteur;
-    const vente = (S.type === 'box' ? 'prix saisi' : S.surf + ' m² × ' + eur(S.surf ? r.vente / S.surf : 0) + ' /m²') + (d && d.mediane ? ' · secteur DVF : ' + eur(d.mediane) + ' médian, ' + eur(d.p75) + ' haut de fourchette' : q.vise && Math.abs(q.ecart) > .02 ? ' · prix du quartier : ' + eur(q.vise) : '');
+    const vente = (S.type === 'box' ? 'prix saisi' : S.surf + ' m² × ' + eur(S.surf ? r.vente / S.surf : 0) + ' /m²') + (d && d.mediane ? ' · secteur DVF : ' + eur(d.mediane) + ' médian, ' + eur(d.p75) + ' haut de fourchette' + (b.reventeManuelle ? ' · revente saisie à la main' : ' · revente à ' + coefRevente() + ' % du haut de fourchette') : q.vise && Math.abs(q.ecart) > .02 ? ' · prix du quartier : ' + eur(q.vise) : '');
     return { achat, travaux, vente, notaire: 'notaire ≈ ' + pc(r.achat ? r.not / r.achat : 0, 1) + ' du prix' + (S.agA ? ' + agence ' + eur(S.agA) : ''), annexes: 'taxe foncière, charges, assurance, diagnostics… sur ' + S.duree + ' mois', env: R.enveloppe };
   }
   function ongletSynthese(z, b) {
@@ -530,7 +535,7 @@
       majEntete(b);
     };
     /* événements */
-    champsNum.forEach(el => el.addEventListener('input', () => { S[el.dataset.k] = nb(el.value); if (el.dataset.k === 'pieces') S.pieces = Math.max(1, Math.round(S.pieces)); maj(); }));
+    champsNum.forEach(el => el.addEventListener('input', () => { S[el.dataset.k] = nb(el.value); if (['pm2', 'vente'].includes(el.dataset.k)) b.reventeManuelle = true; if (el.dataset.k === 'pieces') S.pieces = Math.max(1, Math.round(S.pieces)); maj(); }));
     $('#tvaT').onchange = e => { S.tvaT = parseFloat(e.target.value); maj(); };
     $('#tvaMode').onchange = e => { S.tvaMode = e.target.value; maj(); };
     $('#segType').onclick = e => { const x = e.target.closest('button'); if (!x || x.dataset.v === S.type) return; const adr = S.adresse, keep = {}; ['taux', 'obj', 'part', 'pfu', 'dmax', 'tvaT', 'tvaMode', 'abf', 'preempt'].forEach(k => keep[k] = S[k]); M.setType(S, x.dataset.v); Object.assign(S, keep); S.adresse = adr; $$('button', $('#segType')).forEach(y => y.setAttribute('aria-pressed', y === x)); maj(); };
@@ -748,6 +753,13 @@
   /* ---------- Comparables ---------- */
   const coefRevente = () => Math.round(+((reglages().criteres || {}).reventeCoef) || MA.CRITERES_DEF.reventeCoef);
   const pm2Revente = sec => Math.round(sec.p75 * coefRevente() / 100 / 10) * 10;
+  function alignerRevente(b) {
+    const S = b.sim, s = b.dvf && b.dvf.secteur;
+    if (!S || b.reventeManuelle || !s || !s.p75 || ['box', 'terrain'].includes(S.type)) return false;
+    const p = pm2Revente(s), v = Math.round(p * S.surf);
+    if (Math.round(S.pm2) === p && Math.round(S.vente) === v) return false;
+    S.pm2 = p; S.vente = v; cacheAnalyse.clear(); return true;
+  }
   function appliquerRevente(b) { const S = b.sim, s = b.dvf && b.dvf.secteur; if (!s || !s.p75 || S.type === 'box') return false; S.pm2 = pm2Revente(s); if (S.type !== 'terrain') S.vente = Math.round(S.pm2 * S.surf); cacheAnalyse.clear(); return true; }
   function blocDVF(b) {
     const d = b.dvf; if (!d) return '';
@@ -776,14 +788,14 @@
           ${C.moy && S.type !== 'box' && Math.round(C.moy) !== Math.round(S.pm2) ? `<button class="bouton bouton-principal" id="cQuartier">Prix du quartier = ${eur(C.moy)} /m²</button>` : ''}</div>
         <p class="aide">Format des lignes : adresse ; surface ; prix ; date (séparateur point-virgule ou tabulation). La recherche DVF lit les ventes publiques (Etalab, Base Adresse Nationale) : ventes d'un seul logement du même type, surface proche, au plus près de l'adresse, les plus récentes d'abord.</p>`;
       $('#cDVF').onclick = async e => { e.target.disabled = true; e.target.textContent = 'Recherche DVF…'; await chercherDVF(b, false); dessiner(); };
-      const pS = $('#cSecteur'); if (pS) pS.onclick = () => { appliquerRevente(b); sauverMaintenant('biens', b); notifier('Revente : ' + eur(b.sim.pm2) + ' /m², soit ' + eur(b.sim.vente) + '.', 'succes'); dessiner(); };
+      const pS = $('#cSecteur'); if (pS) pS.onclick = () => { b.reventeManuelle = false; appliquerRevente(b); sauverMaintenant('biens', b); notifier('Revente : ' + eur(b.sim.pm2) + ' /m², soit ' + eur(b.sim.vente) + '.', 'succes'); dessiner(); };
       $('#cAjout').onclick = () => { b.comps.push({ adresse: '', surface: 0, prix: 0, date: '' }); sauverMaintenant('biens', b); dessiner(); };
       $$('[data-suppr]', z).forEach(x => x.onclick = () => { b.comps.splice(+x.dataset.suppr, 1); sauverMaintenant('biens', b); dessiner(); });
       $$('tr[data-i] [data-f]', z).forEach(el => el.addEventListener('change', () => { const x = b.comps[+el.closest('tr').dataset.i], f = el.dataset.f; x[f] = ['surface', 'prix'].includes(f) ? nb(el.value) : el.value; sauverMaintenant('biens', b); dessiner(); }));
       const importer = txt => { const l = M.parseComps(txt); l.forEach(x => b.comps.push({ adresse: x.adresse, surface: x.surface, prix: x.prix, date: x.date })); sauverMaintenant('biens', b); notifier(l.length + ' vente(s) importée(s).', l.length ? 'succes' : 'erreur'); dessiner(); };
       $('#cColler').onclick = () => modale('Coller des ventes', '<div class="champ"><label for="cTxt">Une vente par ligne</label><textarea id="cTxt" rows="8" placeholder="12 rue Exemple;42;150000;2026-03"></textarea></div>', [{ l: 'Annuler' }, { l: 'Importer', classe: 'bouton-principal', f: f => importer($('#cTxt', f).value) }]);
       $('#cFichier').onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => importer(String(rd.result || '')); rd.readAsText(f); };
-      const q = $('#cQuartier'); if (q) q.onclick = () => { b.sim.pm2 = Math.round(C.moy); sauverMaintenant('biens', b); notifier('Prix du quartier mis à jour.', 'succes'); dessiner(); };
+      const q = $('#cQuartier'); if (q) q.onclick = () => { b.reventeManuelle = true; b.sim.pm2 = Math.round(C.moy); sauverMaintenant('biens', b); notifier('Prix du quartier mis à jour.', 'succes'); dessiner(); };
     };
     dessiner();
   }
@@ -1637,8 +1649,8 @@
       $('#anZone').innerHTML = !l.length ? `<div class="vide">${fa.onglet === 'examiner' ? 'Aucune annonce ne mérite l\'attention pour l\'instant.' : 'Aucune annonce.'}</div>` :
         `<div class="tableau-conteneur"><table class="tableau adaptable tableau-annonces"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente</th><th class="nombre">Travaux</th><th class="nombre">À sortir</th><th class="nombre">Marge brute</th><th class="nombre">Prix max.</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
           const e = E.get(a.id), st = statutAnnonce(a, e), ex = aExaminer(a);
-          return `<tr class="cliquable${ex ? ' a-examiner' : ''}${a.id === fa.surligne ? ' surligne' : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span></td>
-            <td class="nombre" data-titre="Prix affiché">${eur(e.prix)}${e.surface ? `<span class="sous-ligne">${eur(e.prix / e.surface)} /m²</span>` : ''}${a.prixPrecedent ? `<span class="sous-ligne vert">avant ${eur(a.prixPrecedent)}</span>` : ''}</td>
+          return `<tr class="cliquable${ex ? ' a-examiner' : ''}${a.id === fa.surligne ? ' surligne' : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span>${a.notes ? `<span class="sous-ligne remarque-annonce">Remarques : ${esc(a.notes.length > 90 ? a.notes.slice(0, 90) + '…' : a.notes)}</span>` : ''}</td>
+            <td class="nombre" data-titre="Prix affiché">${eur(e.prix)}${prixM2(e.prix, e.surface)}${a.prixPrecedent ? `<span class="sous-ligne vert">avant ${eur(a.prixPrecedent)}</span>` : ''}</td>
             <td class="nombre" data-titre="Revente">${e.vente ? eur(e.vente) : '—'}</td>
             <td class="nombre" data-titre="Travaux">${e.travaux ? eur(e.travaux.total) + `<span class="sous-ligne">${M.NIVEAUX[e.travaux.niveau].toLowerCase()}</span>` : '—'}</td>
             <td class="nombre" data-titre="À sortir">${e.tresoAffiche ? `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>` : '—'}</td>
@@ -1672,7 +1684,7 @@
       <div class="compte">
         ${ligne('Source', esc(a.source || '—') + (a.agence ? ' · ' + esc(a.agence) : ''), 'reçue le ' + dateFr((a.recueLe || '').slice(0, 10)) + (a.alertes > 1 ? ', ' + a.alertes + ' alertes' : ''))}
         ${ligne('Bien', esc([M.TYPES[e.type] ? M.TYPES[e.type].n : e.type, e.surface ? e.surface + ' m²' : 'surface inconnue', e.pieces ? e.pieces + ' pièce' + (e.pieces > 1 ? 's' : '') + ' à vivre' : ''].filter(Boolean).join(' · ')), esc([a.cp, a.ville].filter(Boolean).join(' ')))}
-        ${ligne('Prix affiché', eur(e.prix), (a.historiquePrix || []).length > 1 ? a.historiquePrix.map(h => dateFr(h.date.slice(0, 10)) + ' : ' + eur(h.prix)).join(' · ') : '')}
+        ${ligne('Prix affiché', eur(e.prix) + prixM2(e.prix, e.surface), (a.historiquePrix || []).length > 1 ? a.historiquePrix.map(h => dateFr(h.date.slice(0, 10)) + ' : ' + eur(h.prix)).join(' · ') : '')}
         ${e.r ? ligne('Revente estimée', eur(e.vente), eur(e.pm2) + ' /m² × ' + e.surface + ' m² · ' + (e.secteur && e.secteur.origine === 'DVF' ? (e.coefRevente < 1 ? Math.round(e.coefRevente * 100) + ' % du haut de fourchette DVF (' + eur(e.pm2Haut) + ' /m²), ' : 'haut de fourchette DVF, ') + (e.secteur.zone ? 'ventes ' + e.secteur.zone + ', ' + e.secteur.n + ' ventes' : (e.type === 'maison' ? e.secteur.nMaisons + ' ventes de maisons' : e.secteur.n + ' ventes d\'appartements') + ' du code postal') : 'prix saisi'))
           + ligne('Travaux estimés', eur(e.r.T), M.NIVEAUX[tv.niveau].toLowerCase() + ' · ' + eur(tv.m2) + ' /m² × ' + e.surface + ' m²' + (tv.piece && tv.pieces ? ' + ' + eur(tv.piece) + ' × ' + tv.pieces + ' pièce' + (tv.pieces > 1 ? 's' : '') : '') + (tv.ht <= tv.min ? ' (minimum ' + eur(tv.min) + ')' : '') + ', aléas ' + tv.aleas + ' % compris')
           + ligne('Argent total à sortir', `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>`, 'au prix affiché · plafond ' + eur(e.criteres.tresoMax))
@@ -1682,12 +1694,16 @@
         ${a.chargesAnnuelles ? ligne('Charges de copropriété', eur(a.chargesAnnuelles) + ' par an', 'annoncées par le site') : ''}
         ${e.signaux.length ? ligne('Signaux', `<span class="vert">${esc(e.signaux.join(', '))}</span>`) : ''}
       </div>
+      <div class="champ ann-remarques"><label for="annNotes">Mes remarques</label><textarea id="annNotes" data-sans-focus rows="3" placeholder="Ex. : pas de douche ni WC, juste un lavabo. Vérifier l'arrivée d'eau et l'évacuation pour créer une salle d'eau (sanibroyeur possible ?), accord de la copropriété…">${esc(a.notes || '')}</textarea><small class="aide">Enregistrées automatiquement. L'annonce reste dans sa liste ; « Retenir » reporte ces remarques dans le journal du bien.</small></div>
       <div id="annDVF" class="ann-dvf">${blocDVFAnnonce(a, e)}</div>
       ${a.texte ? `<details style="margin-top:.6rem"><summary class="aide">Texte de l'alerte</summary><p class="aide">${esc(a.texte)}</p></details>` : ''}`,
       [{ l: 'Écarter', classe: 'bouton-danger', f: () => { a.statutTri = 'ecartee'; D.enregistrer('annonces', a); afficher(); } },
        { l: 'Corriger', f: () => { setTimeout(() => corrigerAnnonce(D.obtenir('annonces', a.id)), 0); } },
        { l: 'Retenir et prendre rendez-vous', classe: 'bouton-principal', f: () => retenirAnnonce(D.obtenir('annonces', a.id)) }]);
     lierDVFAnnonce(fond, a, e);
+    const zn = $('#annNotes', fond); let tn;
+    if (zn) { const sauverNotes = () => { const x = D.obtenir('annonces', a.id) || a, v = zn.value.trim(); if ((x.notes || '') === v) return; x.notes = v; a.notes = v; D.enregistrer('annonces', x); };
+      zn.oninput = () => { clearTimeout(tn); tn = setTimeout(sauverNotes, 800); }; zn.onblur = () => { clearTimeout(tn); sauverNotes(); afficher(); }; }
     return fond;
   }
   function blocDVFAnnonce(a, e) {
@@ -1788,6 +1804,7 @@
       prochaine: { action: 'Prendre rendez-vous de visite', date: aujourdhui() } });
     D.enregistrer('relances', { date: aujourdhui(), objet: 'Prendre rendez-vous de visite', bienId: b.id, contactId: liens[0] ? liens[0].contactId : '', fait: false });
     D.enregistrer('journal', { bienId: b.id, date: (a.recueLe || aujourdhui()).slice(0, 10), type: 'note', texte: 'Annonce ' + (a.source || '') + (a.agence ? ' (' + a.agence + ')' : '') + ' reçue par alerte. Analyse : ' + (e.score != null ? 'score ' + e.score + ', ' : '') + (e.motifs.join(', ') || 'à examiner') + '.', auto: true });
+    if (a.notes) D.enregistrer('journal', { bienId: b.id, date: aujourdhui(), type: 'note', texte: "Remarques sur l'annonce : " + a.notes });
     a.statutTri = 'retenue'; a.bienId = b.id; D.enregistrer('annonces', a);
     chercherDVF(b, true);
     return b;
@@ -2151,7 +2168,7 @@
       <button class="bouton bouton-vert bouton-large" id="vNouveau">+ Nouveau bien</button>
       <div class="vacc-titre">Biens en cours</div>
       <input type="search" id="vQ" placeholder="Rechercher : adresse, ville…" value="${esc(fv.q)}" aria-label="Rechercher">
-      <div class="vacc-liste">${l.map(b => { const B = b.visiteBrouillon, V = b.visite; return `<button class="vacc-bien" data-id="${b.id}"><span><strong>${esc(titreBien(b))}</strong><small>${esc([typeBien(b), surfaceBien(b), b.prixAffiche ? eur(b.prixAffiche) : ''].filter(Boolean).join(' · '))}</small></span><span class="vacc-etat">${B ? '<b class="orange">Visite en cours</b>' : V ? '<b class="vert">Visité le ' + dateFr(V.fin.slice(0, 10)) + '</b>' : esc(ETAPE[b.etape || 'repere'])}</span></button>`; }).join('') || '<div class="vide">Aucun bien en cours. « + Nouveau bien » pour commencer.</div>'}</div>`;
+      <div class="vacc-liste">${l.map(b => { const B = b.visiteBrouillon, V = b.visite; return `<button class="vacc-bien" data-id="${b.id}"><span><strong>${esc(titreBien(b))}</strong><small>${esc([typeBien(b), surfaceBien(b), b.prixAffiche ? eur(b.prixAffiche) : '', b.prixAffiche && surfBien(b) ? eur(b.prixAffiche / surfBien(b)) + ' /m²' : ''].filter(Boolean).join(' · '))}</small></span><span class="vacc-etat">${B ? '<b class="orange">Visite en cours</b>' : V ? '<b class="vert">Visité le ' + dateFr(V.fin.slice(0, 10)) + '</b>' : esc(ETAPE[b.etape || 'repere'])}</span></button>`; }).join('') || '<div class="vide">Aucun bien en cours. « + Nouveau bien » pour commencer.</div>'}</div>`;
     $('#vNouveau').onclick = () => nouveauBienVisite();
     $('#vQ').oninput = e => { fv.q = e.target.value; const pos = e.target.selectionStart; vueVisiteAccueil(); const x = $('#vQ'); x.focus(); x.setSelectionRange(pos, pos); };
     $$('[data-id]', c).forEach(x => x.onclick = () => ouvrirVisite(D.obtenir('biens', x.dataset.id), b => { fv.fin = b.id; vueVisiteAccueil(); }));
