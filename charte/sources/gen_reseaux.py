@@ -4,7 +4,8 @@ et la liste des rendus (manifeste.json), puis rendu_reseaux.js les photographie 
 Usage : python gen_reseaux.py <dossier charte>   puis   node rendu_reseaux.js <dossier charte>
 Les logos SVG de charte/logos sont insérés tels quels (seul le fond ivoire des versions « clair » est retiré
 pour qu'ils se posent sur n'importe quel ivoire). Les extraits d'écran viennent de charte/captures (mode démonstration).
-Aucun chiffre inventé : les seuls nombres visibles sont ceux des captures, signalées « mode démonstration ».
+Aucun chiffre inventé : les seuls nombres visibles sont ceux des captures, signalées « mode démonstration »
+(la référence DVF de la fiche d'annonce est réelle : code postal 95100, ventes 2024-2025, js/secteurs-dvf.js).
 """
 import os, re, sys, json
 
@@ -94,6 +95,14 @@ Z_KPI_PROSP = (BUREAU, 640, 446, 1736, 580)      # indicateurs : annonces à exa
 Z_AFAIRE = (BUREAU, 1744, 596, 2840, 966)        # panneau « À faire »
 Z_KPI_CHANTIER = (BUREAU, 1742, 1259, 2840, 1394)  # chantiers en dépassement, marge nette moyenne
 Z_TOUT = (BUREAU, 0, 0, 2880, 1800)
+# fiche d'une annonce : revente estimée à partir de la référence DVF du code postal (95100, ventes 2024-2025)
+DVF = ('bureau-annonce-dvf.png', 2880, 1800)
+Z_DVF = (DVF, 900, 585, 1980, 1172)              # prix affiché → marge brute
+Z_DVF_COURT = (DVF, 900, 690, 1980, 1172)        # revente estimée → marge brute
+# onglet Simulation du même bien, une fois retenu
+SIM = ('bureau-simulation.png', 2880, 2200)
+Z_SIM = (SIM, 1740, 930, 2840, 1850)             # indicateurs + « Où va le prix de revente »
+Z_SIM_REPART = (SIM, 1740, 1270, 2840, 1850)     # « Où va le prix de revente »
 
 
 def ecran(zone, largeur, style=''):
@@ -127,33 +136,6 @@ def liste(items, taille=27, gap=14):
     return ('<div style="display:grid;gap:%dpx">' % gap + ''.join(
         f'<div style="display:flex;gap:18px;align-items:baseline;font-size:{taille}px;line-height:1.3">'
         f'<span style="color:var(--acc);flex:none">—</span><span>{t}</span></div>' for t in items) + '</div>')
-
-
-def flux_dvf(taille=26):
-    """Code postal → référence DVF → ventes comparables : schéma sans chiffre."""
-    etapes = [('Code postal', 'du bien repéré'),
-              ('Référence DVF', 'prix au m² des ventes réelles 2024-2025'),
-              ('Ventes comparables', 'pour recouper le prix de revente')]
-    out = []
-    for i, (a, b) in enumerate(etapes):
-        out.append(f'<div class="pan" style="padding:20px 26px"><div style="font-size:{taille}px;font-weight:600">{a}</div>'
-                   f'<div style="font-size:{taille*0.78:.0f}px;opacity:.78;margin-top:4px">{b}</div></div>')
-        if i < len(etapes) - 1:
-            out.append(f'<div class="serif" style="text-align:center;font-size:{taille*1.3:.0f}px;line-height:1;color:var(--acc)">↓</div>')
-    return '<div style="display:grid;gap:10px">' + ''.join(out) + '</div>'
-
-
-def grand_livre(taille=25):
-    """Lignes de la simulation, sans montant."""
-    lignes = ['Prix d\'achat négocié', 'Frais d\'agence et de notaire', 'Travaux chiffrés et aléas',
-              'Frais annexes, TVA des travaux avancée', 'Prix de revente']
-    out = ''.join(f'<div style="display:flex;align-items:baseline;gap:12px;font-size:{taille}px;padding:9px 0">'
-                  f'<span>{l}</span><span style="flex:1;border-bottom:2px dotted var(--pan_bord);opacity:.6;transform:translateY(-6px)"></span></div>'
-                  for l in lignes)
-    out += (f'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:14px;border-top:2px solid var(--pan_bord)">'
-            f'<span class="serif" style="font-size:{taille*1.5:.0f}px;font-weight:600;color:var(--pan_acc)">Marge brute et nette</span>'
-            f'<span class="caps" style="font-size:{taille*0.62:.0f}px;color:var(--pan_acc)">Dossier PDF</span></div>')
-    return f'<div class="pan" style="padding:22px 30px 24px">{out}</div>'
 
 
 # =====================================================================
@@ -197,11 +179,11 @@ carre_visite()
 
 carre(3, 'metal-vert', 'Prix DVF', 'Le vrai prix <i>du secteur.</i>',
       'La référence DVF par code postal, tirée des ventes réelles 2024-2025, et les ventes comparables du bien.',
-      flux_dvf(27) + '<div class="note" style="margin-top:14px">Source : base DVF, ventes 2024-2025</div>')
+      ecran(Z_DVF_COURT, 892) + '<div class="note" style="margin-top:12px">Mode démonstration : annonce fictive, référence DVF réelle du 95100 (ventes 2024-2025)</div>')
 
 carre(4, 'ivoire-or', 'Simulation', 'Chiffrer <i>avant d\'offrir.</i>',
       'Simulation complète, travaux chiffrés, comparateur de 2 à 4 biens et dossier PDF prêt à transmettre.',
-      grand_livre(25))
+      ecran(Z_SIM_REPART, 760, 'align-self:center') + note_demo('margin-top:12px;text-align:center'))
 
 carre(5, 'metal-or', 'Chantier et bilan', 'Le chantier <i>sous contrôle.</i>',
       'Chaque dépense suivie, une alerte dès qu\'un poste dépasse, et le bilan de l\'opération à la revente.',
@@ -268,11 +250,11 @@ diapo(3, 'metal-vert', '02 · Visite', 'Sur place,<br><i>rien n\'est oublié.</i
 
 diapo(4, 'ivoire-or', '03 · Prix', 'Le prix réel,<br><i>pas l\'affiché.</i>',
       'La référence DVF du code postal et les ventes comparables situent le bien face aux ventes réelles 2024-2025.',
-      flux_dvf(29))
+      ecran(Z_DVF, 892) + '<div class="note" style="margin-top:12px">Mode démonstration : annonce fictive, référence DVF réelle du 95100 (ventes 2024-2025)</div>')
 
 diapo(5, 'metal-or', '04 · Décision', 'L\'offre,<br><i>chiffres en main.</i>',
       'Simulation complète, travaux chiffrés, comparateur de 2 à 4 biens, dossier PDF pour la banque ou l\'associé.',
-      grand_livre(26))
+      ecran(Z_SIM, 640, 'align-self:center') + note_demo('margin-top:12px;text-align:center'))
 
 diapo(6, 'ivoire-vert', '05 · Chantier', 'Le chantier,<br><i>sans dérive.</i>',
       'Chaque dépense est saisie. Un poste dépasse son budget : l\'alerte remonte au tableau de bord.',
@@ -290,7 +272,7 @@ page('carrousel-8', 1080, 1350, theme,
      '<div style="position:absolute;inset:34px;padding:70px 62px 46px;display:flex;flex-direction:column;align-items:center;text-align:center">'
      f'{logo("marcheo-vertical-clair.svg", 210)}'
      '<div class="kicker caps" style="font-size:18px;margin-top:64px">Essai gratuit</div>'
-     '<h1 class="titre" style="font-size:112px;margin-top:24px">Essayez Marchéo <i>pendant [durée].</i></h1>'
+     '<h1 class="titre" style="font-size:112px;margin-top:24px">Essayez Marchéo <i>pendant 7 jours.</i></h1>'
      '<p class="phrase" style="font-size:30px;margin-top:26px;max-width:800px">Parcourez la démo en ligne, puis demandez votre accès d\'essai.</p>'
      '<div style="display:grid;gap:22px;width:100%;margin-top:64px;text-align:left">'
      '<div class="pan" style="padding:24px 30px"><div class="caps" style="font-size:15px;color:var(--pan_acc)">Démo en ligne</div>'
@@ -312,7 +294,7 @@ page('lancement-1200x628', 1200, 628, theme,
      f'{signature(theme, 74)}'
      '<h1 class="titre" style="font-size:62px;margin-top:40px">Du repérage à la revente,<br><i>un seul outil.</i></h1>'
      '<p class="phrase" style="font-size:20px;margin-top:20px;max-width:480px">Annonces triées à la marge, visite sur téléphone, prix DVF, simulation, chantier et bilan.</p>'
-     '<div class="caps" style="font-size:14px;color:var(--acc);margin-top:28px;display:inline-block;border:1.5px solid var(--acc);border-radius:6px;padding:12px 18px">Essai gratuit · démo en ligne</div>'
+     '<div class="caps" style="font-size:14px;color:var(--acc);margin-top:28px;display:inline-block;border:1.5px solid var(--acc);border-radius:6px;padding:12px 18px">Essai gratuit 7 jours · démo en ligne</div>'
      '</div>'
      '<div style="position:absolute;left:660px;top:96px;width:500px;padding:10px;border-radius:16px;background:#0b0f0d;box-shadow:0 30px 70px rgba(0,0,0,.55),0 0 0 2px #2a3a31">'
      + ecran(Z_TOUT, 480, 'border-radius:7px;box-shadow:none') + '</div>'
@@ -333,7 +315,7 @@ page('story-1-visite', 1080, 1920, theme,
      '<div style="margin-top:56px">' + telephone(360) + '</div>'
      '</div>'
      '<div style="position:absolute;left:0;right:0;bottom:180px;text-align:center">'
-     '<div class="caps" style="font-size:18px;color:var(--acc)">Le CRM du marchand de biens · essai gratuit</div></div>')
+     '<div class="caps" style="font-size:18px;color:var(--acc)">Le CRM du marchand de biens · essai gratuit 7 jours</div></div>')
 
 theme = 'ivoire-vert'
 page('story-2-parcours', 1080, 1920, theme,
@@ -344,7 +326,7 @@ page('story-2-parcours', 1080, 1920, theme,
      '<h1 class="titre" style="font-size:124px;margin-top:26px">Du repérage<br><i>à la revente.</i></h1>'
      '<div style="margin-top:56px">' + parcours(38) + '</div>'
      '<div class="pan" style="margin-top:auto;padding:30px 34px">'
-     '<div class="serif" style="font-size:52px;font-weight:600;line-height:1.05">Essai gratuit, <i style="font-weight:500;color:var(--pan_acc)">[durée].</i></div>'
+     '<div class="serif" style="font-size:52px;font-weight:600;line-height:1.05">Essai gratuit, <i style="font-weight:500;color:var(--pan_acc)">7 jours.</i></div>'
      f'<div style="font-size:26px;margin-top:14px">Démo : <b style="font-weight:600">{DEMO_COURT}</b></div></div>'
      '</div>')
 
