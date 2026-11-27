@@ -1,0 +1,21 @@
+# Marchéo · serveur hébergé (Cloudflare Workers). Voir DEPLOIEMENT.md pour la mise en ligne.
+name = "marcheo-serveur"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Domaine des adresses de transfert : <adresse>@alertes.<domaine> (Email Routing en catch-all vers ce Worker)
+ALERTES_DOMAINE = "alertes.exemple.fr"
+# Adresse publique de l'application (liens de réinitialisation du mot de passe)
+APP_URL = "https://smailmehdipro-debug.github.io/marcheo/"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "marcheo"
+database_id = "A_REMPLACER_APRES_wrangler_d1_create"
+
+[[r2_buckets]]
+binding = "STOCKAGE"
+bucket_name = "marcheo-stockage"
+
+# Secret à définir hors du dépôt : wrangler secret put STRIPE_WEBHOOK_SECRET

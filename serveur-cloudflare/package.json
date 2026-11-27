@@ -1,0 +1,16 @@
+{
+  "name": "marcheo-serveur",
+  "private": true,
+  "type": "module",
+  "description": "Marchéo : serveur hébergé multi-comptes (Cloudflare Workers, D1, R2, Email Routing)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "base:locale": "wrangler d1 execute marcheo --local --file=schema.sql",
+    "base:distante": "wrangler d1 execute marcheo --remote --file=schema.sql",
+    "deploy": "wrangler deploy",
+    "test": "node --test ../test/worker.test.js ../test/mime.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
