@@ -683,14 +683,59 @@ a.prochaine-etape span { color: var(--c); font-weight: 700; font-size: .9rem; }
 
 /* Tableau de bord : indicateurs en alternance ivoire / vert clair pour mieux les distinguer.
    Le fond alterne toujours ; les alertes (rouge, orange) gardent leur bordure et leur filet. */
-.indicateurs.alternes > .indicateur:nth-child(odd) { box-shadow: inset 3px 0 0 #c9ab74; }
-.indicateurs.alternes > .indicateur:nth-child(even) { background: #e2ebe3; border-color: #b9cfbe; box-shadow: inset 3px 0 0 #2f6b4c; }
-.indicateurs.alternes > .indicateur:nth-child(even) .indicateur-titre { color: #0f4a30; }
-.indicateurs.alternes > .indicateur:nth-child(even) .indicateur-detail { color: #2c4a3a; }
-.indicateurs.alternes > a.indicateur:nth-child(even):hover { background: #d6e3d8; }
-[data-theme="sombre"] .indicateurs.alternes > .indicateur:nth-child(even) { background: #17342a; border-color: #2f6b4c; box-shadow: inset 3px 0 0 #8cc78a; }
-[data-theme="sombre"] .indicateurs.alternes > .indicateur:nth-child(even) .indicateur-titre { color: #cfe5d2; }
-[data-theme="sombre"] .indicateurs.alternes > .indicateur:nth-child(even) .indicateur-detail { color: #a3c2a8; }
-[data-theme="sombre"] .indicateurs.alternes > a.indicateur:nth-child(even):hover { background: #1d3f32; }
-.indicateurs.alternes > .indicateur.indicateur-rouge { border-color: var(--rouge); box-shadow: inset 3px 0 0 var(--rouge); }
-.indicateurs.alternes > .indicateur.indicateur-orange { border-color: var(--orange); box-shadow: inset 3px 0 0 var(--orange); }
+.indicateurs > .indicateur:nth-child(odd) { box-shadow: inset 3px 0 0 #c9ab74; }
+.indicateurs > .indicateur:nth-child(even) { background: #e2ebe3; border-color: #b9cfbe; box-shadow: inset 3px 0 0 #2f6b4c; }
+.indicateurs > .indicateur:nth-child(even) .indicateur-titre { color: #0f4a30; }
+.indicateurs > .indicateur:nth-child(even) .indicateur-detail { color: #2c4a3a; }
+.indicateurs > a.indicateur:nth-child(even):hover { background: #d6e3d8; }
+[data-theme="sombre"] .indicateurs > .indicateur:nth-child(even) { background: #17342a; border-color: #2f6b4c; box-shadow: inset 3px 0 0 #8cc78a; }
+[data-theme="sombre"] .indicateurs > .indicateur:nth-child(even) .indicateur-titre { color: #cfe5d2; }
+[data-theme="sombre"] .indicateurs > .indicateur:nth-child(even) .indicateur-detail { color: #a3c2a8; }
+[data-theme="sombre"] .indicateurs > a.indicateur:nth-child(even):hover { background: #1d3f32; }
+.indicateurs > .indicateur.indicateur-rouge { border-color: var(--rouge); box-shadow: inset 3px 0 0 var(--rouge); }
+.indicateurs > .indicateur.indicateur-orange { border-color: var(--orange); box-shadow: inset 3px 0 0 var(--orange); }
+
+/* ===== Ce qui demande l'attention ===== */
+/* Pastilles du menu : bulle pleine, verte (à traiter) ou rouge pulsée (en retard) */
+.nav-compteur, .nav-compteur.alerte { min-width: 1.55rem; height: 1.55rem; padding: 0 .45rem; border-radius: 999px; display: inline-grid; place-items: center; flex: none;
+  background: #3f9b5f; color: #fff; font-size: .82rem; font-weight: 800; line-height: 1; box-shadow: 0 0 0 2px rgba(255, 255, 255, .18), 0 2px 6px rgba(0, 0, 0, .35); }
+.nav-compteur.alerte { background: #d9463b; animation: pulse-pastille 2s ease-out infinite; }
+@keyframes pulse-pastille { 0% { box-shadow: 0 0 0 0 rgba(217, 70, 59, .65), 0 2px 6px rgba(0, 0, 0, .35); } 70% { box-shadow: 0 0 0 9px rgba(217, 70, 59, 0), 0 2px 6px rgba(0, 0, 0, .35); } 100% { box-shadow: 0 0 0 0 rgba(217, 70, 59, 0), 0 2px 6px rgba(0, 0, 0, .35); } }
+@media (prefers-reduced-motion: reduce) { .nav-compteur.alerte { animation: none; } }
+
+/* Bandeau de suivi en haut du module ouvert depuis une pastille */
+.bandeau-suivi { display: flex; align-items: center; gap: .6rem; border-radius: var(--rayon-petit); padding: .6rem .9rem; margin: 0 0 .9rem; font-weight: 600; border: 1px solid; }
+.bandeau-suivi-vert { background: var(--vert-fond); border-color: var(--vert); color: var(--vert); }
+.bandeau-suivi-rouge { background: var(--rouge-fond); border-color: var(--rouge); color: var(--rouge); }
+.point-suivi { width: .7rem; height: .7rem; border-radius: 50%; background: currentColor; flex: none; }
+.bandeau-suivi-rouge .point-suivi { animation: pulse-point 2s ease-out infinite; }
+@keyframes pulse-point { 0% { box-shadow: 0 0 0 0 rgba(217, 70, 59, .6); } 70% { box-shadow: 0 0 0 7px rgba(217, 70, 59, 0); } 100% { box-shadow: 0 0 0 0 rgba(217, 70, 59, 0); } }
+@media (prefers-reduced-motion: reduce) { .bandeau-suivi-rouge .point-suivi { animation: none; } }
+
+/* Lignes et fiches à traiter : vert si pour aujourd'hui, rouge si en retard */
+.compte-ligne.attention-vert, .compte-ligne.attention-rouge { border-radius: var(--rayon-petit); padding-left: .6rem; padding-right: .4rem; margin: 2px 0; }
+.attention-vert { background: var(--vert-fond); box-shadow: inset 4px 0 0 var(--vert); }
+.attention-rouge { background: var(--rouge-fond); box-shadow: inset 4px 0 0 var(--rouge); }
+tr.attention-vert, tr.attention-rouge { box-shadow: none; }
+tr.attention-vert td { background: var(--vert-fond); }
+tr.attention-vert td:first-child { box-shadow: inset 4px 0 0 var(--vert); }
+tr.attention-rouge td { background: var(--rouge-fond); }
+tr.attention-rouge td:first-child { box-shadow: inset 4px 0 0 var(--rouge); }
+.fiche-mini.attention-vert { border-color: var(--vert); }
+.fiche-mini.attention-rouge { border-color: var(--rouge); }
+.tableau-annonces tr.a-traiter td { background: var(--vert-fond); font-weight: 600; }
+.tableau-annonces tr.a-traiter td:first-child { box-shadow: inset 6px 0 0 var(--vert); }
+.lien-attention { color: var(--vert); font-weight: 700; }
+.attention-vert:hover, .attention-rouge:hover, tr.attention-vert:hover td, tr.attention-rouge:hover td { filter: brightness(.97); }
+
+/* Encarts en alternance de couleur légère : ivoire / vert très pâle */
+.carte.carte-alt { background: #eef4ec; border-color: #cbdccd; }
+[data-theme="sombre"] .carte.carte-alt { background: #132a20; border-color: #24453a; }
+
+/* Bulle sur le bouton menu (téléphone) */
+.bouton-menu { position: relative; }
+.bulle-menu { position: absolute; top: -4px; right: -6px; min-width: 1.2rem; height: 1.2rem; padding: 0 .3rem; border-radius: 999px; display: grid; place-items: center;
+  background: #3f9b5f; color: #fff; font-size: .7rem; font-weight: 800; line-height: 1; box-shadow: 0 0 0 2px var(--surface), 0 2px 5px rgba(0, 0, 0, .3); }
+.bulle-menu.alerte { background: #d9463b; animation: pulse-pastille 2s ease-out infinite; }
+.bulle-menu[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .bulle-menu.alerte { animation: none; } }

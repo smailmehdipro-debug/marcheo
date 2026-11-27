@@ -123,9 +123,12 @@
   function route() { const h = location.hash.replace(/^#\/?/, '').split('/'); return { m: h[0] || 'tableau', id: h[1] || '', o: h[2] || '' }; }
   const aller = h => { location.hash = h; };
 
+  /* Ce qui demande l'attention : rouge si en retard, vert si à faire aujourd'hui */
+  const attentionBien = b => { const d = b.prochaine && b.prochaine.date, t = aujourdhui(); return !d || ['ecarte', 'vendu'].includes(b.etape) ? '' : d < t ? ' attention-rouge' : d === t ? ' attention-vert' : ''; };
   function compteurs() {
     const t = aujourdhui(), rel = D.liste('relances').filter(r => !r.fait && r.date && r.date <= t);
-    return { annonces: D.liste('annonces').filter(a => a.statutTri !== 'vue' && aExaminer(a)).length, relances: rel.length, retard: rel.some(r => r.date < t), biens: D.liste('biens').filter(b => b.etape !== 'ecarte' && b.etape !== 'vendu').length };
+    return { annonces: D.liste('annonces').filter(a => a.statutTri !== 'vue' && aExaminer(a)).length, relances: rel.length, retard: rel.some(r => r.date < t), biens: D.liste('biens').filter(b => b.etape !== 'ecarte' && b.etape !== 'vendu' && b.prochaine && b.prochaine.date && b.prochaine.date <= t).length,
+      biensRetard: D.liste('biens').some(b => b.etape !== 'ecarte' && b.etape !== 'vendu' && b.prochaine && b.prochaine.date && b.prochaine.date < t) };
   }
   function majNav() {
     if (!$('#listeModules')) return; // page Visite : pas de menu latéral
@@ -136,9 +139,13 @@
       if (m.g !== g) { g = m.g; h += `<div class="nav-groupe">${esc(g)}</div>`; }
       const n = m.id === 'relances' ? C.relances : m.id === 'biens' ? C.biens : m.id === 'annonces' ? C.annonces : 0;
       const actif = r.m === m.id || (r.m === 'bien' && m.id === 'biens');
-      h += `<a class="nav-lien${actif ? ' actif' : ''}" href="${m.href || '#/' + m.id}"><span class="pastille-module">${m.i}</span><span class="nav-texte"><span class="nav-libelle">${esc(m.l)}</span><span class="nav-desc">${esc(m.d)}</span></span>${n ? `<span class="nav-compteur${m.id === 'relances' && C.retard ? ' alerte' : ''}">${n}</span>` : ''}</a>`;
+      h += `<a class="nav-lien${actif ? ' actif' : ''}" href="${m.href || '#/' + m.id}"><span class="pastille-module">${m.i}</span><span class="nav-texte"><span class="nav-libelle">${esc(m.l)}</span><span class="nav-desc">${esc(m.d)}</span></span>${n ? `<span class="nav-compteur${(m.id === 'relances' && C.retard) || (m.id === 'biens' && C.biensRetard) ? ' alerte' : ''}" title="${m.id === 'annonces' ? 'nouvelles annonces à examiner' : m.id === 'relances' ? 'relances du jour et en retard' : 'projets dont la prochaine action est due'}">${n}</span>` : ''}</a>`;
     });
     $('#listeModules').innerHTML = h || '<div class="nav-vide">Aucun module</div>';
+    /* Bouton menu (téléphone) : bulle avec le total à traiter, rouge si quelque chose est en retard */
+    const bm = $('#bMenu'), total = C.annonces + C.relances + C.biens;
+    if (bm) { let p = $('.bulle-menu', bm); if (!p) { p = document.createElement('span'); p.className = 'bulle-menu'; bm.appendChild(p); }
+      p.textContent = total; p.hidden = !total; p.classList.toggle('alerte', !!(C.retard || C.biensRetard)); bm.setAttribute('aria-label', total ? 'Menu, ' + total + ' élément(s) à traiter' : 'Menu'); }
   }
   function titre(t, s, icone) { $('#titreModule').innerHTML = `<span class="pastille-module">${icone || ''}</span><span class="titre-texte"><strong>${esc(t)}</strong>${s ? `<small>${esc(s)}</small>` : ''}</span>`; }
   function majSynchro(e) {
@@ -164,7 +171,26 @@
     try {
       ({ tableau: vueTableau, annonces: vueAnnonces, biens: vueBiens, bien: vueBien, comparateur: vueComparateur, relances: vueRelances, contacts: vueContacts, reperes: vueReperes, reglages: vueReglages }[r.m] || vueTableau)(c, r);
     } catch (e) { console.error(e); c.innerHTML = `<div class="alerte-bandeau">Erreur d'affichage : ${esc(e.message)}</div>`; }
+    suiviPastille(c, r); alternerEncarts(c);
     if (garderDefilement) { c.scrollTop = y; window.scrollTo(0, yw); } else { c.scrollTop = 0; window.scrollTo(0, 0); }
+  }
+
+  /* Suivi de la pastille du menu : en ouvrant le module, un bandeau dit ce qu'elle compte et où le trouver */
+  function suiviPastille(c, r) {
+    const C = compteurs(), tete = $('.en-tete-page', c); if (!tete) return;
+    const s = n => n > 1 ? 's' : '';
+    const b = r.m === 'annonces' && !r.id && C.annonces ? ['vert', C.annonces + ' nouvelle' + s(C.annonces) + ' annonce' + s(C.annonces) + ' à examiner : surlignée' + s(C.annonces) + ' en vert ci-dessous.']
+      : r.m === 'relances' && C.relances ? [C.retard ? 'rouge' : 'vert', C.relances + ' relance' + s(C.relances) + ' à faire' + (C.retard ? ' : en rouge si en retard, en vert si pour aujourd\'hui.' : ' aujourd\'hui, en vert ci-dessous.')]
+      : r.m === 'biens' && C.biens ? [C.biensRetard ? 'rouge' : 'vert', C.biens + ' projet' + s(C.biens) + ' avec une action due : ' + (C.biensRetard ? 'en rouge si en retard, en vert si pour aujourd\'hui.' : 'en vert ci-dessous.')] : null;
+    if (!b) return;
+    const d = document.createElement('div'); d.className = 'bandeau-suivi bandeau-suivi-' + b[0];
+    d.innerHTML = '<span class="point-suivi"></span>' + esc(b[1]);
+    tete.after(d);
+  }
+  /* Encarts en alternance de couleur légère, dans l'ordre de la page (les encarts imbriqués ne comptent pas) */
+  function alternerEncarts(c) {
+    let i = 0;
+    $$('.carte', c).forEach(x => { if (x.parentElement.closest('.carte')) return; x.classList.toggle('carte-alt', i++ % 2 === 1); });
   }
 
   /* ================= Tableau de bord ================= */
@@ -192,7 +218,7 @@
         ${indic('Offres en cours', offres.length, { detail: offres.length ? eur(offres.reduce((s, b) => s + montantOffre(b), 0)) + ' offerts' : 'aucune', lien: '#/biens' })}
       </div>
       <div class="deux-colonnes">
-        <div class="carte"><h2>Annonces à examiner</h2>${annonces.length ? `<div class="compte">${annonces.slice(0, 6).map(a => { const e = evalAnnonce(a); return ligneCompte(`<a href="#/annonces/a/${a.id}">${esc(a.titre || 'Annonce')}</a><small class="discret">${esc([a.ville, e.surface ? e.surface + ' m²' : '', a.source].filter(Boolean).join(' · '))}</small>`, eur(e.prix) + prixM2(e.prix, e.surface) + `<small class="sous-ligne vert">marge brute ${pc(e.margeBrute, 0)}</small>`); }).join('')}</div>${annonces.length > 6 ? `<p class="aide"><a href="#/annonces/examiner">Voir les ${annonces.length} annonces</a></p>` : ''}` : '<div class="vide">Aucune annonce à examiner.</div>'}</div>
+        <div class="carte"><h2>Annonces à examiner</h2>${annonces.length ? `<div class="compte">${annonces.slice(0, 6).map(a => { const e = evalAnnonce(a); return ligneCompte(`<a class="lien-attention" href="#/annonces/a/${a.id}">${esc(a.titre || 'Annonce')}</a><small class="discret">${esc([a.ville, e.surface ? e.surface + ' m²' : '', a.source].filter(Boolean).join(' · '))}</small>`, eur(e.prix) + prixM2(e.prix, e.surface) + `<small class="sous-ligne vert">marge brute ${pc(e.margeBrute, 0)}</small>`); }).join('')}</div>${annonces.length > 6 ? `<p class="aide"><a href="#/annonces/examiner">Voir les ${annonces.length} annonces</a></p>` : ''}` : '<div class="vide">Aucune annonce à examiner.</div>'}</div>
         <div class="carte"><h2>À faire</h2>${listeRelances(retard.concat(duJour), true) || '<div class="vide">Rien d\'échu.</div>'}</div>
       </div>
       <div class="section-titre"><h2>Projets en cours</h2></div>
@@ -270,7 +296,7 @@
     const l = biensFiltres(), t = aujourdhui();
     if (filtres.vue === 'colonnes') {
       const etapes = ETAPES.filter(e => filtres.etape ? e[0] === filtres.etape : (e[0] !== 'ecarte' || filtres.ecartes));
-      z.innerHTML = `<div class="colonnes">${etapes.map(e => { const bs = l.filter(b => (b.etape || 'repere') === e[0]); return `<div class="colonne-etape" data-etape="${e[0]}"><div class="colonne-tete"><span>${e[1]}</span><span>${bs.length}</span></div>${bs.map(b => { const A = analyse(b); return `<div class="fiche-mini" draggable="true" data-id="${b.id}"><strong>${esc(titreBien(b))}</strong><div class="ligne"><span>${esc(typeBien(b))} · ${surfaceBien(b)}</span><b>${eur(b.prixAffiche || A.r.achat)}${prixM2(b.prixAffiche || A.r.achat, surfBien(b))}</b></div><div class="ligne"><span>${b.prochaine && b.prochaine.date ? `<span class="${b.prochaine.date < t ? 'rouge' : ''}">${dateFr(b.prochaine.date)}</span>` : ''}</span><b class="${ETATS[A.etat][0]}">${pc(A.r.m)}</b></div></div>`; }).join('')}</div>`; }).join('')}</div>`;
+      z.innerHTML = `<div class="colonnes">${etapes.map(e => { const bs = l.filter(b => (b.etape || 'repere') === e[0]); return `<div class="colonne-etape" data-etape="${e[0]}"><div class="colonne-tete"><span>${e[1]}</span><span>${bs.length}</span></div>${bs.map(b => { const A = analyse(b); return `<div class="fiche-mini${attentionBien(b)}" draggable="true" data-id="${b.id}"><strong>${esc(titreBien(b))}</strong><div class="ligne"><span>${esc(typeBien(b))} · ${surfaceBien(b)}</span><b>${eur(b.prixAffiche || A.r.achat)}${prixM2(b.prixAffiche || A.r.achat, surfBien(b))}</b></div><div class="ligne"><span>${b.prochaine && b.prochaine.date ? `<span class="${b.prochaine.date < t ? 'rouge' : ''}">${dateFr(b.prochaine.date)}</span>` : ''}</span><b class="${ETATS[A.etat][0]}">${pc(A.r.m)}</b></div></div>`; }).join('')}</div>`; }).join('')}</div>`;
       $$('.fiche-mini', z).forEach(f => {
         f.onclick = () => aller('#/bien/' + f.dataset.id);
         f.ondragstart = e => e.dataTransfer.setData('text/plain', f.dataset.id);
@@ -288,7 +314,7 @@
     const th = (k, lib, n) => `<th class="triable${n ? ' nombre' : ''}" data-tri="${k}">${lib}${filtres.tri === k ? (filtres.sens > 0 ? ' ▲' : ' ▼') : ''}</th>`;
     z.innerHTML = `<div class="tableau-conteneur"><table class="tableau adaptable"><thead><tr>${th('adresse', 'Bien')}${th('etape', 'Étape')}${th('surface', 'Surface', 1)}${th('prix', 'Prix affiché', 1)}${th('source', 'Source')}${th('marge', 'Marge nette', 1)}${th('action', 'Prochaine action')}</tr></thead><tbody>${l.map(b => {
       const A = analyse(b), p = b.prochaine || {};
-      return `<tr class="cliquable" data-id="${b.id}"><td data-titre="Bien"><strong>${esc(titreBien(b))}</strong><span class="sous-ligne">${esc(typeBien(b))}${b.lien ? ` · <a href="${esc(b.lien)}" target="_blank" rel="noopener" data-stop>annonce</a>` : ''}</span></td><td data-titre="Étape"><span class="etiquette">${ETAPE[b.etape || 'repere']}</span>${b.etape === 'ecarte' && b.motif ? `<span class="sous-ligne">${esc(b.motif)}</span>` : ''}</td><td class="nombre" data-titre="Surface">${surfaceBien(b)}</td><td class="nombre" data-titre="Prix affiché">${b.prixAffiche ? eur(b.prixAffiche) + prixM2(b.prixAffiche, surfBien(b)) : '—'}</td><td data-titre="Source">${esc(b.source || '')}</td><td class="nombre" data-titre="Marge nette">${voyant(ETATS[A.etat][0], pc(A.r.m))}<span class="sous-ligne">${eur(A.r.N)}</span></td><td data-titre="Prochaine action">${p.action ? `${esc(p.action)}<span class="sous-ligne ${p.date && p.date < t ? 'rouge' : ''}">${dateFr(p.date)}</span>` : ''}</td></tr>`;
+      return `<tr class="cliquable${attentionBien(b)}" data-id="${b.id}"><td data-titre="Bien"><strong>${esc(titreBien(b))}</strong><span class="sous-ligne">${esc(typeBien(b))}${b.lien ? ` · <a href="${esc(b.lien)}" target="_blank" rel="noopener" data-stop>annonce</a>` : ''}</span></td><td data-titre="Étape"><span class="etiquette">${ETAPE[b.etape || 'repere']}</span>${b.etape === 'ecarte' && b.motif ? `<span class="sous-ligne">${esc(b.motif)}</span>` : ''}</td><td class="nombre" data-titre="Surface">${surfaceBien(b)}</td><td class="nombre" data-titre="Prix affiché">${b.prixAffiche ? eur(b.prixAffiche) + prixM2(b.prixAffiche, surfBien(b)) : '—'}</td><td data-titre="Source">${esc(b.source || '')}</td><td class="nombre" data-titre="Marge nette">${voyant(ETATS[A.etat][0], pc(A.r.m))}<span class="sous-ligne">${eur(A.r.N)}</span></td><td data-titre="Prochaine action">${p.action ? `${esc(p.action)}<span class="sous-ligne ${p.date && p.date < t ? 'rouge' : ''}">${dateFr(p.date)}</span>` : ''}</td></tr>`;
     }).join('')}</tbody></table></div>`;
     $$('th[data-tri]', z).forEach(h => h.onclick = () => { if (filtres.tri === h.dataset.tri) filtres.sens *= -1; else { filtres.tri = h.dataset.tri; filtres.sens = 1; } zoneBiens(); });
     $$('tr[data-id]', z).forEach(tr => tr.onclick = e => { if (!e.target.closest('[data-stop]')) aller('#/bien/' + tr.dataset.id); });
@@ -1649,7 +1675,7 @@
       $('#anZone').innerHTML = !l.length ? `<div class="vide">${fa.onglet === 'examiner' ? 'Aucune annonce ne mérite l\'attention pour l\'instant.' : 'Aucune annonce.'}</div>` :
         `<div class="tableau-conteneur"><table class="tableau adaptable tableau-annonces"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente</th><th class="nombre">Travaux</th><th class="nombre">Budget</th><th class="nombre">Marge brute</th><th class="nombre">Prix max.</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
           const e = E.get(a.id), st = statutAnnonce(a, e), ex = aExaminer(a);
-          return `<tr class="cliquable${ex ? ' a-examiner' : ''}${a.id === fa.surligne ? ' surligne' : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span>${a.notes ? `<span class="sous-ligne remarque-annonce">Remarques : ${esc(a.notes.length > 90 ? a.notes.slice(0, 90) + '…' : a.notes)}</span>` : ''}</td>
+          return `<tr class="cliquable${ex ? ' a-examiner' : ''}${ex && a.statutTri !== 'vue' ? ' a-traiter' : ''}${a.id === fa.surligne ? ' surligne' : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span>${a.notes ? `<span class="sous-ligne remarque-annonce">Remarques : ${esc(a.notes.length > 90 ? a.notes.slice(0, 90) + '…' : a.notes)}</span>` : ''}</td>
             <td class="nombre" data-titre="Prix affiché">${eur(e.prix)}${prixM2(e.prix, e.surface)}${a.prixPrecedent ? `<span class="sous-ligne vert">avant ${eur(a.prixPrecedent)}</span>` : ''}</td>
             <td class="nombre" data-titre="Revente">${e.vente ? eur(e.vente) : '—'}</td>
             <td class="nombre" data-titre="Travaux">${e.travaux ? eur(e.travaux.total) + `<span class="sous-ligne">${M.NIVEAUX[e.travaux.niveau].toLowerCase()}</span>` : '—'}</td>
@@ -1986,7 +2012,7 @@
   function listeRelances(l, compact) {
     if (!l.length) return '';
     const t = aujourdhui();
-    return `<div class="compte">${l.sort((a, z) => (a.date || '').localeCompare(z.date || '')).map(x => { const b = x.bienId && D.obtenir('biens', x.bienId), c = x.contactId && D.obtenir('contacts', x.contactId); return `<div class="compte-ligne"><span><label class="case" style="margin:0"><input type="checkbox" data-fait="${x.id}"${x.fait ? ' checked' : ''}> <span>${esc(x.objet)}</span></label><small class="discret">${[b ? `<a href="#/bien/${b.id}">${esc(titreBien(b))}</a>` : '', c ? esc(c.nom) + (c.tel ? ` · <a href="tel:${esc(c.tel.replace(/\s/g, ''))}">${esc(c.tel)}</a>` : '') : ''].filter(Boolean).join(' · ')}</small></span><b class="${!x.fait && x.date < t ? 'rouge' : ''}">${dateFr(x.date)}${compact ? '' : ` <button class="bouton-icone" data-modif="${x.id}" aria-label="Modifier">✎</button>`}</b></div>`; }).join('')}</div>`;
+    return `<div class="compte">${l.sort((a, z) => (a.date || '').localeCompare(z.date || '')).map(x => { const b = x.bienId && D.obtenir('biens', x.bienId), c = x.contactId && D.obtenir('contacts', x.contactId); return `<div class="compte-ligne${!x.fait && x.date && x.date < t ? ' attention-rouge' : !x.fait && x.date === t ? ' attention-vert' : ''}"><span><label class="case" style="margin:0"><input type="checkbox" data-fait="${x.id}"${x.fait ? ' checked' : ''}> <span>${esc(x.objet)}</span></label><small class="discret">${[b ? `<a href="#/bien/${b.id}">${esc(titreBien(b))}</a>` : '', c ? esc(c.nom) + (c.tel ? ` · <a href="tel:${esc(c.tel.replace(/\s/g, ''))}">${esc(c.tel)}</a>` : '') : ''].filter(Boolean).join(' · ')}</small></span><b class="${!x.fait && x.date < t ? 'rouge' : ''}">${dateFr(x.date)}${compact ? '' : ` <button class="bouton-icone" data-modif="${x.id}" aria-label="Modifier">✎</button>`}</b></div>`; }).join('')}</div>`;
   }
   function brancherRelances(c) {
     $$('[data-fait]', c).forEach(x => x.onchange = () => { const r = D.obtenir('relances', x.dataset.fait); r.fait = x.checked; r.faitLe = x.checked ? aujourdhui() : ''; sauverMaintenant('relances', r); afficher(); });
