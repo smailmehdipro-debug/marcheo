@@ -34,7 +34,7 @@ h2 { font: 600 2rem/1.1 var(--serif); margin: 0 0 6px; text-wrap: balance; }
 .case img { max-width: 100%; height: auto; }
 .case small { color: var(--texte-2); }
 .case.sombre small { color: #a9b8a8; }
-.logo-zone { display: grid; place-items: center; min-height: 150px; }
+.logo-zone { display: flex; gap: 14px; justify-content: center; align-items: center; min-height: 150px; }
 .nuancier { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .teinte { border-radius: 8px; overflow: hidden; border: 1px solid var(--bordure); background: var(--surface); }
 .teinte div { height: 84px; }
@@ -60,23 +60,26 @@ footer .w { padding-block: 28px; color: #a9b8a8; font-size: .85rem; }
 </style>
 
 <header class="bande"><div class="w">
-  <img src="logos/marcheo-signature-transparent.svg" alt="Marchéo, marchand de biens">
+  <img src="logos/marcheo-signature-transparent.svg" alt="Marchéo, le CRM du marchand de biens">
   <h1>Charte graphique<br><em>vert anglais métallisé</em></h1>
-  <p>Logos, couleurs, typographies, finition carrosserie du CRM, carte de visite et visuels. Toutes les pièces sont générées par script depuis les mêmes valeurs : changer une couleur ou un numéro de téléphone met tout à jour d'un coup.</p>
+  <p>Logos, couleurs, typographies, finition carrosserie et visuels de Marchéo, le CRM du marchand de biens. Toutes les pièces sont générées par script depuis les mêmes valeurs : changer une couleur ou une mention met tout à jour d'un coup.</p>
 </div></header>
 
 <section><div class="w">
   <p class="sur">1 · Logo</p><h2>Monogramme, signature, mot</h2>
-  <p class="chapo">Le M dessine une ligne de toit inversée dans un cercle laiton. L'accent du é est en laiton : c'est le seul détail de couleur dans le mot. Les textes sont convertis en tracés, les fichiers s'impriment sans police installée.</p>
+  <p class="chapo">Le monogramme est une maison à pignon qui porte un M Bodoni Black : on lit la lettre et on comprend l'immobilier. Sur fond clair, maison vert nuit et M laiton ; sur fond vert, maison laiton et M évidé. L'icône d'appli en est la version en relief. L'accent du é est en laiton : c'est le seul détail de couleur dans le mot. Les textes sont convertis en tracés, les fichiers s'impriment sans police installée.</p>
   <div class="grille">
     <div class="case"><div class="logo-zone"><img src="logos/marcheo-signature-clair.svg" alt="Signature horizontale sur ivoire"></div><small>Signature horizontale · fond ivoire</small></div>
     <div class="case sombre"><div class="logo-zone"><img src="logos/marcheo-signature-transparent.svg" alt="Signature horizontale sur vert"></div><small>Signature horizontale · fond vert métallisé</small></div>
-    <div class="case"><div class="logo-zone"><img src="logos/marcheo-vertical-clair.svg" alt="Signature verticale" style="max-height:170px"></div><small>Verticale · carte, couverture, avatar</small></div>
-    <div class="case sombre"><div class="logo-zone"><img src="logos/marcheo-monogramme-transparent.svg" alt="Monogramme" style="height:110px"></div><small>Monogramme seul · icône d'appli, tampon, réseaux</small></div>
+    <div class="case"><div class="logo-zone"><img src="logos/marcheo-vertical-clair.svg" alt="Signature verticale" style="max-height:170px"></div><small>Verticale · couverture, présentation</small></div>
+    <div class="case sombre"><div class="logo-zone"><img src="logos/marcheo-vertical-transparent.svg" alt="Signature verticale sur vert" style="max-height:170px"></div><small>Verticale · fond vert métallisé</small></div>
+    <div class="case"><div class="logo-zone"><img src="logos/marcheo-monogramme-clair.svg" alt="Monogramme sur ivoire" style="height:110px"></div><small>Monogramme · fond clair, tampon, en-tête</small></div>
+    <div class="case sombre"><div class="logo-zone"><img src="logos/marcheo-monogramme-transparent.svg" alt="Monogramme sur vert" style="height:110px"></div><small>Monogramme · fond vert, avatar, réseaux</small></div>
+    <div class="case sombre"><div class="logo-zone"><img src="../icone.svg" alt="Icône d'appli Marchéo" style="height:110px"><img src="../icone-visite.svg" alt="Icône d'appli Visite" style="height:110px"></div><small>Icônes d'appli · Marchéo et Visite (bloc-notes)</small></div>
   </div>
   <ul class="regles" style="margin-top:24px">
-    <li>Taille minimale : monogramme 8 mm imprimé, 24 px à l'écran ; signature horizontale 30 mm de large.</li>
-    <li>Zone de protection : la hauteur du cercle divisée par deux, tout autour.</li>
+    <li>Taille minimale : monogramme 8 mm imprimé, 24 px à l'écran ; signature horizontale 40 mm de large (la mention doit rester lisible).</li>
+    <li>Zone de protection : la moitié de la hauteur de la maison, tout autour.</li>
     <li>Fond clair : version « clair ». Fond vert ou photo sombre : version « transparent ». Tampon, fax, gravure : « noir » ou « blanc ».</li>
     <li>Jamais déformé, jamais en ombre portée, jamais le mot en laiton entier.</li>
   </ul>
@@ -86,7 +89,7 @@ footer .w { padding-block: 28px; color: #a9b8a8; font-size: .85rem; }
   <p class="sur">2 · Couleurs</p><h2>Vert anglais, ivoire, laiton</h2>
   <p class="chapo">Une seule couleur d'accent, le vert. Le laiton sert aux filets, repères et accents, jamais en aplat. Le bordeaux est réservé aux alertes. Aucun blanc pur dans le CRM.</p>
   <div class="nuancier">
-    <div class="teinte"><div style="background:var(--metal)"></div><p><b>Vert métallisé</b>Tôle : barre latérale, boutons, recto de carte</p></div>
+    <div class="teinte"><div style="background:var(--metal)"></div><p><b>Vert métallisé</b>Tôle : barre latérale, boutons, en-têtes</p></div>
     <div class="teinte"><div style="background:#0e2a1d"></div><p><b>Vert nuit</b><code>#0E2A1D</code> · CMJN ≈ 85 40 80 65</p></div>
     <div class="teinte"><div style="background:#0f4a30"></div><p><b>Vert anglais</b><code>#0F4A30</code> · accent, liens</p></div>
     <div class="teinte"><div style="background:#c9ab74"></div><p><b>Laiton</b><code>#C9AB74</code> · sur fond vert<br><code>#A8864F</code> · sur ivoire</p></div>
@@ -102,35 +105,34 @@ footer .w { padding-block: 28px; color: #a9b8a8; font-size: .85rem; }
     <figure><img src="captures/bureau-tableau.png" alt="Tableau de bord Marchéo sur ordinateur"><figcaption>Tableau de bord, ordinateur</figcaption></figure>
     <figure><img src="captures/mobile-visite.png" alt="Page Visite sur téléphone"><figcaption>Page Visite, téléphone</figcaption></figure>
   </div>
-  <p class="chapo" style="margin-top:20px">À l'impression, une encre ne brille pas : le dégradé seul donne l'effet. Pour un vrai rendu métal sur la carte, demander à l'imprimeur un vernis sélectif sur le reflet ou une dorure à chaud laiton sur le logo.</p>
+  <p class="chapo" style="margin-top:20px">À l'impression, une encre ne brille pas : le dégradé seul donne l'effet. Pour un vrai rendu métal sur un support imprimé, demander à l'imprimeur un vernis sélectif sur le reflet ou une dorure à chaud laiton sur le logo.</p>
 </div></section>
 
 <section style="background:var(--surface);border-block:1px solid var(--bordure)"><div class="w">
   <p class="sur">4 · Typographies</p><h2>Cormorant Garamond et Inter</h2>
   <p class="chapo">Deux polices Google Fonts, gratuites, licence libre y compris pour l'impression.</p>
   <div class="typo">
-    <div class="case"><div class="grand">Marchéo 79 000 €</div><small>Cormorant Garamond SemiBold · titres, chiffres clés, nom sur la carte. Italique 500 pour les accroches.</small></div>
+    <div class="case"><div class="grand">Marchéo 79 000 €</div><small>Cormorant Garamond SemiBold · titres, chiffres clés, titres de présentation. Italique 500 pour les accroches.</small></div>
     <div class="case"><div class="grand s">Annonces · 42 m²</div><small>Inter 400 et 600 · texte courant, tableaux, coordonnées. Capitales espacées à 0,22 em pour les intitulés.</small></div>
   </div>
 </div></section>
 
 <section><div class="w">
-  <p class="sur">5 · Supports</p><h2>Carte, en-tête, réseaux</h2>
-  <p class="chapo">La carte vise le vendeur : l'accroche du recto dit ce que tu fais en six mots. Le verso porte la mention EI obligatoire pour un entrepreneur individuel.</p>
+  <p class="sur">5 · Supports</p><h2>Réseaux et présentation</h2>
+  <p class="chapo">Marchéo est un logiciel : ses supports parlent aux marchands de biens qui pourraient l'utiliser. Les supports de l'entreprise qui utilise le CRM (carte de visite, papier à en-tête) relèvent de sa propre charte, pas de celle-ci.</p>
   <div class="grille">
-    <figure><img src="supports/carte-visite-apercu.png" alt="Carte de visite recto et verso"><figcaption>Carte 85 × 55 mm, PDF avec 3 mm de fond perdu</figcaption></figure>
-    <figure><img src="supports/papier-en-tete-apercu.png" alt="Papier à en-tête A4"><figcaption>Papier à en-tête A4 · offres d'achat, courriers propriétaires</figcaption></figure>
-    <figure><img src="supports/avatar-1080.png" alt="Avatar monogramme"><figcaption>Avatar 1080 px · WhatsApp, Google, LinkedIn</figcaption></figure>
+    <figure><img src="supports/avatar-1080.png" alt="Avatar monogramme"><figcaption>Avatar 1080 px · LinkedIn, Google, réseaux</figcaption></figure>
   </div>
   <figure style="margin-top:20px"><img src="supports/banniere-1584x396.png" alt="Bannière LinkedIn"><figcaption>Bannière 1584 × 396 · LinkedIn, Facebook</figcaption></figure>
-  <figure style="margin-top:20px"><img src="supports/visuel-crm-2400x1350.png" alt="Visuel du CRM sur ordinateur et téléphone"><figcaption>Visuel du CRM 2400 × 1350 · présentation banque, associé, réseaux</figcaption></figure>
+  <figure style="margin-top:20px"><img src="supports/visuel-crm-2400x1350.png" alt="Visuel du CRM sur ordinateur et téléphone"><figcaption>Visuel du CRM 2400 × 1350 · présentation, réseaux (à refaire avec le nouveau logo)</figcaption></figure>
 </div></section>
 
 <section style="background:var(--surface);border-top:1px solid var(--bordure)"><div class="w">
   <p class="sur">6 · Fichiers</p><h2>Où sont les pièces</h2>
   <div class="table-wrap"><table class="fichiers">
-    <tr><td>logos/</td><td>SVG vectorisés : signature horizontale (clair, transparent), verticale (clair), monogramme (transparent)</td></tr>
-    <tr><td>supports/</td><td>Aperçus PNG : carte de visite, papier à en-tête A4, avatar, bannière, visuel CRM</td></tr>
+    <tr><td>logos/</td><td>SVG vectorisés : signature horizontale et verticale, monogramme, chacun en « clair » et « transparent »</td></tr>
+    <tr><td>supports/</td><td>Aperçus PNG : avatar, bannière, visuel CRM</td></tr>
+    <tr><td>sources/</td><td>Scripts générateurs : <code>gen_icones.py</code> (icônes d'appli), <code>gen_charte.py</code> (logos et pages des supports, rendues avec Chrome sans interface)</td></tr>
     <tr><td>captures/</td><td>Écrans du CRM en mode démonstration : tableau de bord (ordinateur), page Visite (téléphone)</td></tr>
   </table></div>
 </div></section>
