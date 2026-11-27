@@ -1,0 +1,49 @@
+# Publie le serveur Apps Script à chaque push sur main qui touche serveur/.
+# Secrets du dépôt : CLASPRC_JSON (contenu de ~/.clasprc.json après « clasp login »)
+# et DEPLOIEMENT_ID (id du déploiement « Application Web » : l'URL /exec reste la même).
+name: Publier le serveur
+
+on:
+  push:
+    branches: [main]
+    paths: ['serveur/**']
+  workflow_dispatch:
+
+concurrency:
+  group: serveur
+  cancel-in-progress: false
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Tester le serveur
+        run: node --test test/serveur.test.js
+
+      - name: Installer clasp
+        run: npm i -g @google/clasp@3
+
+      - name: Identifiants clasp
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+
+      - name: Envoyer le code
+        working-directory: serveur
+        run: clasp push --force
+
+      - name: Mettre à jour le déploiement Web
+        working-directory: serveur
+        env:
+          DEPLOIEMENT_ID: ${{ secrets.DEPLOIEMENT_ID }}
+        run: clasp deploy -i "$DEPLOIEMENT_ID" -d "GitHub ${GITHUB_SHA::7}"
+
+      - name: Nettoyer
+        if: always()
+        run: rm -f ~/.clasprc.json
