@@ -52,6 +52,14 @@
     [/(?:reserve|destine|ideal|uniquement|exclusivement) (?:aux |a un |pour )?investisseurs? (?:uniquement|seulement)|investisseurs? (?:uniquement|seulement)/, 'pour investisseur uniquement']
   ];
   const motifsLocatif = t => { const x = norm(t).replace(/[’]/g, "'"); return LOCATIF.filter(r => r[0].test(x)).map(r => r[1]); };
+  /* Revente au m² à partir des ventes comparables affichées (DVF) :
+     coef (80 % par défaut) du prix au m² le plus élevé, sans jamais descendre sous leur médiane. */
+  function reventeVentes(ventes, coef) {
+    const m2 = (ventes || []).map(v => +v.m2 || (v.prix && v.surface ? v.prix / v.surface : 0)).filter(x => x > 0).sort((x, y) => x - y);
+    if (!m2.length) return 0;
+    const n = m2.length, med = n % 2 ? m2[(n - 1) / 2] : (m2[n / 2 - 1] + m2[n / 2]) / 2;
+    return Math.round(Math.max(m2[n - 1] * (+coef || 80) / 100, med) / 10) * 10;
+  }
   const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
 
   const TYPES_HORS = { immeuble: 'Immeuble', terrain: 'Terrain' };
@@ -130,7 +138,9 @@
     const dc = a.dvf && a.dvf.secteur;
     if (dc && dc.p75 && !(sec && sec.origine === 'saisi')) sec = { origine: 'DVF', zone: dc.zone === '1 km' ? 'à moins d\'1 km' : 'commune', pm2: dc.p75, pm2Maison: dc.p75, n: dc.n, nMaisons: dc.n, mediane: dc.mediane, medianeMaison: dc.mediane };
     /* Le haut de fourchette DVF est minoré (reventeCoef) ; un prix saisi ou corrigé à la main est pris tel quel */
-    const coef = sec && sec.origine === 'DVF' && !k.pm2 && ['appt', 'maison', 'local'].includes(type) ? (+C.reventeCoef || 100) / 100 : 1;
+    const r3 = !k.pm2 && a.dvf && a.dvf.ventes && a.dvf.ventes.length && ['appt', 'maison', 'local'].includes(type) ? reventeVentes(a.dvf.ventes, C.reventeCoef) : 0;
+    if (r3) sec = Object.assign({}, sec || {}, { origine: 'DVF', regle: '3 ventes', pm2: r3, pm2Maison: r3 });
+    const coef = !r3 && sec && sec.origine === 'DVF' && !k.pm2 && ['appt', 'maison', 'local'].includes(type) ? (+C.reventeCoef || 100) / 100 : 1;
     const haut = +(k.pm2 || (sec && (type === 'terrain' ? sec.pm2Terrain : type === 'box' ? sec.prixBox : type === 'maison' ? (sec.pm2Maison || sec.pm2) : sec.pm2))) || 0;
     const pm2 = coef < 1 ? Math.round(haut * coef / 10) * 10 : haut;
     const motifs = [], manque = [];
@@ -173,6 +183,8 @@
     const controles = p => { const q = M.compute(S, { achat: p }); return { q, treso: !+C.tresoMax || q.treso <= +C.tresoMax, marge: brute(q) >= mb }; };
     const tient = p => { const c = controles(p); return c.treso && c.marge; };
     const achatMax = tient(0) ? M.solve(tient, 0, Math.max(prix, S.vente), true) : 0;
+    const margeOk = p => controles(p).marge;
+    const achatVise = margeOk(0) ? Math.floor(M.solve(margeOk, 0, Math.max(prix, S.vente), true) / 100) * 100 : 0;
     const r = M.compute(S), nego = prix ? 1 - achatMax / prix : 1;
     /* Motifs : ce qui ne tient pas au prix négocié au maximum réaliste */
     const pNego = prix * (1 - C.negoMax / 100), cn = controles(pNego);
@@ -187,9 +199,9 @@
     const statut = motifs.length ? 'ecartee' : 'signalee';
     return Object.assign(base, { statut, motifs, manque, score, S, r, achatMax, nego, marge: r.m, vente: S.vente, niveau: S.niveau, lots: S.pieces,
       pieces: S.pieces, travaux: { niveau: S.niveau, m2: +bt.m2, piece: +bt.piece || 0, pieces: S.pieces, min: +bt.min, ht: travauxHT, total: S.trvForfait, aleas: S.aleas },
-      tresoAffiche: r.treso, tresoAuMax: qMax ? qMax.treso : null, margeBrute: brute(r), margeBruteEur: r.vente - r.C, criteres: C });
+      tresoAffiche: r.treso, achatVise, dvfConsulte: !!(a.dvf && a.dvf.ventes && a.dvf.ventes.length), regleRevente: r3 ? '3 ventes' : '', tresoAuMax: qMax ? qMax.treso : null, margeBrute: brute(r), margeBruteEur: r.vente - r.C, criteres: C });
   }
 
-  const api = { DVF, CRITERES_DEF, motifsLocatif, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, piecesDepuisTexte, lireTexte, evaluer, secteur };
+  const api = { DVF, CRITERES_DEF, motifsLocatif, reventeVentes, TYPES_HORS, dansZone, typeDepuisTexte, niveauDepuisTexte, piecesDepuisTexte, lireTexte, evaluer, secteur };
   if (typeof module === 'object' && module.exports) module.exports = api; else global.MarcheoAnnonces = api;
 })(typeof window !== 'undefined' ? window : globalThis);

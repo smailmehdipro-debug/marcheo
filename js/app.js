@@ -219,7 +219,7 @@
         ${indic('Offres en cours', offres.length, { detail: offres.length ? eur(offres.reduce((s, b) => s + montantOffre(b), 0)) + ' offerts' : 'aucune', lien: '#/biens' })}
       </div>
       <div class="deux-colonnes">
-        <div class="carte"><h2>Annonces à examiner</h2>${annonces.length ? `<div class="compte">${annonces.slice(0, 6).map(a => { const e = evalAnnonce(a); return ligneCompte(`<a class="lien-attention" href="#/annonces/a/${a.id}">${esc(a.titre || 'Annonce')}</a><small class="discret">${esc([a.ville, e.surface ? e.surface + ' m²' : '', a.source].filter(Boolean).join(' · '))}</small>`, eur(e.prix) + prixM2(e.prix, e.surface) + `<small class="sous-ligne vert">marge brute ${pc(e.margeBrute, 0)}</small>`); }).join('')}</div>${annonces.length > 6 ? `<p class="aide"><a href="#/annonces/examiner">Voir les ${annonces.length} annonces</a></p>` : ''}` : '<div class="vide">Aucune annonce à examiner.</div>'}</div>
+        <div class="carte"><h2>Annonces à examiner</h2>${annonces.length ? `<div class="compte">${annonces.slice(0, 6).map(a => { const e = evalAnnonce(a); return ligneCompte(`<a class="lien-attention" href="#/annonces/a/${a.id}">${esc(a.titre || 'Annonce')}</a><small class="discret">${esc([a.ville, e.surface ? e.surface + ' m²' : '', a.source].filter(Boolean).join(' · '))}</small>`, eur(e.prix) + prixM2(e.prix, e.surface) + (e.dvfConsulte ? `<small class="sous-ligne vert">marge brute ${pc(e.margeBrute, 0)}</small>` : '')); }).join('')}</div>${annonces.length > 6 ? `<p class="aide"><a href="#/annonces/examiner">Voir les ${annonces.length} annonces</a></p>` : ''}` : '<div class="vide">Aucune annonce à examiner.</div>'}</div>
         <div class="carte"><h2>À faire</h2>${listeRelances(retard.concat(duJour), true) || '<div class="vide">Rien d\'échu.</div>'}</div>
       </div>
       <div class="section-titre"><h2>Projets en cours</h2></div>
@@ -405,7 +405,7 @@
       : S.trvForfait != null ? (S.trvForfaitOrigine === 'visite' ? 'estimés à la visite' : 'estimés d\'après l\'annonce') + ' : ' + M.NIVEAUX[S.niveau].toLowerCase() + ', ' + eur(S.surf ? r.T / S.surf : 0) + ' /m²'
       : 'poste par poste (repères), ' + M.NIVEAUX[S.niveau].toLowerCase();
     const q = A.quartier, d = b.dvf && b.dvf.secteur;
-    const vente = (S.type === 'box' ? 'prix saisi' : S.surf + ' m² × ' + eur(S.surf ? r.vente / S.surf : 0) + ' /m²') + (d && d.mediane ? ' · secteur DVF : ' + eur(d.mediane) + ' médian, ' + eur(d.p75) + ' haut de fourchette' + (b.reventeManuelle ? ' · revente saisie à la main' : ' · revente à ' + coefRevente() + ' % du haut de fourchette') : q.vise && Math.abs(q.ecart) > .02 ? ' · prix du quartier : ' + eur(q.vise) : '');
+    const vente = (S.type === 'box' ? 'prix saisi' : S.surf + ' m² × ' + eur(S.surf ? r.vente / S.surf : 0) + ' /m²') + (d && d.mediane ? ' · secteur DVF : ' + eur(d.mediane) + ' médian, ' + eur(d.p75) + ' haut de fourchette' + (b.reventeManuelle ? ' · revente saisie à la main' : ' · revente : ' + libRegle(b)) : q.vise && Math.abs(q.ecart) > .02 ? ' · prix du quartier : ' + eur(q.vise) : '');
     return { achat, travaux, vente, notaire: 'notaire ≈ ' + pc(r.achat ? r.not / r.achat : 0, 1) + ' du prix' + (S.agA ? ' + agence ' + eur(S.agA) : ''), annexes: 'taxe foncière, charges, assurance, diagnostics… sur ' + S.duree + ' mois', env: R.enveloppe };
   }
   function ongletSynthese(z, b) {
@@ -779,15 +779,22 @@
 
   /* ---------- Comparables ---------- */
   const coefRevente = () => Math.round(+((reglages().criteres || {}).reventeCoef) || MA.CRITERES_DEF.reventeCoef);
-  const pm2Revente = sec => Math.round(sec.p75 * coefRevente() / 100 / 10) * 10;
+  /* Revente au m² d'un projet : règle des 3 ventes comparables DVF (80 % de la plus chère, jamais sous leur médiane) ;
+     à défaut de ventes, le % réglé du haut de fourchette du secteur */
+  const ventesDVFBien = b => ((b && b.comps) || []).filter(x => x.source === 'DVF' && x.prix && x.surface);
+  const pm2Revente = (sec, b) => { const r3 = MA.reventeVentes(ventesDVFBien(b), coefRevente()); return r3 || Math.round(sec.p75 * coefRevente() / 100 / 10) * 10; };
+  const libRegle = b => ventesDVFBien(b).length ? coefRevente() + ' % de la vente la plus chère des ' + ventesDVFBien(b).length + ' comparables, jamais sous leur médiane' : coefRevente() + ' % du haut de fourchette';
+  /* Couleur du prix affiché face au prix d'achat visé : vert dessous, orange jusqu'à 10 % au-dessus, rouge au-delà */
+  const couleurVise = (prix, vise) => !vise ? 'rouge' : prix <= vise ? 'vert' : prix <= vise * 1.10 ? 'orange' : 'rouge';
+  const ecartVise = (prix, vise) => !vise ? 'aucun prix ne donne 10 %' : prix <= vise ? 'prix affiché ' + pc(1 - prix / vise, 0) + ' sous le prix visé' : 'prix affiché ' + pc(prix / vise - 1, 0) + ' au-dessus';
   function alignerRevente(b) {
     const S = b.sim, s = b.dvf && b.dvf.secteur;
     if (!S || b.reventeManuelle || !s || !s.p75 || ['box', 'terrain'].includes(S.type)) return false;
-    const p = pm2Revente(s), v = Math.round(p * S.surf);
+    const p = pm2Revente(s, b), v = Math.round(p * S.surf);
     if (Math.round(S.pm2) === p && Math.round(S.vente) === v) return false;
     S.pm2 = p; S.vente = v; cacheAnalyse.clear(); return true;
   }
-  function appliquerRevente(b) { const S = b.sim, s = b.dvf && b.dvf.secteur; if (!s || !s.p75 || S.type === 'box') return false; S.pm2 = pm2Revente(s); if (S.type !== 'terrain') S.vente = Math.round(S.pm2 * S.surf); cacheAnalyse.clear(); return true; }
+  function appliquerRevente(b) { const S = b.sim, s = b.dvf && b.dvf.secteur; if (!s || !s.p75 || S.type === 'box') return false; S.pm2 = pm2Revente(s, b); if (S.type !== 'terrain') S.vente = Math.round(S.pm2 * S.surf); cacheAnalyse.clear(); return true; }
   function blocDVF(b) {
     const d = b.dvf; if (!d) return '';
     const s = d.secteur || {}, S = b.sim || {};
@@ -795,7 +802,7 @@
       <p><strong>${s.mediane ? eur(s.mediane) + ' /m²' : '—'}</strong> médiane · fourchette ${eur(s.p25)} – ${eur(s.p75)} /m² · ${s.n || 0} ventes ${esc(d.type === 'Maison' ? 'de maisons' : 'd\'appartements')} ${s.zone === '1 km' ? 'à moins d\'1 km' : 'dans la commune'}.</p>
       <p class="aide">${d.lieu && d.lieu.precis ? 'Autour de : ' + esc(d.lieu.libelle) : '<span class="orange">Adresse non précise : recherche autour du centre de ' + esc((d.lieu && d.lieu.commune) || 'la commune') + '. Saisir la rue dans l\'adresse du projet puis relancer.</span>'}
         · DVF tous états confondus : un bien rénové se situe plutôt vers le haut de la fourchette. Dernière vente publiée : ${esc(d.derniere || '—')}. Recherche du ${esc(d.le || '')}.</p>
-      ${S.type !== 'box' && s.p75 && Math.round(S.pm2) !== pm2Revente(s) ? `<button class="bouton bouton-petit" id="cSecteur">Revente au m² = ${eur(pm2Revente(s))} (${coefRevente()} % du haut de fourchette)</button>` : ''}</div>`;
+      ${S.type !== 'box' && s.p75 && Math.round(S.pm2) !== pm2Revente(s, b) ? `<button class="bouton bouton-petit" id="cSecteur">Revente au m² = ${eur(pm2Revente(s, b))} (${esc(libRegle(b))})</button>` : ''}</div>`;
   }
   function ongletComparables(z, b) {
     const dessiner = () => {
@@ -1644,6 +1651,33 @@
     visite: ['Visite', ['Visite à programmer', 'Contre-visite à prévoir', 'Clés ou accès à obtenir']],
     autre: ['Autre', ['Autre (préciser)']]
   };
+  /* Écarter : toujours un motif, rangé par catégorie */
+  const MOTIFS_ECART = {
+    emplacement: ['Emplacement', ['Quartier connu, revente difficile', 'Zone géographique hors secteur', 'Nuisances (bruit, voie ferrée, grand axe)', 'Rue ou immeuble mal entretenu', 'Loin des transports et commerces']],
+    technique: ['Technique', ['Pas d\'évacuation de 100 (WC impossible)', 'Salle d\'eau impossible à créer', 'Structure ou fissures', 'Humidité ou infiltrations', 'Surface ou hauteur sous plafond insuffisante', 'Travaux trop lourds']],
+    juridique: ['Copropriété et juridique', ['Copropriété en difficulté', 'Gros travaux votés ou à venir', 'Procédure ou litige en cours', 'Servitude ou mitoyenneté gênante', 'Usage ou destination non conforme']],
+    vente: ['Type de vente', ['Locatif uniquement', 'Vendu loué ou occupé', 'Viager ou démembrement', 'Résidence gérée (étudiante, senior, tourisme)']],
+    prix: ['Prix et rentabilité', ['Prix trop élevé, vendeur ferme', 'Marge insuffisante', 'Budget dépassé', 'Revente estimée trop basse']],
+    annonce: ['Annonce', ['Déjà vendu ou retiré', 'Doublon d\'une autre annonce', 'Annonce trompeuse ou incomplète', 'Agence ou vendeur injoignable']],
+    autre: ['Autre', ['Autre (préciser)']]
+  };
+  const libelleEcart = x => x ? (MOTIFS_ECART[x.motif] ? MOTIFS_ECART[x.motif][0] : 'Écartée') + (x.sousMotif ? ' · ' + x.sousMotif : '') : '';
+  function ecarterAnnonce(a) {
+    const x = a.ecart || {}, opt = (v, l, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(l)}</option>`;
+    modale('Écarter l\'annonce', `<p class="aide">${esc(a.titre || 'Annonce')}</p>
+      <div class="grille-champs">
+        <div class="champ"><label for="ecMotif">Catégorie</label><select id="ecMotif">${Object.entries(MOTIFS_ECART).map(([k, v]) => opt(k, v[0], k === (x.motif || 'emplacement'))).join('')}</select></div>
+        <div class="champ"><label for="ecSous">Motif</label><select id="ecSous"></select></div>
+        <div class="champ" style="grid-column:1/-1"><label for="ecPrec">Précisions (facultatif)</label><textarea id="ecPrec" rows="2">${esc(x.precision || '')}</textarea></div>
+      </div>`,
+      [{ l: 'Annuler' }, { l: 'Écarter', classe: 'bouton-danger', f: f => {
+        a.statutTri = 'ecartee'; a.ecart = { motif: $('#ecMotif', f).value, sousMotif: $('#ecSous', f).value, precision: $('#ecPrec', f).value.trim(), le: aujourdhui() };
+        D.enregistrer('annonces', a); notifier('Annonce écartée : ' + libelleEcart(a.ecart) + '.', 'succes'); afficher();
+      } }],
+      f => { const m = $('#ecMotif', f), sSel = $('#ecSous', f);
+        const remplir = () => { sSel.innerHTML = (MOTIFS_ECART[m.value] || MOTIFS_ECART.autre)[1].map(v => opt(v, v, v === x.sousMotif)).join(''); };
+        m.onchange = remplir; remplir(); });
+  }
   const libelleAttente = x => x ? (MOTIFS_ATTENTE[x.motif] ? MOTIFS_ATTENTE[x.motif][0] : 'En attente') + (x.sousMotif ? ' · ' + x.sousMotif : '') : '';
   const attenteDue = a => a.statutTri === 'attente' && a.attente && a.attente.revoirLe && a.attente.revoirLe <= aujourdhui();
   function mettreEnAttente(a) {
@@ -1711,16 +1745,16 @@
         .sort((x, y) => dateAnnonce(y).localeCompare(dateAnnonce(x)));
       const vis = l.slice(0, 200);
       $('#anZone').innerHTML = !l.length ? `<div class="vide">${fa.onglet === 'examiner' ? 'Aucune annonce ne mérite l\'attention pour l\'instant.' : 'Aucune annonce.'}</div>` :
-        `<div class="tableau-conteneur"><table class="tableau adaptable tableau-annonces"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente</th><th class="nombre">Travaux</th><th class="nombre">Budget</th><th class="nombre">Marge brute</th><th class="nombre">Prix max.</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
+        `<div class="tableau-conteneur"><table class="tableau adaptable tableau-annonces"><thead><tr><th>Annonce</th><th class="nombre">Prix affiché</th><th class="nombre">Revente</th><th class="nombre">Travaux</th><th class="nombre">Budget</th><th class="nombre">Marge brute</th><th class="nombre">Prix visé</th><th>Analyse</th></tr></thead><tbody>${vis.map(a => {
           const e = E.get(a.id), st = statutAnnonce(a, e), ex = aExaminer(a);
           return `<tr class="cliquable${ex ? ' a-examiner' : ''}${ex && a.statutTri !== 'vue' ? ' a-traiter' : ''}${a.id === fa.surligne ? ' surligne' : ''}${attenteDue(a) ? (a.attente.revoirLe < aujourdhui() ? ' attention-rouge' : ' attention-vert') : ''}" data-id="${a.id}"><td data-titre="Annonce"><strong>${esc(a.titre || 'Annonce')}</strong>${a.statutTri === 'nouvelle' ? ' <span class="etiquette">nouvelle</span>' : ''}<span class="sous-ligne">${esc([M.TYPES[e.type] ? M.TYPES[e.type].n : '', e.surface ? e.surface + ' m²' : '', e.pieces ? e.pieces + ' p.' : '', [a.cp, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span><span class="sous-ligne">${esc(a.source || '')} · ${dateFr((a.recueLe || '').slice(0, 10))}${e.signaux.length ? ' · <span class="vert">' + esc(e.signaux.join(', ')) + '</span>' : ''}</span>${a.notes ? `<span class="sous-ligne remarque-annonce">Remarques : ${esc(a.notes.length > 90 ? a.notes.slice(0, 90) + '…' : a.notes)}</span>` : ''}</td>
             <td class="nombre" data-titre="Prix affiché">${eur(e.prix)}${prixM2(e.prix, e.surface)}${a.prixPrecedent ? `<span class="sous-ligne vert">avant ${eur(a.prixPrecedent)}</span>` : ''}</td>
-            <td class="nombre" data-titre="Revente">${e.vente ? eur(e.vente) : '—'}</td>
+            <td class="nombre" data-titre="Revente">${e.dvfConsulte && e.vente ? eur(e.vente) + prixM2(e.vente, e.surface) : '<span class="discret">ventes à consulter</span>'}</td>
             <td class="nombre" data-titre="Travaux">${e.travaux ? eur(e.travaux.total) + `<span class="sous-ligne">${M.NIVEAUX[e.travaux.niveau].toLowerCase()}</span>` : '—'}</td>
-            <td class="nombre" data-titre="Budget">${e.tresoAffiche ? `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>` : '—'}</td>
-            <td class="nombre" data-titre="Marge brute">${e.margeBrute != null ? `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)}</span><span class="sous-ligne">${eur(e.margeBruteEur)}</span>` : '—'}</td>
-            <td class="nombre" data-titre="Prix max.">${e.achatMax ? eur(Math.floor(e.achatMax / 1000) * 1000) + `<span class="sous-ligne ${e.nego <= 0 ? 'vert' : e.statut === 'signalee' ? 'orange' : 'rouge'}">${e.nego <= 0 ? 'sans négociation' : '− ' + pc(e.nego, 0)}</span>` : '—'}</td>
-            <td data-titre="Analyse">${voyant(st[0], st[1])}${e.score != null ? ` <b class="montant">${e.score}</b>` : ''}${a.statutTri === 'attente' && a.attente ? `<span class="sous-ligne orange">${esc(libelleAttente(a.attente))}${a.attente.revoirLe ? ' · à revoir le ' + dateFr(a.attente.revoirLe) : ''}</span>${a.attente.precision ? `<span class="sous-ligne">${esc(a.attente.precision.length > 90 ? a.attente.precision.slice(0, 90) + '…' : a.attente.precision)}</span>` : ''}` : `<span class="sous-ligne">${esc(e.motifs.join(' · '))}</span>`}</td></tr>`;
+            <td class="nombre" data-titre="Budget">${e.tresoAffiche ? `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>` + prixM2(e.tresoAffiche, e.surface) : '—'}</td>
+            <td class="nombre" data-titre="Marge brute">${e.dvfConsulte && e.margeBrute != null ? `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)}</span><span class="sous-ligne">${eur(e.margeBruteEur)}</span>` : '—'}</td>
+            <td class="nombre" data-titre="Prix visé">${e.dvfConsulte && e.r ? `<span class="${couleurVise(e.prix, e.achatVise)}">${e.achatVise ? eur(e.achatVise) : 'aucun'}</span><span class="sous-ligne ${couleurVise(e.prix, e.achatVise)}">${esc(ecartVise(e.prix, e.achatVise))}</span>` : '—'}</td>
+            <td data-titre="Analyse">${voyant(st[0], st[1])}${e.score != null ? ` <b class="montant">${e.score}</b>` : ''}${a.statutTri === 'attente' && a.attente ? `<span class="sous-ligne orange">${esc(libelleAttente(a.attente))}${a.attente.revoirLe ? ' · à revoir le ' + dateFr(a.attente.revoirLe) : ''}</span>${a.attente.precision ? `<span class="sous-ligne">${esc(a.attente.precision.length > 90 ? a.attente.precision.slice(0, 90) + '…' : a.attente.precision)}</span>` : ''}` : a.statutTri === 'ecartee' && a.ecart ? `<span class="sous-ligne rouge">${esc(libelleEcart(a.ecart))}</span>${a.ecart.precision ? `<span class="sous-ligne">${esc(a.ecart.precision)}</span>` : ''}` : `<span class="sous-ligne">${esc(e.motifs.join(' · '))}</span>`}</td></tr>`;
         }).join('')}</tbody></table></div>${l.length > 200 ? `<p class="aide">200 premières sur ${l.length}. Affiner la recherche.</p>` : ''}`;
       $$('tr[data-id]', $('#anZone')).forEach(tr => tr.onclick = () => ficheAnnonce(D.obtenir('annonces', tr.dataset.id)));
       const sl = $('tr.surligne', $('#anZone')); if (sl) sl.scrollIntoView({ block: 'center' });
@@ -1749,20 +1783,25 @@
         ${ligne('Source', esc(a.source || '—') + (a.agence ? ' · ' + esc(a.agence) : ''), 'reçue le ' + dateFr((a.recueLe || '').slice(0, 10)) + (a.alertes > 1 ? ', ' + a.alertes + ' alertes' : ''))}
         ${ligne('Bien', esc([M.TYPES[e.type] ? M.TYPES[e.type].n : e.type, e.surface ? e.surface + ' m²' : 'surface inconnue', e.pieces ? e.pieces + ' pièce' + (e.pieces > 1 ? 's' : '') + ' à vivre' : ''].filter(Boolean).join(' · ')), esc([a.cp, a.ville].filter(Boolean).join(' ')))}
         ${ligne('Prix affiché', eur(e.prix) + prixM2(e.prix, e.surface), (a.historiquePrix || []).length > 1 ? a.historiquePrix.map(h => dateFr(h.date.slice(0, 10)) + ' : ' + eur(h.prix)).join(' · ') : '')}
-        ${e.r ? ligne('Revente estimée', eur(e.vente), eur(e.pm2) + ' /m² × ' + e.surface + ' m² · ' + (e.secteur && e.secteur.origine === 'DVF' ? (e.coefRevente < 1 ? Math.round(e.coefRevente * 100) + ' % du haut de fourchette DVF (' + eur(e.pm2Haut) + ' /m²), ' : 'haut de fourchette DVF, ') + (e.secteur.zone ? 'ventes ' + e.secteur.zone + ', ' + e.secteur.n + ' ventes' : (e.type === 'maison' ? e.secteur.nMaisons + ' ventes de maisons' : e.secteur.n + ' ventes d\'appartements') + ' du code postal') : 'prix saisi'))
+        ${e.r ? (e.dvfConsulte
+            ? ligne('Revente estimée', eur(e.vente) + prixM2(e.vente, e.surface), eur(e.pm2) + ' /m² × ' + e.surface + ' m² · ' + (e.regleRevente ? Math.round(+e.criteres.reventeCoef || 80) + ' % de la vente la plus chère des 3 comparables, jamais sous leur médiane' : 'prix saisi'))
+            : ligne('Revente estimée', '<span class="discret">—</span>', 'consultez les ventes du secteur ci-dessous pour l\'estimer'))
           + ligne('Travaux estimés', eur(e.r.T), M.NIVEAUX[tv.niveau].toLowerCase() + ' · ' + eur(tv.m2) + ' /m² × ' + e.surface + ' m²' + (tv.piece && tv.pieces ? ' + ' + eur(tv.piece) + ' × ' + tv.pieces + ' pièce' + (tv.pieces > 1 ? 's' : '') : '') + (tv.ht <= tv.min ? ' (minimum ' + eur(tv.min) + ')' : '') + ', aléas ' + tv.aleas + ' % compris')
-          + ligne('Budget total', `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>`, 'au prix affiché · budget maximum à respecter ' + eur(e.criteres.tresoMax))
-          + ligne('Marge brute', `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)} · ${eur(e.margeBruteEur)}</span>`, 'au prix affiché · minimum ' + e.criteres.margeBruteMin + ' % de la revente')
-          + ligne('Bénéfice net', eur(e.r.N), 'au prix affiché, après TVA, intérêts et impôt')
-          + ligne('Prix d\'achat maximum', e.achatMax ? eur(e.achatMax) : 'aucun', e.nego > 0 ? 'négociation nécessaire : ' + pc(e.nego, 0) : 'le prix affiché passe') : ''}
+          + ligne('Budget total', `<span class="${+e.criteres.tresoMax && e.tresoAffiche > e.criteres.tresoMax ? 'rouge' : ''}">${eur(e.tresoAffiche)}</span>` + prixM2(e.tresoAffiche, e.surface), 'au prix affiché · budget maximum à respecter ' + eur(e.criteres.tresoMax))
+          + (e.dvfConsulte
+            ? ligne('Prix d\'achat visé', `<span class="${couleurVise(e.prix, e.achatVise)}">${e.achatVise ? eur(e.achatVise) : 'aucun'}</span>`, 'pour une marge brute de ' + e.criteres.margeBruteMin + ' % · ' + ecartVise(e.prix, e.achatVise))
+              + ligne('Marge brute', `<span class="${e.margeBrute >= e.criteres.margeBruteMin / 100 ? 'vert' : 'rouge'}">${pc(e.margeBrute)} · ${eur(e.margeBruteEur)}</span>`, 'au prix affiché · minimum ' + e.criteres.margeBruteMin + ' % de la revente')
+              + ligne('Bénéfice net', eur(e.r.N), 'au prix affiché, après TVA, intérêts et impôt')
+            : '') : ''}
         ${a.chargesAnnuelles ? ligne('Charges de copropriété', eur(a.chargesAnnuelles) + ' par an', 'annoncées par le site') : ''}
         ${e.signaux.length ? ligne('Signaux', `<span class="vert">${esc(e.signaux.join(', '))}</span>`) : ''}
       </div>
       ${a.statutTri === 'attente' && a.attente ? `<div class="bandeau-suivi bandeau-suivi-orange"><span class="point-suivi"></span><span><b>En attente</b> · ${esc(libelleAttente(a.attente))}${a.attente.revoirLe ? ' · à revoir le ' + dateFr(a.attente.revoirLe) : ''}${a.attente.precision ? '<br><span class="discret">' + esc(a.attente.precision) + '</span>' : ''}</span></div>` : ''}
+      ${a.statutTri === 'ecartee' && a.ecart ? `<div class="bandeau-suivi bandeau-suivi-rouge"><span class="point-suivi"></span><span><b>Écartée</b> · ${esc(libelleEcart(a.ecart))}${a.ecart.precision ? '<br><span class="discret">' + esc(a.ecart.precision) + '</span>' : ''}</span></div>` : ''}
       <div class="champ ann-remarques"><label for="annNotes">Mes remarques</label><textarea id="annNotes" data-sans-focus rows="3" placeholder="Ex. : pas de douche ni WC, juste un lavabo. Vérifier l'arrivée d'eau et l'évacuation pour créer une salle d'eau (sanibroyeur possible ?), accord de la copropriété…">${esc(a.notes || '')}</textarea><small class="aide">Enregistrées automatiquement. L'annonce reste dans sa liste ; « Retenir » reporte ces remarques dans le journal du bien.</small></div>
       <div id="annDVF" class="ann-dvf">${blocDVFAnnonce(a, e)}</div>
       ${a.texte ? `<details style="margin-top:.6rem"><summary class="aide">Texte de l'alerte</summary><p class="aide">${esc(a.texte)}</p></details>` : ''}`,
-      [{ l: 'Écarter', classe: 'bouton-danger', f: () => { a.statutTri = 'ecartee'; D.enregistrer('annonces', a); afficher(); } },
+      [{ l: 'Écarter', classe: 'bouton-danger', f: () => { setTimeout(() => ecarterAnnonce(D.obtenir('annonces', a.id)), 0); } },
        { l: 'Corriger', f: () => { setTimeout(() => corrigerAnnonce(D.obtenir('annonces', a.id)), 0); } },
        { l: a.statutTri === 'attente' ? 'Modifier l\'attente' : 'Mettre en attente', f: () => { setTimeout(() => mettreEnAttente(D.obtenir('annonces', a.id)), 0); } },
        { l: 'Retenir et prendre rendez-vous', classe: 'bouton-principal', f: () => retenirAnnonce(D.obtenir('annonces', a.id)) }]);
@@ -1778,7 +1817,7 @@
     const pm2 = e.surface ? e.prix / e.surface : 0, s = d.secteur || {};
     return `<div class="compte-titre">Ventes récentes du secteur <small class="discret">DVF ${esc(d.periode || '')}${d.lieu && !d.lieu.precis ? ' · autour du centre de ' + esc(d.lieu.commune || 'la commune') : ''}</small></div>
       <div class="compte">${ligneCompte('Prix médian du secteur', eur(s.mediane) + ' /m²', { s: 'fourchette ' + eur(s.p25) + ' à ' + eur(s.p75) + ' · ' + s.n + ' ventes' })}
-        ${pm2 ? ligneCompte('Prix affiché de l\'annonce', `<span class="${pm2 < s.mediane ? 'vert' : 'orange'}">${eur(pm2)} /m²</span>`, { s: (pm2 < s.mediane ? pc(1 - pm2 / s.mediane, 0) + ' sous' : pc(pm2 / s.mediane - 1, 0) + ' au-dessus de') + ' la médiane · revente estimée ' + eur(e.pm2) + ' /m²' }) : ''}
+        ${pm2 ? ligneCompte('Prix affiché de l\'annonce', `<span class="${pm2 < s.mediane ? 'vert' : 'orange'}">${eur(pm2)} /m²</span>`, { s: (pm2 < s.mediane ? pc(1 - pm2 / s.mediane, 0) + ' sous' : pc(pm2 / s.mediane - 1, 0) + ' au-dessus de') + ' la médiane' + (e.dvfConsulte ? ' · revente estimée ' + eur(e.pm2) + ' /m²' : '') }) : ''}
         ${e.pm2 && s.p75 && e.pm2 > s.p75 * 1.05 && e.secteur && e.secteur.origine !== 'DVF' ? `<div class="alerte-bandeau">Revente estimée à ${eur(e.pm2)} /m², au-dessus du haut de fourchette du secteur (${eur(s.p75)} /m²) : la marge est probablement surestimée. « Corriger » pour ramener le prix du secteur à ${eur(s.p75)}.</div>` : ''}
         ${(d.ventes || []).map(v => ligneCompte(esc(v.adresse) + `<small class="discret">${dateFr(v.date)} · ${v.surface} m²${v.pieces ? ' · ' + v.pieces + ' p.' : ''}${v.distance != null ? ' · à ' + (v.distance < 1000 ? v.distance + ' m' : (v.distance / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' km') : ''}</small>`, eur(v.prix) + `<small class="sous-ligne">${eur(v.m2)} /m²</small>`)).join('')}</div>`;
   }
@@ -1793,7 +1832,7 @@
         const x = await requeteDVF({ rue, cp: a.cp, ville: a.ville }, e.type, e.surface, e.pieces);
         const cur = D.obtenir('annonces', a.id), avant = evalAnnonce(cur); cur.dvf = dvfEnFiche(x); D.enregistrer('annonces', cur); cacheAnn.clear();
         const apres = evalAnnonce(cur); fond.remove(); afficher();
-        setTimeout(() => ficheAnnonce(cur, 'Revente recalculée avec les ventes de la commune : ' + eur(avant.pm2) + ' → <b>' + eur(apres.pm2) + ' /m²</b> (' + Math.round((+(reglages().criteres || {}).reventeCoef || MA.CRITERES_DEF.reventeCoef)) + ' % du haut de fourchette ' + eur(apres.pm2Haut) + '). Bénéfice net au prix affiché : ' + (apres.r ? eur(apres.r.N) : '—') + '.'), 0);
+        setTimeout(() => ficheAnnonce(cur, apres.dvfConsulte ? 'Revente estimée avec les 3 ventes du secteur : <b>' + eur(apres.pm2) + ' /m²</b>, soit ' + eur(apres.vente) + '. Prix d\'achat visé pour ' + apres.criteres.margeBruteMin + ' % de marge : <b>' + (apres.achatVise ? eur(apres.achatVise) : 'aucun') + '</b>.' : 'Ventes du secteur affichées ci-dessous.'), 0);
       } catch (err) { bt.disabled = false; bt.textContent = 'Voir les ventes du secteur'; notifier(/inconnue/i.test(err.message) ? 'Serveur à mettre à jour (Code.gs) pour la recherche DVF.' : 'DVF : ' + err.message, 'erreur'); }
     };
   }
@@ -1851,8 +1890,8 @@
   /* Retenir : crée le projet, relie le contact de l'agence, relance de prise de rendez-vous */
   function retenirAnnonce(a) {
     creerProjet(a);
-    notifier('Projet créé, relance « Prendre rendez-vous » pour aujourd\'hui.', 'succes');
-    aller('#/bien/' + a.bienId);
+    notifier('Projet créé dans « Projets en cours », relance « Prendre rendez-vous » pour aujourd\'hui. L\'annonce passe dans « Traitées ».', 'succes');
+    afficher();
   }
   function creerProjet(a) {
     const e = evalAnnonce(a), R = reglages();
@@ -1977,7 +2016,7 @@
         <div class="champ"><label for="crTreso">2. Budget maximum à respecter (€)</label><input id="crTreso" data-cr="tresoMax" type="number" inputmode="numeric" step="5000" value="${C.tresoMax}"><small class="aide">achat, frais d'agence, notaire, travaux et aléas, annexes, TVA des travaux avancée</small></div>
         <div class="champ"><label for="crMb">3. Marge brute minimum (% de la revente)</label><input id="crMb" data-cr="margeBruteMin" type="number" inputmode="decimal" value="${C.margeBruteMin}"><small class="aide">revente moins coût de revient</small></div>
         <div class="champ"><label for="crNego">Négociation maximum (%)</label><input id="crNego" data-cr="negoMax" type="number" inputmode="numeric" value="${C.negoMax}"><small class="aide">les étapes 2 et 3 s'apprécient au prix négocié</small></div>
-        <div class="champ"><label for="crRev">Revente estimée (% du haut de fourchette DVF)</label><input id="crRev" data-cr="reventeCoef" type="number" inputmode="numeric" min="50" max="120" value="${C.reventeCoef}"><small class="aide">haut de fourchette = 3e quartile des ventes réelles du secteur</small></div>
+        <div class="champ"><label for="crRev">Revente estimée (% de la vente la plus chère des 3 comparables)</label><input id="crRev" data-cr="reventeCoef" type="number" inputmode="numeric" min="50" max="120" value="${C.reventeCoef}"><small class="aide">jamais sous la médiane des 3 ventes ; sans ventes consultées, % du haut de fourchette du secteur (tri automatique)</small></div>
         <div class="champ" style="grid-column:1/-1"><label>Budget travaux, hors aléas</label>
           <table class="tableau"><thead><tr><th>Niveau</th><th class="nombre">€/m²</th><th class="nombre">Minimum par bien (€)</th></tr></thead><tbody>
           ${['r', 'c', 'l'].map(n => { const t = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {})[n]; return `<tr><td>${M.NIVEAUX[n]}</td><td><input data-crt="${n}.m2" type="number" inputmode="numeric" step="10" value="${t.m2}" style="width:90px"></td><td><input data-crt="${n}.min" type="number" inputmode="numeric" step="500" value="${t.min}" style="width:110px"></td></tr>`; }).join('')}
@@ -1991,7 +2030,7 @@
       </div>`;
   }
   const zoneCourte = z => { const d = {}; z.forEach(x => { const m = String(x).match(/^(\d{2})/); const k = m ? m[1] : x; d[k] = (d[k] || 0) + 1; }); return Object.entries(d).map(([k, n]) => n > 1 ? k + ' (' + n + ' communes)' : k).join(', '); };
-  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Prix affiché ≤ ' + eur(C.prixAfficheMax) + ' · budget maximum à respecter ' + eur(C.tresoMax) + ' · marge brute ≥ ' + C.margeBruteMin + ' % de la revente · travaux ' + (() => { const t = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}); return t.r.m2 + ' / ' + t.c.m2 + ' / ' + t.l.m2 + ' €/m², par défaut ' + M.NIVEAUX[t.defaut].toLowerCase(); })() + ' · négociation ≤ ' + C.negoMax + ' % · revente à ' + C.reventeCoef + ' % du haut de fourchette DVF · zone : ' + (C.zone && C.zone.length ? zoneCourte(C.zone) : 'partout') + ' · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
+  const resumeCriteres = R => { const C = Object.assign({}, MA.CRITERES_DEF, R.criteres || {}); return 'Prix affiché ≤ ' + eur(C.prixAfficheMax) + ' · budget maximum à respecter ' + eur(C.tresoMax) + ' · marge brute ≥ ' + C.margeBruteMin + ' % de la revente · travaux ' + (() => { const t = Object.assign({}, MA.CRITERES_DEF.travaux, C.travaux || {}); return t.r.m2 + ' / ' + t.c.m2 + ' / ' + t.l.m2 + ' €/m², par défaut ' + M.NIVEAUX[t.defaut].toLowerCase(); })() + ' · négociation ≤ ' + C.negoMax + ' % · revente à ' + C.reventeCoef + ' % de la vente la plus chère des 3 comparables (jamais sous leur médiane) · zone : ' + (C.zone && C.zone.length ? zoneCourte(C.zone) : 'partout') + ' · ' + C.types.map(k => M.TYPES[k] ? M.TYPES[k].n.toLowerCase() : k).join(', '); };
   function editerCriteres() {
     modale('Critères d\'analyse', champsCriteres(reglages()), [{ l: 'Fermer', classe: 'bouton-principal', f: () => afficher() }], f => brancherCriteres(f));
   }
