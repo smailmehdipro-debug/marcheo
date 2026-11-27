@@ -1,0 +1,140 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Charte Marchéo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : colonne de lecture 1080 px, bandes vert métallisé pour les chapitres « tôle », ivoire mat pour le reste. */
+:root {
+  --fond: #f1ece1; --surface: #faf6ee; --bordure: #d9cfbb; --texte: #15211b; --texte-2: #5a675f;
+  --vert: #0f4a30; --nuit: #0e2a1d; --laiton: #a8864f; --laiton-clair: #c9ab74; --ivoire: #f6f0e2;
+  --metal: linear-gradient(100deg, transparent 28%, rgba(190,235,205,.10) 42%, rgba(255,255,255,.15) 46%, rgba(190,235,205,.08) 50%, transparent 64%), linear-gradient(118deg, #07190f 0%, #0d2f1f 20%, #17503a 36%, #2f7553 43%, #164a31 50%, #0c2c1c 66%, #103826 84%, #081c12 100%);
+  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --fond: #0a140f; --surface: #10201a; --bordure: #27412f; --texte: #ede5d2; --texte-2: #a3b09f; --vert: #8cc78a; --laiton: #c9ab74; color-scheme: dark; } }
+:root[data-theme="dark"] { --fond: #0a140f; --surface: #10201a; --bordure: #27412f; --texte: #ede5d2; --texte-2: #a3b09f; --vert: #8cc78a; --laiton: #c9ab74; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 15px/1.6 var(--sans); }
+.w { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bande { background: var(--metal); color: var(--ivoire); }
+header.bande { margin-top: calc(-1 * env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); }
+header .w { padding-block: 56px 48px; display: grid; gap: 28px; }
+header img { height: 92px; width: auto; max-width: 100%; }
+header h1 { font: 600 clamp(2.2rem, 5vw, 3.6rem)/1.05 var(--serif); margin: 0; text-wrap: balance; }
+header h1 em { font-style: italic; font-weight: 500; color: var(--laiton-clair); }
+header p { margin: 0; max-width: 60ch; color: #cfd8cc; }
+section .w { padding-block: 48px; }
+h2 { font: 600 2rem/1.1 var(--serif); margin: 0 0 6px; text-wrap: balance; }
+.sur { font: 600 .72rem/1 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--laiton); margin: 0 0 10px; }
+.chapo { color: var(--texte-2); max-width: 65ch; margin: 0 0 28px; }
+.grille { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.case { background: var(--surface); border: 1px solid var(--bordure); border-radius: 8px; padding: 18px; display: grid; gap: 10px; min-width: 0; }
+.case.sombre { background: var(--metal); border-color: #0a3320; color: var(--ivoire); }
+.case img { max-width: 100%; height: auto; }
+.case small { color: var(--texte-2); }
+.case.sombre small { color: #a9b8a8; }
+.logo-zone { display: grid; place-items: center; min-height: 150px; }
+.nuancier { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.teinte { border-radius: 8px; overflow: hidden; border: 1px solid var(--bordure); background: var(--surface); }
+.teinte div { height: 84px; }
+.teinte p { margin: 0; padding: 10px 12px; font-size: .82rem; line-height: 1.4; }
+.teinte b { display: block; font-weight: 600; }
+code { font: 500 .8rem/1 ui-monospace, Menlo, monospace; color: var(--texte-2); }
+.typo { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.typo .case .grand { font: 600 3rem/1 var(--serif); }
+.typo .case .grand.s { font: 600 2.4rem/1 var(--sans); letter-spacing: -.01em; }
+.regles { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; max-width: 70ch; }
+.regles li { padding-left: 22px; position: relative; }
+.regles li::before { content: ""; position: absolute; left: 0; top: .8em; width: 12px; height: 1.5px; background: var(--laiton); }
+figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+figure img { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--bordure); display: block; }
+figcaption { font-size: .85rem; color: var(--texte-2); }
+.deux { display: grid; gap: 20px; grid-template-columns: 2fr 1fr; align-items: start; }
+@media (max-width: 720px) { .deux { grid-template-columns: 1fr; } }
+.fichiers { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.fichiers td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--bordure); vertical-align: top; }
+.fichiers td:first-child { white-space: nowrap; font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+footer .w { padding-block: 28px; color: #a9b8a8; font-size: .85rem; }
+</style>
+
+<header class="bande"><div class="w">
+  <img src="logos/marcheo-signature-transparent.svg" alt="Marchéo, marchand de biens">
+  <h1>Charte graphique<br><em>vert anglais métallisé</em></h1>
+  <p>Logos, couleurs, typographies, finition carrosserie du CRM, carte de visite et visuels. Toutes les pièces sont générées par script depuis les mêmes valeurs : changer une couleur ou un numéro de téléphone met tout à jour d'un coup.</p>
+</div></header>
+
+<section><div class="w">
+  <p class="sur">1 · Logo</p><h2>Monogramme, signature, mot</h2>
+  <p class="chapo">Le M dessine une ligne de toit inversée dans un cercle laiton. L'accent du é est en laiton : c'est le seul détail de couleur dans le mot. Les textes sont convertis en tracés, les fichiers s'impriment sans police installée.</p>
+  <div class="grille">
+    <div class="case"><div class="logo-zone"><img src="logos/marcheo-signature-clair.svg" alt="Signature horizontale sur ivoire"></div><small>Signature horizontale · fond ivoire</small></div>
+    <div class="case sombre"><div class="logo-zone"><img src="logos/marcheo-signature-transparent.svg" alt="Signature horizontale sur vert"></div><small>Signature horizontale · fond vert métallisé</small></div>
+    <div class="case"><div class="logo-zone"><img src="logos/marcheo-vertical-clair.svg" alt="Signature verticale" style="max-height:170px"></div><small>Verticale · carte, couverture, avatar</small></div>
+    <div class="case sombre"><div class="logo-zone"><img src="logos/marcheo-monogramme-transparent.svg" alt="Monogramme" style="height:110px"></div><small>Monogramme seul · icône d'appli, tampon, réseaux</small></div>
+  </div>
+  <ul class="regles" style="margin-top:24px">
+    <li>Taille minimale : monogramme 8 mm imprimé, 24 px à l'écran ; signature horizontale 30 mm de large.</li>
+    <li>Zone de protection : la hauteur du cercle divisée par deux, tout autour.</li>
+    <li>Fond clair : version « clair ». Fond vert ou photo sombre : version « transparent ». Tampon, fax, gravure : « noir » ou « blanc ».</li>
+    <li>Jamais déformé, jamais en ombre portée, jamais le mot en laiton entier.</li>
+  </ul>
+</div></section>
+
+<section style="background:var(--surface);border-block:1px solid var(--bordure)"><div class="w">
+  <p class="sur">2 · Couleurs</p><h2>Vert anglais, ivoire, laiton</h2>
+  <p class="chapo">Une seule couleur d'accent, le vert. Le laiton sert aux filets, repères et accents, jamais en aplat. Le bordeaux est réservé aux alertes. Aucun blanc pur dans le CRM.</p>
+  <div class="nuancier">
+    <div class="teinte"><div style="background:var(--metal)"></div><p><b>Vert métallisé</b>Tôle : barre latérale, boutons, recto de carte</p></div>
+    <div class="teinte"><div style="background:#0e2a1d"></div><p><b>Vert nuit</b><code>#0E2A1D</code> · CMJN ≈ 85 40 80 65</p></div>
+    <div class="teinte"><div style="background:#0f4a30"></div><p><b>Vert anglais</b><code>#0F4A30</code> · accent, liens</p></div>
+    <div class="teinte"><div style="background:#c9ab74"></div><p><b>Laiton</b><code>#C9AB74</code> · sur fond vert<br><code>#A8864F</code> · sur ivoire</p></div>
+    <div class="teinte"><div style="background:#f1ece1"></div><p><b>Ivoire</b><code>#F1ECE1</code> fond · <code>#FAF6EE</code> cartes</p></div>
+    <div class="teinte"><div style="background:#8e1f24"></div><p><b>Cuir bordeaux</b><code>#8E1F24</code> · retards, alertes</p></div>
+  </div>
+</div></section>
+
+<section><div class="w">
+  <p class="sur">3 · Finition carrosserie</p><h2>Le vert métallisé dans le CRM</h2>
+  <p class="chapo">Base vert profond, reflet clair en diagonale, paillettes fines visibles de près. La finition reste sur les surfaces « tôle » : barre latérale, en-têtes mobiles, boutons principaux, pastilles actives. Les cartes et tableaux restent ivoire mat pour que les chiffres se lisent. Au survol, un reflet balaie le bouton.</p>
+  <div class="deux">
+    <figure><img src="captures/bureau-tableau.png" alt="Tableau de bord Marchéo sur ordinateur"><figcaption>Tableau de bord, ordinateur</figcaption></figure>
+    <figure><img src="captures/mobile-visite.png" alt="Page Visite sur téléphone"><figcaption>Page Visite, téléphone</figcaption></figure>
+  </div>
+  <p class="chapo" style="margin-top:20px">À l'impression, une encre ne brille pas : le dégradé seul donne l'effet. Pour un vrai rendu métal sur la carte, demander à l'imprimeur un vernis sélectif sur le reflet ou une dorure à chaud laiton sur le logo.</p>
+</div></section>
+
+<section style="background:var(--surface);border-block:1px solid var(--bordure)"><div class="w">
+  <p class="sur">4 · Typographies</p><h2>Cormorant Garamond et Inter</h2>
+  <p class="chapo">Deux polices Google Fonts, gratuites, licence libre y compris pour l'impression.</p>
+  <div class="typo">
+    <div class="case"><div class="grand">Marchéo 79 000 €</div><small>Cormorant Garamond SemiBold · titres, chiffres clés, nom sur la carte. Italique 500 pour les accroches.</small></div>
+    <div class="case"><div class="grand s">Annonces · 42 m²</div><small>Inter 400 et 600 · texte courant, tableaux, coordonnées. Capitales espacées à 0,22 em pour les intitulés.</small></div>
+  </div>
+</div></section>
+
+<section><div class="w">
+  <p class="sur">5 · Supports</p><h2>Carte, en-tête, réseaux</h2>
+  <p class="chapo">La carte vise le vendeur : l'accroche du recto dit ce que tu fais en six mots. Le verso porte la mention EI obligatoire pour un entrepreneur individuel.</p>
+  <div class="grille">
+    <figure><img src="supports/carte-visite-apercu.png" alt="Carte de visite recto et verso"><figcaption>Carte 85 × 55 mm, PDF avec 3 mm de fond perdu</figcaption></figure>
+    <figure><img src="supports/papier-en-tete-apercu.png" alt="Papier à en-tête A4"><figcaption>Papier à en-tête A4 · offres d'achat, courriers propriétaires</figcaption></figure>
+    <figure><img src="supports/avatar-1080.png" alt="Avatar monogramme"><figcaption>Avatar 1080 px · WhatsApp, Google, LinkedIn</figcaption></figure>
+  </div>
+  <figure style="margin-top:20px"><img src="supports/banniere-1584x396.png" alt="Bannière LinkedIn"><figcaption>Bannière 1584 × 396 · LinkedIn, Facebook</figcaption></figure>
+  <figure style="margin-top:20px"><img src="supports/visuel-crm-2400x1350.png" alt="Visuel du CRM sur ordinateur et téléphone"><figcaption>Visuel du CRM 2400 × 1350 · présentation banque, associé, réseaux</figcaption></figure>
+</div></section>
+
+<section style="background:var(--surface);border-top:1px solid var(--bordure)"><div class="w">
+  <p class="sur">6 · Fichiers</p><h2>Où sont les pièces</h2>
+  <div class="table-wrap"><table class="fichiers">
+    <tr><td>logos/</td><td>SVG vectorisés : signature horizontale (clair, transparent), verticale (clair), monogramme (transparent)</td></tr>
+    <tr><td>supports/</td><td>Aperçus PNG : carte de visite, papier à en-tête A4, avatar, bannière, visuel CRM</td></tr>
+    <tr><td>captures/</td><td>Écrans du CRM en mode démonstration : tableau de bord (ordinateur), page Visite (téléphone)</td></tr>
+  </table></div>
+</div></section>
+
+<footer class="bande"><div class="w">Marchéo · charte du 27 novembre 2026</div></footer>
+
+</body></html>
