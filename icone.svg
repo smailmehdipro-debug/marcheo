@@ -1,1 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#0e2a1d"/><circle cx="32" cy="32" r="28.5" fill="none" stroke="#c9ab74" stroke-width="1.5"/><path d="M18 44V21l14 13 14-13v23" fill="none" stroke="#c9ab74" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="fond" cx="50%" cy="28%" r="80%">
+      <stop offset="0" stop-color="#2a6a4a"/>
+      <stop offset=".55" stop-color="#123a28"/>
+      <stop offset="1" stop-color="#071710"/>
+    </radialGradient>
+    <linearGradient id="or" gradientUnits="userSpaceOnUse" x1="0" y1="130" x2="0" y2="410">
+      <stop offset="0" stop-color="#fff6d2"/>
+      <stop offset=".22" stop-color="#e9c674"/>
+      <stop offset=".48" stop-color="#9c7125"/>
+      <stop offset=".62" stop-color="#f3d88e"/>
+      <stop offset=".82" stop-color="#b8892f"/>
+      <stop offset="1" stop-color="#6e4c14"/>
+    </linearGradient>
+    <linearGradient id="orCadre" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff1c0"/>
+      <stop offset=".3" stop-color="#c99a45"/>
+      <stop offset=".55" stop-color="#7a561a"/>
+      <stop offset=".8" stop-color="#e8c77a"/>
+      <stop offset="1" stop-color="#8a6420"/>
+    </linearGradient>
+    <linearGradient id="reflet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".22"/>
+      <stop offset=".46" stop-color="#fff" stop-opacity=".05"/>
+      <stop offset=".54" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="relief" x="-20%" y="-20%" width="140%" height="150%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="flou"/>
+      <feSpecularLighting in="flou" surfaceScale="6" specularConstant="1.1" specularExponent="22" lighting-color="#fff6dc" result="spec">
+        <feDistantLight azimuth="235" elevation="48"/>
+      </feSpecularLighting>
+      <feComposite in="spec" in2="SourceAlpha" operator="in" result="spec2"/>
+      <feComposite in="SourceGraphic" in2="spec2" operator="arithmetic" k1="0" k2="1" k3=".75" k4="0" result="metal"/>
+      <feDropShadow in="metal" dx="0" dy="10" stdDeviation="9" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+    <filter id="creux" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10"/>
+      <feOffset dy="8"/>
+      <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="ombre"/>
+      <feFlood flood-color="#000" flood-opacity=".6"/>
+      <feComposite in2="ombre" operator="in"/>
+      <feComposite in2="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Plaque émaillée -->
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#orCadre)"/>
+  <rect x="22" y="22" width="468" height="468" rx="100" fill="#3d2a0b" opacity=".55"/>
+  <rect x="28" y="28" width="456" height="456" rx="95" fill="url(#fond)" filter="url(#creux)"/>
+  <rect x="28" y="28" width="456" height="456" rx="95" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="2"/>
+
+  <!-- Emblème : un M dont le tracé est une toiture à deux pignons -->
+  <g filter="url(#relief)" fill="none" stroke="url(#or)" stroke-linejoin="round">
+    <!-- cheminée -->
+    <path d="M350 200 V142 H382 V232 Z" fill="url(#or)" stroke="none"/>
+    <rect x="342" y="128" width="48" height="18" rx="4" fill="url(#or)" stroke="none"/>
+    <!-- toits -->
+    <path d="M100 262 L196 158 L256 226 L316 158 L412 262" stroke-width="34" stroke-linecap="round"/>
+    <!-- murs = jambages du M -->
+    <path d="M148 226 V392 M364 226 V392" stroke-width="34" stroke-linecap="butt"/>
+    <!-- porte en arche -->
+    <path d="M228 392 V330 A28 28 0 0 1 284 330 V392" stroke-width="16"/>
+    <!-- sol -->
+    <path d="M112 400 H400" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <circle cx="271" cy="364" r="6" fill="url(#or)" filter="url(#relief)"/>
+
+  <!-- Reflet vitré -->
+  <rect x="28" y="28" width="456" height="456" rx="95" fill="url(#reflet)"/>
+</svg>
